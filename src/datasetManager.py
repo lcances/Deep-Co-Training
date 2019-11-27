@@ -26,25 +26,21 @@ class DatasetManager:
     LENGTH = 4
     SR = 22050
 
-    def __init__(self, metadata_root, audio_root, preload: bool = True,
-                 train_fold: list = [1, 2, 3, 4, 5, 6, 7, 8, 9],
-                 val_fold: list = [10], verbose=1):
+    def __init__(self, metadata_root, audio_root,
+                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10), verbose=1):
 
         self.metadata_root = metadata_root
         self.audio_root = audio_root
         self.train_fold = train_fold
         self.val_fold = val_fold
-        self.preload = preload
         self.hdf_path = "urbansound8k_22050.hdf5"
         self.feat_val = None
         self.y_val = None
 
         # verbose mode
         self.verbose = verbose
-        if self.verbose == 1:
-            self.tqdm_func = tqdm.tqdm
-        elif self.verbose == 2:
-            self.tqdm_func = tqdm.tqdm_notebook
+        if self.verbose == 1: self.tqdm_func = tqdm.tqdm
+        elif self.verbose == 2: self.tqdm_func = tqdm.tqdm_notebook
 
         # Store the dataset metadata information
         self.meta = {}
@@ -60,10 +56,6 @@ class DatasetManager:
     def validation(self):
         raise NotImplementedError()
 
-    def load_subset(self, key, limit=None):
-        if key == "train":
-            self.audio["weak"] = self._hdf_to_dict()
-
     def _hdf_to_dict(self, hdf_path, folds: list) -> dict:
         output = dict()
 
@@ -71,7 +63,7 @@ class DatasetManager:
         hdf = h5py.File(hdf_path, "r")
 
         for fold in self.tqdm_func(folds):
-            hdf_fold = hdf["fold%d"%fold]
+            hdf_fold = hdf["fold%d" % fold]
 
             filenames = hdf_fold["filenames"]
             raw_audios = hdf_fold["data"]
@@ -96,11 +88,12 @@ class DatasetManager:
     def _load_metadata(self):
         metadata_path = os.path.join(self.metadata_root, "UrbanSound8K.csv")
 
-        data = pd.read_csv(metadata_path,sep=",")
+        data = pd.read_csv(metadata_path, sep=",")
         data = data.set_index("slice_file_name")
 
         self.meta["train"] = data.loc[data.fold.isin(self.train_fold)]
         self.meta["val"] = data.loc[data.fold.isin(self.val_fold)]
+
 
 if __name__ == '__main__':
     audio_root = "../dataset/audio"
