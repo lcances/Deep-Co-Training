@@ -23,11 +23,23 @@ class Generator(data.Dataset):
         self.filenames = list(self.x.keys())
 
         # Validation
-        self.X_val, self.Y_val = None, None
+        self.X_val, self.y_val = None, None
 
     @property
     def validation(self):
-        return self.corpus.validation
+        if self.X_val is not None and self.y_val is not None:
+            return self.X_val, self.y_val
+
+        raw_audios = np.array(list(self.corpus.audio["val"].values()))
+
+        self.X_val = []
+        for raw in self.corpus.tqdm_func(raw_audios):
+            self.X_val.append(self.corpus.extract_feature(raw, DatasetManager.SR))
+        self.X_val = np.asarray(self.X_val)
+
+        self.y_val = self.corpus.meta["val"].classID.values
+
+        return self.X_val, self.y_val
 
     def __len__(self):
         nb_file = len(self.filenames)
@@ -45,7 +57,7 @@ class Generator(data.Dataset):
         raw_audio = self.x[filename]
 
         # recover ground truth
-        y_weak = self.y.at[filename, "weak"]
+        y = self.y.at[filename, "classID"]
 
         # data augmentation
         for augment_func in self.augments:
@@ -61,7 +73,7 @@ class Generator(data.Dataset):
 
         # extract feature
         feat = self.corpus.extract_feature(raw_audio, SR)
-        y = np.asarray(y_weak, dtype=np.float)
+        y = np.asarray(y)
 
         return feat, y
 
