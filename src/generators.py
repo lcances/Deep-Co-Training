@@ -25,21 +25,30 @@ class Generator(data.Dataset):
         # Validation
         self.X_val, self.y_val = None, None
 
+        # alias for verbose mode
+        self.tqdm_func = self.corpus.tqdm_func
+
     @property
     def validation(self):
         if self.X_val is not None and self.y_val is not None:
             return self.X_val, self.y_val
 
-        raw_audios = np.array(list(self.corpus.audio["val"].values()))
+        # Need to ensure that the data are store in the same order.
+        self.X_val, self.y_val = [], []
+        filenames = self.corpus.audio["val"].keys()
 
-        self.X_val = []
-        for raw in self.corpus.tqdm_func(raw_audios):
-            self.X_val.append(self.corpus.extract_feature(raw, DatasetManager.SR))
+        for filename in self.tqdm_func(filenames):
+            raw_audio = self.corpus.audio["val"][filename]
+            feature = self.corpus.extract_feature(raw_audio, DatasetManager.SR)
+            target = self.corpus.meta["val"].at[filename, "classID"]
+
+            self.X_val.append(feature)
+            self.y_val.append(target)
+
         self.X_val = np.asarray(self.X_val)
-
-        self.y_val = self.corpus.meta["val"].classID.values
-
+        self.y_val = np.asarray(self.y_val)
         return self.X_val, self.y_val
+
 
     def __len__(self):
         nb_file = len(self.filenames)
