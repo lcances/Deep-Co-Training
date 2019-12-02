@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 
@@ -17,3 +18,30 @@ class ConvReLU(nn.Sequential):
             nn.Conv2d(in_size, out_size, kernel_size=kernel_size, stride=stride, padding=padding),
             nn.ReLU6(inplace=True),
         )
+
+class MultisampleDropout2d(nn.Module):
+    """https://arxiv.org/pdf/1905.09788.pdf"""
+
+    def __init__(self, ratio, nb_sample):
+        super(MultisampleDropout2d, self).__init__()
+        self.nb_sample = nb_sample
+
+        self.dropouts = [nn.Dropout2d(ratio) for _ in range(nb_sample)]
+
+    def forward(self, x):
+        d = [dropout(x) for dropout in self.dropouts]
+        return torch.mean(torch.stack(d, dim=0), dim=0)
+
+
+class MultisampleDropout1d(nn.Module):
+    """https://arxiv.org/pdf/1905.09788.pdf"""
+
+    def __init__(self, ratio, nb_sample):
+        super(MultisampleDropout1d, self).__init__()
+        self.nb_sample = nb_sample
+
+        self.dropouts = [nn.Dropout(ratio) for _ in range(nb_sample)]
+
+    def forward(self, x):
+        d = [dropout(x) for dropout in self.dropouts]
+        return torch.mean(torch.stack(d, dim=0), dim=0)
