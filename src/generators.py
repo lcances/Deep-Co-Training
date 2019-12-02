@@ -4,6 +4,7 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NUM_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
+import pandas as pd
 
 from torch.utils import data
 from datasetManager import DatasetManager
@@ -95,8 +96,37 @@ class CoTrainingGenerator(data.Dataset):
         self.sampler = sampler
         self.augments = augments
 
-        self.S_weak_filenames = list(self.dataset.audio["weak"].keys())
-        self.U_filenames = list(self.dataset.audio["unlabel_in_domain"].keys())
+        # prepare co-training variable
+        self.X_S = {}
+        self.X_U = {}
+
+        self.y_S = pd.DataFrame()
+        self.y_U = pd.DataFrame()
+
+        self._prepare_cotraining_metadata()
+
+        self.filenames_S = self.y_S.index.values
+        self.filenames_U = self.y_U.index.values
+
+    def _prepare_cotraining_metadata(self):
+        """Using the sampler nb of of supervised file, select balanced amount of file in each class"""
+        metadata = self.dataset.meta["train"]
+        nb_S = len(self.sampler.S_idx)
+
+        # Prepare ground truth
+        for i in range(DatasetManager.NB_CLASS):
+            class_samples = metadata.loc[metadata.classID == i]
+
+            nb_sample_S = nb_S // DatasetManager.NB_CLASS
+
+            if i == 0:
+                self.y_S = class_samples[:nb_sample_S]
+                self.y_U = class_samples[nb_sample_S:]
+            else:
+                class_meta_S = class_samples[:nb_sample_S]
+                class_meta_U = class_samples[nb_sample_S:]
+                self.y_S = pd.concat([self.y_S, class_meta_S])
+                self.y_U = pd.concat([self.y_U, class_meta_U])
 
     def __len__(self) -> int:
         return len(self.sampler)
@@ -110,9 +140,9 @@ class CoTrainingGenerator(data.Dataset):
         for vi in views_indexes:
             X_V, y_V = self._generate_data(
                 vi,
-                target_filenames=self.S_weak_filenames,
-                target_raw=self.dataset.audio["weak"],
-                target_meta=self.dataset.meta["weak"],
+                target_filenames=self.filenames_S,
+                target_raw=self.dataset.audio["train"],
+                target_meta=self.y_S,
             )
             X.append(X_V)
             y.append(y_V)
@@ -120,8 +150,8 @@ class CoTrainingGenerator(data.Dataset):
         # Prepare U
         X_U, y_U = self._generate_data(
             U_indexes,
-            target_filenames=self.U_filenames,
-            target_raw=self.dataset.audio["unlabel_in_domain"],
+            target_filenames=self.filenames_U,
+            target_raw=self.dataset.audio["train"],
             target_meta=None
         )
         X.append(X_U)
@@ -130,24 +160,21 @@ class CoTrainingGenerator(data.Dataset):
 
         return X, y
 
-    def _generate_data(self, indexes: list, target_filenames: list, target_raw: dict, target_meta: dict = None):
+    def _generate_data(self, indexes: list, target_filenames: list, target_raw: dict, target_meta: pd.DataFrame = None):
         LENGTH = DatasetManager.LENGTH
         SR = DatasetManager.SR
 
         # Get the corresponding filenames
-        # filenames = [target_filenames[i] for i in indexes]
-        filenames = []
-        for i in indexes:
-            filenames.append(target_filenames[i])
+        filenames = [target_filenames[i] for i in indexes]
 
         # Get the raw_adio
         raw_audios = [target_raw[name] for name in filenames]
 
         # Get the ground truth
         # For unlabel set, create a fake ground truth (batch collate error otherwise)
-        targets = [[0] * DatasetManager.NB_CLASS for _ in range(len(filenames))]
+        targets = 0 #[[0] * DatasetManager.NB_CLASS for _ in range(len(filenames))]
         if target_meta is not None:
-            targets = [target_meta.at[name, "weak"] for name in filenames]
+            targets = [target_meta.at[name, "classID"] for name in filenames]
 
         # Data augmentation ?
         for i in range(len(raw_audios)):
@@ -168,3 +195,38 @@ class CoTrainingGenerator(data.Dataset):
 
         # Convert to np array
         return np.array(features), np.array(targets)
+
+if __name__ == '__main__':
+    from datasetManager import DatasetManager
+    from samplers import CoTrainingSampler
+
+    # load the data
+    audio_root = "../dataset/audio"
+    metadata_root = "../dataset/metadata"
+    dataset = DatasetManager(metadata_root, audio_root, verbose=1)
+    
+    # prepare the sampler with the specified number of supervised file
+    nb_train_file = len(dataset.audio["train"])
+    nb_s_file = nb_train_file // 10
+    nb_s_file = nb_s_file - (nb_s_file % DatasetManager.NB_CLASS)  # need to be a multiple of number of class
+    nb_u_file = nb_train_file - nb_s_file
+    sampler = CoTrainingSampler(32, nb_s_file, nb_u_file, nb_view=2, ratio=None, method="duplicate")
+
+    # create the generator and the loader
+    generator = CoTrainingGenerator(dataset, sampler)
+
+    train_loader = data.DataLoader(generator, batch_sampler=sampler)
+
+    for X, y in train_loader:
+        X = [x.squeeze() for x in X]
+        y = [y_.squeeze() for y_ in y]
+
+        # separate Supervised (S) and Unsupervised (U) parts
+        X_S, X_U = X[:-1], X[-1]
+        y_S, y_U = y[:-1], y[-1]
+
+        print("X_U shape: ", X_U.shape)
+        print("X_S shape: ", X_S[0].shape)
+        print("y_U shape: ", y_U.shape)
+        print("y_S shape: ", y_S[0].shape)
+        break
