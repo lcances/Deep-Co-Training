@@ -8,10 +8,10 @@ dataset:
 # Required package
 ```bash
 conda create -n UbS8k pip
-conda install torch
-conda install tensorboard
+conda install pytorch
 conda install pandas
 conda install numpy
+pip install tensorboard
 pip install librosa
 pip install tqdm
 ```
