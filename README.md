@@ -18,6 +18,7 @@ pip install tqdm
 
 # Full supervised
 ```bash
+conda activate UbS8k
 cd standalone
 python python full_supervised.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
 ```
