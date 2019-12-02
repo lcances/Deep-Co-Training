@@ -27,7 +27,7 @@ class DatasetManager:
     SR = 22050
 
     def __init__(self, metadata_root, audio_root,
-                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10), verbose=1):
+                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10, ), verbose=1):
 
         self.metadata_root = metadata_root
         self.audio_root = audio_root
