@@ -45,3 +45,31 @@ class MultisampleDropout1d(nn.Module):
     def forward(self, x):
         d = [dropout(x) for dropout in self.dropouts]
         return torch.mean(torch.stack(d, dim=0), dim=0)
+
+
+class MBConv(nn.Module):
+    """https://arxiv.org/pdf/1905.11946.pdf"""
+    def __init__(self, in_size, out_size, t, kernel_size, stride, padding):
+        super(MBConv, self).__init__()
+        expand_dim = in_size * t
+        self.stride = stride
+
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_size, expand_dim, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(expand_dim),
+            nn.ReLU6(inplace=True),
+
+            nn.Conv2d(expand_dim, expand_dim, kernel_size=kernel_size, stride=stride, padding=padding,
+                      groups=expand_dim),
+            nn.BatchNorm2d(expand_dim),
+            nn.ReLU6(inplace=True),
+
+            nn.Conv2d(expand_dim, out_size, kernel_size=1, stride=1, padding=0),
+            nn.BatchNorm2d(out_size),
+            nn.ReLU6(inplace=True),
+        )
+
+    def forward(self, x):
+        if self.stride == 1:
+            return x + self.conv(x)
+        return self.conv(x)
