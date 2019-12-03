@@ -70,6 +70,7 @@ class Generator(data.Dataset):
         y = self.y.at[filename, "classID"]
 
         # data augmentation
+        np.random.shuffle(self.augments)
         for augment_func in self.augments:
             raw_audio = augment_func(raw_audio)
 
@@ -88,7 +89,7 @@ class Generator(data.Dataset):
         return feat, y
 
 
-class CoTrainingGenerator(data.Dataset):
+class CoTrainingGenerator(Generator):
     """Must be used with the CoTrainingSampler"""
 
     def __init__(self, dataset, sampler, augments=()):
@@ -178,6 +179,7 @@ class CoTrainingGenerator(data.Dataset):
 
         # Data augmentation ?
         for i in range(len(raw_audios)):
+            np.random.shuffle(self.augments)
             for augment_func in self.augments:
                 raw_audios[i] = augment_func(raw_audios[i])
 
