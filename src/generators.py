@@ -11,15 +11,15 @@ from datasetManager import DatasetManager
 
 
 class Generator(data.Dataset):
-    def __init__(self, corpus, augments=()):
+    def __init__(self, dataset, augments=()):
         super().__init__()
 
-        self.corpus = corpus
+        self.dataset = dataset
         self.augments = augments
 
         # dataset access (combine weak and synthetic)
-        self.x = self.corpus.audio["train"]
-        self.y = self.corpus.meta["train"]
+        self.x = self.dataset.audio["train"]
+        self.y = self.dataset.meta["train"]
 
         self.filenames = list(self.x.keys())
 
@@ -27,7 +27,7 @@ class Generator(data.Dataset):
         self.X_val, self.y_val = None, None
 
         # alias for verbose mode
-        self.tqdm_func = self.corpus.tqdm_func
+        self.tqdm_func = self.dataset.tqdm_func
 
     @property
     def validation(self):
@@ -36,12 +36,12 @@ class Generator(data.Dataset):
 
         # Need to ensure that the data are store in the same order.
         self.X_val, self.y_val = [], []
-        filenames = self.corpus.audio["val"].keys()
+        filenames = self.dataset.audio["val"].keys()
 
         for filename in self.tqdm_func(filenames):
-            raw_audio = self.corpus.audio["val"][filename]
-            feature = self.corpus.extract_feature(raw_audio, DatasetManager.SR)
-            target = self.corpus.meta["val"].at[filename, "classID"]
+            raw_audio = self.dataset.audio["val"][filename]
+            feature = self.dataset.extract_feature(raw_audio, DatasetManager.SR)
+            target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
             self.y_val.append(target)
@@ -49,7 +49,6 @@ class Generator(data.Dataset):
         self.X_val = np.asarray(self.X_val)
         self.y_val = np.asarray(self.y_val)
         return self.X_val, self.y_val
-
 
     def __len__(self):
         nb_file = len(self.filenames)
@@ -83,16 +82,18 @@ class Generator(data.Dataset):
             raw_audio = raw_audio[:LENGTH * SR]
 
         # extract feature
-        feat = self.corpus.extract_feature(raw_audio, SR)
+        feat = self.dataset.extract_feature(raw_audio, SR)
         y = np.asarray(y)
 
         return feat, y
 
 
-class CoTrainingGenerator(Generator):
+class CoTrainingGenerator(data.Dataset):
     """Must be used with the CoTrainingSampler"""
 
     def __init__(self, dataset, sampler, augments=()):
+        super(CoTrainingGenerator, self).__init__()
+
         self.dataset = dataset
         self.sampler = sampler
         self.augments = augments
@@ -108,6 +109,13 @@ class CoTrainingGenerator(Generator):
 
         self.filenames_S = self.y_S.index.values
         self.filenames_U = self.y_U.index.values
+
+        # Validation
+        self.X_val, self.y_val = None, None
+
+        # alias for verbose mode
+        self.tqdm_func = self.dataset.tqdm_func
+
 
     def _prepare_cotraining_metadata(self):
         """Using the sampler nb of of supervised file, select balanced amount of file in each class"""
@@ -128,6 +136,27 @@ class CoTrainingGenerator(Generator):
                 class_meta_U = class_samples[nb_sample_S:]
                 self.y_S = pd.concat([self.y_S, class_meta_S])
                 self.y_U = pd.concat([self.y_U, class_meta_U])
+
+    @property
+    def validation(self):
+        if self.X_val is not None and self.y_val is not None:
+            return self.X_val, self.y_val
+
+        # Need to ensure that the data are store in the same order.
+        self.X_val, self.y_val = [], []
+        filenames = self.dataset.audio["val"].keys()
+
+        for filename in self.tqdm_func(filenames):
+            raw_audio = self.dataset.audio["val"][filename]
+            feature = self.dataset.extract_feature(raw_audio, DatasetManager.SR)
+            target = self.dataset.meta["val"].at[filename, "classID"]
+
+            self.X_val.append(feature)
+            self.y_val.append(target)
+
+        self.X_val = np.asarray(self.X_val)
+        self.y_val = np.asarray(self.y_val)
+        return self.X_val, self.y_val
 
     def __len__(self) -> int:
         return len(self.sampler)
@@ -157,7 +186,6 @@ class CoTrainingGenerator(Generator):
         )
         X.append(X_U)
         y.append(y_U)
-
 
         return X, y
 
@@ -197,6 +225,7 @@ class CoTrainingGenerator(Generator):
 
         # Convert to np array
         return np.array(features), np.array(targets)
+
 
 if __name__ == '__main__':
     from datasetManager import DatasetManager
