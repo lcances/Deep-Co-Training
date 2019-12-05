@@ -12,6 +12,11 @@ from datasetManager import DatasetManager
 
 class Generator(data.Dataset):
     def __init__(self, dataset, augments=()):
+        """
+        Args:
+            dataset:
+            augments:
+        """
         super().__init__()
 
         self.dataset = dataset
@@ -55,10 +60,18 @@ class Generator(data.Dataset):
         return nb_file
 
     def __getitem__(self, index):
+        """
+        Args:
+            index:
+        """
         filename = self.filenames[index]
         return self._generate_data(filename)
 
     def _generate_data(self, filename: str):
+        """
+        Args:
+            filename (str):
+        """
         LENGTH = DatasetManager.LENGTH
         SR = DatasetManager.SR
 
@@ -91,11 +104,19 @@ class Generator(data.Dataset):
 class CoTrainingGenerator(data.Dataset):
     """Must be used with the CoTrainingSampler"""
 
-    def __init__(self, dataset, sampler, augments=()):
+    def __init__(self, dataset, sampler, unlabel_target: bool = False, augments: list = ()):
+        """
+        Args:
+            dataset:
+            sampler:
+            unlabel_target (bool): If the unlabel target should be return or not
+            augments (list):
+        """
         super(CoTrainingGenerator, self).__init__()
 
         self.dataset = dataset
         self.sampler = sampler
+        self.unlabel_target = unlabel_target
         self.augments = augments
 
         # prepare co-training variable
@@ -116,9 +137,10 @@ class CoTrainingGenerator(data.Dataset):
         # alias for verbose mode
         self.tqdm_func = self.dataset.tqdm_func
 
-
     def _prepare_cotraining_metadata(self):
-        """Using the sampler nb of of supervised file, select balanced amount of file in each class"""
+        """Using the sampler nb of of supervised file, select balanced amount of
+        file in each class
+        """
         metadata = self.dataset.meta["train"]
         nb_S = len(self.sampler.S_idx)
 
@@ -162,6 +184,10 @@ class CoTrainingGenerator(data.Dataset):
         return len(self.sampler)
 
     def __getitem__(self, batch_idx):
+        """
+        Args:
+            batch_idx:
+        """
         views_indexes = batch_idx[:-1]
         U_indexes = batch_idx[-1]
 
@@ -178,11 +204,12 @@ class CoTrainingGenerator(data.Dataset):
             y.append(y_V)
 
         # Prepare U
+        target_meta = None if self.unlabel_target else self.y_U
         X_U, y_U = self._generate_data(
             U_indexes,
             target_filenames=self.filenames_U,
             target_raw=self.dataset.audio["train"],
-            target_meta=None
+            target_meta=target_meta
         )
         X.append(X_U)
         y.append(y_U)
@@ -190,6 +217,13 @@ class CoTrainingGenerator(data.Dataset):
         return X, y
 
     def _generate_data(self, indexes: list, target_filenames: list, target_raw: dict, target_meta: pd.DataFrame = None):
+        """
+        Args:
+            indexes (list):
+            target_filenames (list):
+            target_raw (dict):
+            target_meta (pd.DataFrame):
+        """
         LENGTH = DatasetManager.LENGTH
         SR = DatasetManager.SR
 
