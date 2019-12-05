@@ -8,16 +8,17 @@ dataset:
 # Required package
 ```bash
 conda create -n UbS8k pip
-conda install torch
-conda install tensorboard
+conda install pytorch
 conda install pandas
 conda install numpy
+pip install tensorboard
 pip install librosa
 pip install tqdm
 ```
 
 # Full supervised
 ```bash
+conda activate UbS8k
 cd standalone
 python python full_supervised.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
 ```

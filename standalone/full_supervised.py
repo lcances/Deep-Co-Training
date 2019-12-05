@@ -108,8 +108,8 @@ for epoch in tqdm.tqdm_notebook(range(nb_epoch)):
 
     for i, (X, y) in enumerate(training_loader):
         # Transfer to GPU
-        X = X.cuda()
-        y = y.cuda()
+        X = X.cuda().float()
+        y = y.cuda().long()
 
         # predict
         logits = m1(X)
@@ -146,8 +146,8 @@ for epoch in tqdm.tqdm_notebook(range(nb_epoch)):
 
         for X_val, y_val in val_loader:
             # Transfer to GPU
-            X_val = X_val.cuda()
-            y_val = y_val.cuda()
+            X_val = X_val.cuda().float()
+            y_val = y_val.cuda().long()
 
             #             y_weak_val_pred, _ = model(X_val)
             logits = m1(X_val)
