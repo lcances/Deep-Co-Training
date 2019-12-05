@@ -8,8 +8,8 @@ import argparse
 from multiprocessing import Pool
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-sr", "--sampling_rate", default=22050, help="Librosa load sampling rate")
-parser.add_argument("-l", "--length", default=4, help="audio file length")
+parser.add_argument("-sr", "--sampling_rate", default=22050, type=int, help="Librosa load sampling rate")
+parser.add_argument("-l", "--length", default=4, type=int, help="audio file length")
 parser.add_argument("-a", "--audioroot", default="../dataset/audio", help="path to audio folds directory")
 args = parser.parse_args()
 
