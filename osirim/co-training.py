@@ -244,6 +244,10 @@ def reset_all_metrics():
     for m in all_metrics:
         m.reset()
 
+def get_current_lr():
+    for param_group in optimizer.param_groups:
+        return param_group["lr"]
+
 def train(epoch):
     net1.train()
     net2.train()
@@ -441,6 +445,10 @@ def test(epoch):
     
     tensorboard.add_scalar("val/acc 1", correct1 / total1, epoch)
     tensorboard.add_scalar("val/acc 2", correct2 / total2, epoch)
+
+    tensorboard.add_scalar("detail_hyperparameters/lambda cot", lambda_cot, epoch)
+    tensorboard.add_scalar("detail_hyperparameters/lambda diff", lambda_diff, epoch)
+    tensorboard.add_scalar("detail_hyperparameters/lr", get_current_lr(), epoch)
 
     acc = ((100.*correct1/total1)+(100.*correct2/total2))/2
     if acc > best_acc:
