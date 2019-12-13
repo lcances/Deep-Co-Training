@@ -42,6 +42,11 @@ class Warmup:
             ramp = self.method(self.current_epoch, self.nb_epoch)
             self.value = self.max * ramp
 
+        return self.value
+
+    def __call__(self):
+        return self.value
+
 if __name__ == '__main__':
     linear_warmup = Warmup(10, 80, linear_rampup)
     exp_warmup = Warmup(10, 80, sigmoid_rampup)
