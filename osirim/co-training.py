@@ -46,7 +46,7 @@ parser.add_argument('--momentum', default=0.9, type=float)
 parser.add_argument('--decay', default=1e-4, type=float)
 parser.add_argument('--epsilon', default=0.02, type=float)
 parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--cifar10_dir', default='./data', type=str)
+parser.add_argument('--cifar10_dir', default='/corpus/corpus/CIFAR10', type=str)
 parser.add_argument('--svhn_dir', default='./data', type=str)
 parser.add_argument('--tensorboard_dir', default='tensorboard/', type=str)
 parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
@@ -66,9 +66,6 @@ def set_seed(seed=args.seed):
     torch.backends.cudnn.benchmark = False
 set_seed()
 
-
-
-
 import datetime
 def get_datetime():
     now = datetime.datetime.now()
@@ -83,6 +80,7 @@ end_epoch = args.epochs
 class_num = args.num_class 
 batch_size = args.batchsize
 nb_batch = 50000 / batch_size
+best_acc = 0.0
 
 title = "%s_%s_%slcm_%sldm_%swl" % (
     get_datetime(),
@@ -252,14 +250,14 @@ def train(epoch):
 
     adjust_learning_rate(optimizer, epoch)
 
-    total_S1 = 0
-    total_S2 = 0
-    total_U1 = 0
-    total_U2 = 0
-    train_correct_S1 = 0
-    train_correct_S2 = 0
-    train_correct_U1 = 0
-    train_correct_U2 = 0
+    # total_S1 = 0
+    # total_S2 = 0
+    # total_U1 = 0
+    # total_U2 = 0
+    # train_correct_S1 = 0
+    # train_correct_S2 = 0
+    # train_correct_U1 = 0
+    # train_correct_U2 = 0
     running_loss = 0.0
     ls = 0.0
     lc = 0.0 
@@ -332,7 +330,6 @@ def train(epoch):
         total_loss.backward()
         optimizer.step()
 
-
         # ======== Calc the metrics ========
         # accuracies ----
         pred_SU1 = torch.cat((pred_S1, pred_U1), 0)
@@ -378,15 +375,15 @@ def train(epoch):
         # train_correct_U2 += np.sum(pred_U2.cpu().numpy() == labels_U.cpu().numpy())
         # total_U2 += labels_U.size(0)
         #
-        # running_loss += total_loss.item()
-        # ls += Loss_sup.item()
-        # lc += Loss_cot.item()
-        # ld += Loss_diff.item()
+        running_loss += total_loss.item()
+        ls += Loss_sup.item()
+        lc += Loss_cot.item()
+        ld += Loss_diff.item()
         
         # print statistics
         print("Epoch %s: %.2f%% : train acc: %.3f %.3f - Loss: %.3f %.3f %.3f %.3f - time: %.2f" % (
             epoch, (i / nb_batch) * 100,
-            (train_correct_S1+train_correct_U1) / (total_S1+total_U1), (train_correct_S2+train_correct_U2) / (total_S2+total_U2),
+            acc_SU1, acc_SU2,
             running_loss/(i+1), ls/(i+1), lc/(i+1), ld/(i+1),
             time.time() - start_time,
         ), end="\r")
