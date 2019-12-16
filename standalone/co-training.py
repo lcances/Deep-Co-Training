@@ -204,8 +204,9 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_%slcm_%sldm_%swl" % (
+title = "%s_%s_%slr_%slcm_%sldm_%swl" % (
     get_datetime(),
+    args.base_lr,
     args.job_name,
     args.lambda_cot_max,
     args.lambda_diff_max,
