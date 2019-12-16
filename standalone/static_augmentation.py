@@ -1,11 +1,14 @@
+import os
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NU M_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "2"
+import numpy as np
 
 import json
 import h5py
 import librosa
 import inspect
-import os
 import sys
-import numpy as np
 import tqdm
 import time
 import argparse
@@ -35,7 +38,7 @@ def get_augment_from_name(class_name):
 SR = config["general"]["sampling_rate"]
 LENGTH = config["general"]["length"]
 audio_root = config["general"]["audioroot"]
-config_name = os.path.basename(args.config)
+config_name = os.path.basename(args.config)[:-5]
 
 # Create the list of augmentation function
 augments = []
@@ -99,7 +102,7 @@ for fold in tqdm.tqdm(range(1, 11)):
     dataset_shape = (len(fold_filenames), SR * LENGTH)
 
     # for every file, extract the raw audio at SR
-    pool = Pool(8)
+    pool = Pool(19)
 
     # raw audio
     folder_path = [folder_path] * len(fold_filenames)
