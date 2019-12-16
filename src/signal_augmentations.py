@@ -65,7 +65,7 @@ class Noise(Augmentation):
 
 
 class Occlusion(Augmentation):
-    def __init__(self, ratio, max_size: float, sampling_rate: int):
+    def __init__(self, ratio, sampling_rate: int, max_size: float = 1):
         super().__init__(ratio)
         self.max_size = max_size
         self.sampling_rate = sampling_rate
