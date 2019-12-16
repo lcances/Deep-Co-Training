@@ -31,7 +31,7 @@ class TimeStretch(Augmentation):
 
 
 class PitchShift(Augmentation):
-    def __init__(self, ratio, sampling_rate: int, steps: tuple = (-3, 3)):
+    def __init__(self, ratio, sampling_rate: int = 22050, steps: tuple = (-3, 3)):
         super().__init__(ratio)
         self.sr = sampling_rate
         self.steps = steps
@@ -63,21 +63,25 @@ class Noise(Augmentation):
         noise_factor = np.random.uniform(*self.noise_factor)
         return data + noise_factor * noise
 
-
 class Occlusion(Augmentation):
-    def __init__(self, ratio, sampling_rate: int, max_size: float = 1):
+    def __init__(self, ratio, sampling_rate: int = 22050, max_size: float = 1):
         super().__init__(ratio)
         self.max_size = max_size
         self.sampling_rate = sampling_rate
 
     def _apply(self, data):
-        occlu_size = np.random.randint(0, int(self.sampling_rate * self.max_size))
+        max_occlu_size = self.sampling_rate * self.max_size
+        if max_occlu_size > len(data):
+            max_occlu_size = len(data) // 4
+
+        occlu_size = np.random.randint(0, max_occlu_size)
         occlu_pos = np.random.randint(0, len(data) - occlu_size)
 
         cp_data = data.copy()
-        cp_data[occlu_pos:occlu_pos+occlu_size] = 0
+        cp_data[occlu_pos:occlu_pos + occlu_size] = 0
 
         return cp_data
+
 
 
 if __name__ == '__main__':
