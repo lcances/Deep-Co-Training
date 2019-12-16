@@ -56,6 +56,7 @@ from ramps import Warmup, sigmoid_rampup
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
 parser.add_argument('--sess', default='default', type=str, help='session id')
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
+parser.add_argument("--ratio", default=0.1, type=int)
 parser.add_argument('--batchsize', '-b', default=100, type=int)
 parser.add_argument('--lambda_cot_max', default=10, type=int)
 parser.add_argument('--lambda_diff_max', default=0.5, type=float)
@@ -290,7 +291,7 @@ def train(epoch):
         Loss_cot = loss_cot(logits_U1, logits_U2)
         pld_S, pld_U, Loss_diff = p_loss_diff(logits_S1, logits_S2, adv_logits_S1, adv_logits_S2, logits_U1, logits_U2, adv_logits_U1, adv_logits_U2)
         
-        total_loss = Loss_sup + lambda_cot.next() * Loss_cot + lambda_diff.next() * Loss_diff
+        total_loss = Loss_sup + lambda_cot() * Loss_cot + lambda_diff() * Loss_diff
         total_loss.backward()
         optimizer.step()
 
@@ -405,9 +406,11 @@ def test(epoch):
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
 
-    # Apply callbacks
+    # Apply callbacks and warmup
     for c in callbacks:
         c.step()
+    lambda_cot.next()
+    lambda_diff.next()
 
 
 # In[ ]:
