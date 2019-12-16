@@ -1,0 +1,38 @@
+{
+  "general":
+  {
+    "sampling_rate": 22050
+  },
+
+  "augments":
+  {
+    "TimeStretch":
+    {
+      "ratio": 0.0,
+      "rate": [0.9, 1.1]
+    },
+
+    "PitchShift":
+    {
+      "ratio": 0.0,
+      "steps": [-3, 3]
+    },
+
+    "level":
+    {
+      "ratio": 0.0,
+      "rate": [0.8, 1.2]
+    },
+
+    "noise": {
+      "ratio": 0.0,
+      "noise_factor": [0.1, 0.4]
+    },
+
+    "occlusion": {
+      "ratio": 0.0,
+      "max_size": 1
+    }
+
+  }
+}
