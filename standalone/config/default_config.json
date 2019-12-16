@@ -11,30 +11,30 @@
   {
     "TimeStretch":
     {
-      "ratio": 0.0,
+      "ratio": 1.0,
       "rate": [0.9, 1.1]
     },
 
     "PitchShift":
     {
-      "ratio": 0.0,
+      "ratio": 1.0,
       "sampling_rate": 22050,
       "steps": [-3, 3]
     },
 
     "Level":
     {
-      "ratio": 0.0,
+      "ratio": 1.0,
       "rate": [0.8, 1.2]
     },
 
     "Noise": {
-      "ratio": 0.0,
+      "ratio": 1.0,
       "noise_factor": [0.1, 0.4]
     },
 
     "Occlusion": {
-      "ratio": 0.0,
+      "ratio": 1.0,
       "sampling_rate": 22050,
       "max_size": 1
     }
