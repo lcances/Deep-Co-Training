@@ -110,7 +110,7 @@ def get_datetime():
 # load the data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-dataset = DatasetManager(metadata_root, audio_root, verbose=2)
+dataset = DatasetManager(metadata_root, audio_root, verbose=1)
 
 # prepare the sampler with the specified number of supervised file
 nb_train_file = len(dataset.audio["train"])
