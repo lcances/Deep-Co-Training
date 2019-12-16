@@ -3,7 +3,7 @@
   {
     "sampling_rate": 22050,
     "length": 4,
-    "audioroot": "../dataset/audio/original"
+    "audioroot": "../dataset/audio"
   },
 
   "augments":
