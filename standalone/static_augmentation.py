@@ -1,21 +1,52 @@
+
+import json
 import h5py
 import librosa
+import inspect
 import os
+import sys
 import numpy as np
 import tqdm
 import time
 import argparse
 from multiprocessing import Pool
 
+sys.path.append("../scr")
+import signal_augmentations as sa
+
 parser = argparse.ArgumentParser()
-parser.add_argument("-sr", "--sampling_rate", default=22050, type=int, help="Librosa load sampling rate")
-parser.add_argument("-l", "--length", default=4, type=int, help="audio file length")
-parser.add_argument("-a", "--audioroot", default="../dataset/audio", help="path to audio folds directory")
+parser.add_argument("-c", "--config", default="config/default_config.json", type=str)
 args = parser.parse_args()
 
-SR = args.sampling_rate
-LENGTH = args.length
-audio_root = args.audioroot
+# Prepare for the augmentations
+with open(args.config) as json_file:
+    config = json.load(json_file)
+
+
+def get_augment_from_name(class_name):
+    for name, obj in inspect.getmembers(sa):
+        if inspect.isclass(obj):
+            if obj.__name__ == class_name:
+                return obj
+    raise AttributeError("This augmentation method doesn't exist: (%s)" % class_name)
+
+# Get the general information
+SR = config["general"]["sampling_rate"]
+LENGTH = config["general"]["length"]
+audioroot = config["general"]["audioroot"]
+destination = config["general"]["destination"]
+
+# Create the list of augmentation function
+augment_config = config["augments"]
+
+for key in augment_config:
+    augment_obj = get_augment_from_name(key)
+    augment_func = augment_obj
+sys.exit(1)
+
+
+augments = []
+
 
 # create the hdf_file
 hdf_path = os.path.join(audio_root, "%s_%s.hdf5" % ("urbansound8k", SR))
