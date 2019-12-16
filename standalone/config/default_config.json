@@ -22,18 +22,18 @@
       "steps": [-3, 3]
     },
 
-    "level":
+    "Level":
     {
       "ratio": 0.0,
       "rate": [0.8, 1.2]
     },
 
-    "noise": {
+    "Noise": {
       "ratio": 0.0,
       "noise_factor": [0.1, 0.4]
     },
 
-    "occlusion": {
+    "Occlusion": {
       "ratio": 0.0,
       "sampling_rate": 22050,
       "max_size": 1
