@@ -150,7 +150,7 @@ x = torch.from_numpy(x)
 y = torch.from_numpy(y)
 val_dataset = torch.utils.data.TensorDataset(x, y)
 
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=4)
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=8)
 val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
 
 # adversarial generation
