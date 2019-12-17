@@ -26,9 +26,21 @@
 # python co-training.py --job_name 1gpu --base_lr 0.05 --lambda_cot_max 10 --lambda_diff_max 0.5 --warm_up 160
 
 # Change epsilon
-python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.02
-python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.05
-python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.1
-python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.5
-python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 1.0
-python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 2.0
+# python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.02
+# python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.05
+# python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.1
+# python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 0.5
+# python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 1.0
+# python co-training.py --job_name 1gpu --base_lr 0.05 --epsilon 2.0
+
+# Change base lr
+python co-training.py --job_name 1gpu --base_lr 0.01
+python co-training.py --job_name 1gpu --base_lr 0.02
+python co-training.py --job_name 1gpu --base_lr 0.03
+python co-training.py --job_name 1gpu --base_lr 0.04
+python co-training.py --job_name 1gpu --base_lr 0.05
+python co-training.py --job_name 1gpu --base_lr 0.06
+python co-training.py --job_name 1gpu --base_lr 0.07
+python co-training.py --job_name 1gpu --base_lr 0.08
+python co-training.py --job_name 1gpu --base_lr 0.09
+python co-training.py --job_name 1gpu --base_lr 0.10
