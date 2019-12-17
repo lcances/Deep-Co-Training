@@ -30,7 +30,7 @@ class TimeStretch(Augmentation):
         return output
 
 
-class PitchShift(Augmentation):
+class PitchShiftRandom(Augmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, steps: tuple = (-3, 3)):
         super().__init__(ratio)
         self.sr = sampling_rate
@@ -38,6 +38,18 @@ class PitchShift(Augmentation):
 
     def _apply(self, data):
         nb_steps = np.random.uniform(*self.steps)
+        output = librosa.effects.pitch_shift(data, sr=self.sr, n_steps=nb_steps)
+        return output
+
+
+class PitchShiftChoice(Augmentation):
+    def __init__(self, ratio, sampling_rate: int = 22050, choice: tuple = (-2, -1, 1, 2)):
+        super().__init__(ratio)
+        self.sr = sampling_rate
+        self.choice = choice
+
+    def _apply(self, data):
+        nb_steps = np.random.choice(self.choice)
         output = librosa.effects.pitch_shift(data, sr=self.sr, n_steps=nb_steps)
         return output
 
