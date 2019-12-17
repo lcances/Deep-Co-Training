@@ -154,14 +154,16 @@ train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers
 val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
 
 # adversarial generation
+input_max_value = 0
+input_min_value = -80
 adv_generator_1 = GradientSignAttack(
     m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
 )
 
 adv_generator_2 = GradientSignAttack(
     m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
 )
 
 
