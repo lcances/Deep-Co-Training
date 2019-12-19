@@ -9,6 +9,7 @@ import tqdm
 import h5py
 import pandas as pd
 
+
 class DatasetManager:
     class_correspondance = {"Air_conditioner": 0, "car_horn": 1, "Children_laying": 2,
                             "dog_bark": 3, "drilling": 4,
@@ -24,18 +25,20 @@ class DatasetManager:
     )
     NB_CLASS = 10
     LENGTH = 4
-    SR = 22050
 
-    def __init__(self, metadata_root, audio_root,
-                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10, ), verbose=1):
+    def __init__(self, metadata_root, audio_root, hdf_path: str = None, sr: int = 22050,
+                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10, ),
+                 augments: bool = False, verbose=1):
 
+        self.sr = sr
         self.metadata_root = metadata_root
         self.audio_root = audio_root
         self.train_fold = train_fold
         self.val_fold = val_fold
-        self.hdf_path = "urbansound8k_22050.hdf5"
+        self.hdf_path = "urbansound8k_%s.hdf5" % self.sr if hdf_path is None else hdf_path
         self.feat_val = None
         self.y_val = None
+        self.augments = augments
 
         # verbose mode
         self.verbose = verbose
@@ -52,11 +55,28 @@ class DatasetManager:
             "val": self._hdf_to_dict(os.path.join(audio_root, self.hdf_path), val_fold)
         }
 
+        # Preparation for the gathering the static augmentations
+        if self.augments:
+            augment_keys = self._detect_all_augmentation(self.hdf_path)
+            self.augmentations = {}
+
+            for key in augment_keys:
+                self.augmentations[key] = self._hdf_to_dict(os.path.join(audio_root, self.hdf_path), train_fold, key)
+
     @property
     def validation(self):
         raise NotImplementedError()
 
-    def _hdf_to_dict(self, hdf_path, folds: list) -> dict:
+    def _detect_all_augmentation(self, hdf_path):
+        # open hdf file
+        hdf = h5py.File(hdf_path, "r")
+
+        augment_list = list(hdf.keys())
+
+        hdf.close()
+        return augment_list
+
+    def _hdf_to_dict(self, hdf_path, folds: list, augment_key: str = "data") -> dict:
         output = dict()
 
         # open hdf file
