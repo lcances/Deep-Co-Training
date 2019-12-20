@@ -104,7 +104,7 @@ class Generator(data.Dataset):
 class CoTrainingGenerator(data.Dataset):
     """Must be used with the CoTrainingSampler"""
 
-    def __init__(self, dataset, sampler, unlabel_target: bool = False, augments: list = ()):
+    def __init__(self, dataset, sampler, unlabel_target: bool = False, augments: tuple = ()):
         """
         Args:
             dataset:
@@ -225,8 +225,7 @@ class CoTrainingGenerator(data.Dataset):
             target_meta (pd.DataFrame):
         """
         LENGTH = DatasetManager.LENGTH
-        SR = DatasetManager.SR
-
+        SR = self.dataset.sr
         # Get the corresponding filenames
         filenames = [target_filenames[i] for i in indexes]
 
@@ -261,6 +260,82 @@ class CoTrainingGenerator(data.Dataset):
         return np.array(features), np.array(targets)
 
 
+class CoTrainingGenerator_SA(CoTrainingGenerator):
+    def __init__(self, dataset, sampler, unlabel_target: bool = False, augments: tuple = ()):
+        super().__init__(dataset, sampler, unlabel_target, augments)
+
+    def __getitem__(self, batch_idx):
+        raw_X, y = super().__getitem__(batch_idx)
+
+        views_indexes = batch_idx[:-1]
+        U_indexes = batch_idx[-1]
+
+        # Prepare views
+        augmentations = dict()
+        for augment in self.augments:
+            X = []
+
+            # prepare for each view
+            for vi in views_indexes:
+                X_V, y_V = self._generate_data(
+                    vi,
+                    target_filenames=self.filenames_S,
+                    target_raw=self.dataset.augmentations[augment],
+                    target_meta=self.y_S,
+                )
+                X.append(X_V)
+
+            # Prepare U
+            target_meta = None if self.unlabel_target else self.y_U
+            X_U, y_U = self._generate_data(
+                U_indexes,
+                target_filenames=self.filenames_U,
+                target_raw=self.dataset.augmentations[augment],
+                target_meta=target_meta
+            )
+            X.append(X_U)
+
+            augmentations[augment] = X
+
+        return raw_X, y, augmentations
+
+    def _generate_data(self, indexes: list, target_filenames: list, target_raw: dict, target_meta: pd.DataFrame = None):
+        """
+        Args:
+            indexes (list):
+            target_filenames (list):
+            target_raw (dict):
+            target_meta (pd.DataFrame):
+        """
+        LENGTH = DatasetManager.LENGTH
+        SR = self.dataset.sr
+        # Get the corresponding filenames
+        filenames = [target_filenames[i] for i in indexes]
+
+        # Get the raw_adio
+        raw_audios = [target_raw[name] for name in filenames]
+
+        # Get the ground truth
+        # For unlabel set, create a fake ground truth (batch collate error otherwise)
+        targets = 0 #[[0] * DatasetManager.NB_CLASS for _ in range(len(filenames))]
+        if target_meta is not None:
+            targets = [target_meta.at[name, "classID"] for name in filenames]
+
+        # Padding and cropping
+        for i in range(len(raw_audios)):
+            if len(raw_audios[i]) < LENGTH * SR:
+                missing = (LENGTH * SR) - len(raw_audios[i])
+                raw_audios[i] = np.concatenate((raw_audios[i], [0] * missing))
+
+            if len(raw_audios[i]) > LENGTH * SR:
+                raw_audios[i] = raw_audios[i][:LENGTH * SR]
+
+        # Extract the features
+        features = [self.dataset.extract_feature(raw, SR) for raw in raw_audios]
+
+        # Convert to np array
+        return np.array(features), np.array(targets)
+
 if __name__ == '__main__':
     from datasetManager import DatasetManager
     from samplers import CoTrainingSampler
@@ -268,8 +343,15 @@ if __name__ == '__main__':
     # load the data
     audio_root = "../dataset/audio"
     metadata_root = "../dataset/metadata"
-    dataset = DatasetManager(metadata_root, audio_root, verbose=1)
-    
+    #dataset = DatasetManager(metadata_root, audio_root, verbose=1)
+
+    augmentation_to_use = ("PitchShiftChoice", "Noise")
+    dataset = DatasetManager(metadata_root, audio_root,
+                             train_fold=[1],
+                             hdf_augments_file="urbansound8k_22050_default_config_1.hdf5",
+                             augments=augmentation_to_use
+                             )
+
     # prepare the sampler with the specified number of supervised file
     nb_train_file = len(dataset.audio["train"])
     nb_s_file = nb_train_file // 10
@@ -278,13 +360,15 @@ if __name__ == '__main__':
     sampler = CoTrainingSampler(32, nb_s_file, nb_u_file, nb_view=2, ratio=None, method="duplicate")
 
     # create the generator and the loader
-    generator = CoTrainingGenerator(dataset, sampler)
+    generator = CoTrainingGenerator_SA(dataset, sampler, augments=augmentation_to_use)
 
     train_loader = data.DataLoader(generator, batch_sampler=sampler)
 
-    for X, y in train_loader:
+    for X, y, augmented in train_loader:
         X = [x.squeeze() for x in X]
         y = [y_.squeeze() for y_ in y]
+        for key in augmented:
+            augmented[key] = [x.squeeze() for x in augmented[key]]
 
         # separate Supervised (S) and Unsupervised (U) parts
         X_S, X_U = X[:-1], X[-1]
