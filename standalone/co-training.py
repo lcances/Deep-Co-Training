@@ -41,7 +41,7 @@ from generators import Generator, CoTrainingGenerator
 from samplers import CoTrainingSampler
 import signal_augmentations as sa 
 
-from models import cnn
+import models
 from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
@@ -54,7 +54,7 @@ from ramps import Warmup, sigmoid_rampup
 # In[22]:
 
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
-parser.add_argument('--sess', default='default', type=str, help='session id')
+parser.add_argument("--model", default="cnn", type=str, help="The name of the model to load")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=int)
 parser.add_argument('--batchsize', '-b', default=100, type=int)
@@ -130,8 +130,16 @@ train_dataset = CoTrainingGenerator(dataset, sampler)
 
 # In[24]:
 
+def get_model_from_name(model_name):
+    import inspect
 
-model_func = cnn
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj):
+            if obj.__name__ == model_name:
+                return obj
+
+
+model_func = get_model_from_name(args.model)
 
 m1, m2 = model_func(), model_func()
 
