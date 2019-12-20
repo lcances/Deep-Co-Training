@@ -18,7 +18,7 @@ sys.path.append("../src/")
 
 from datasetManager import DatasetManager
 from generators import Generator
-from models import cnn
+import models
 from utils import get_datetime
 from metrics import CategoricalAccuracy
 import signal_augmentations as sa
@@ -26,6 +26,7 @@ import signal_augmentations as sa
 import argparse
 
 parser = argparse.ArgumentParser()
+parser.add_argument("-m", "--model", default="cnn", type=str, help="The name of the model to load")
 parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
@@ -52,7 +53,17 @@ dataset = DatasetManager(
 # prep model
 torch.cuda.empty_cache()
 
-model_func = cnn
+def get_model_from_name(model_name):
+    import inspect
+
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj):
+            if obj.__name__ == model_name:
+                return obj
+
+
+model_func = get_model_from_name(args.model)
+
 m1 = model_func()
 m1.cuda()
 
