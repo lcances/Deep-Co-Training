@@ -9,6 +9,7 @@ import tqdm
 import h5py
 import pandas as pd
 
+
 class DatasetManager:
     class_correspondance = {"Air_conditioner": 0, "car_horn": 1, "Children_laying": 2,
                             "dog_bark": 3, "drilling": 4,
@@ -24,16 +25,20 @@ class DatasetManager:
     )
     NB_CLASS = 10
     LENGTH = 4
-    SR = 22050
 
-    def __init__(self, metadata_root, audio_root,
-                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10, ), verbose=1):
+    def __init__(self, metadata_root, audio_root, hdf_file: str = None,
+                 hdf_augments_file: str = None, augments: tuple = (),
+                 sr: int = 22050, train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9),
+                 val_fold: list = (10, ), verbose=1):
 
+        self.sr = sr
         self.metadata_root = metadata_root
         self.audio_root = audio_root
         self.train_fold = train_fold
         self.val_fold = val_fold
-        self.hdf_path = "urbansound8k_22050.hdf5"
+        self.hdf_file = "urbansound8k_%s.hdf5" % self.sr if hdf_file is None else hdf_file
+        self.hdf_augments_file = hdf_augments_file
+        self.augments = augments
         self.feat_val = None
         self.y_val = None
 
@@ -48,15 +53,22 @@ class DatasetManager:
 
         # Store the raw audio
         self.audio = {
-            "train": self._hdf_to_dict(os.path.join(audio_root, self.hdf_path), train_fold),
-            "val": self._hdf_to_dict(os.path.join(audio_root, self.hdf_path), val_fold)
+            "train": self._hdf_to_dict(os.path.join(audio_root, self.hdf_file), train_fold),
+            "val": self._hdf_to_dict(os.path.join(audio_root, self.hdf_file), val_fold)
         }
+
+        # Preparation for the gathering the static augmentations
+        if self.hdf_augments_file is not None:
+            self.augmentations = {}
+
+            for key in self.augments:
+                self.augmentations[key] = self._hdf_to_dict(os.path.join(audio_root, self.hdf_augments_file), train_fold, key)
 
     @property
     def validation(self):
         raise NotImplementedError()
 
-    def _hdf_to_dict(self, hdf_path, folds: list) -> dict:
+    def _hdf_to_dict(self, hdf_path, folds: list, key: str = "data") -> dict:
         output = dict()
 
         # open hdf file
@@ -66,7 +78,7 @@ class DatasetManager:
             hdf_fold = hdf["fold%d" % fold]
 
             filenames = hdf_fold["filenames"]
-            raw_audios = hdf_fold["data"]
+            raw_audios = hdf_fold[key]
 
             fold_dict = dict(zip(filenames, raw_audios))
             output = dict(**output, **fold_dict)
@@ -98,5 +110,11 @@ class DatasetManager:
 if __name__ == '__main__':
     audio_root = "../dataset/audio"
     metadata_root = "../dataset/metadata"
-    dataset = DatasetManager(metadata_root, audio_root)
+    #dataset = DatasetManager(metadata_root, audio_root)
+
+    augmentation_to_load = ("PitchShiftChoice", "Noise")
+    dataset = DatasetManager(metadata_root, audio_root,
+                             hdf_augments_file="urbansound8k_22050_default_config_1.hdf5",
+                             augments=("PitchShiftChoice", "Noise")
+                             )
 
