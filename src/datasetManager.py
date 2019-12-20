@@ -112,6 +112,7 @@ if __name__ == '__main__':
     metadata_root = "../dataset/metadata"
     #dataset = DatasetManager(metadata_root, audio_root)
 
+    augmentation_to_load = ("PitchShiftChoice", "Noise")
     dataset = DatasetManager(metadata_root, audio_root,
                              hdf_augments_file="urbansound8k_22050_default_config_1.hdf5",
                              augments=("PitchShiftChoice", "Noise")
