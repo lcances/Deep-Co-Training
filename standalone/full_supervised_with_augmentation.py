@@ -92,7 +92,7 @@ nb_epoch = 100
 batch_size = 32
 nb_batch = len(train_dataset) // batch_size
 
-training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=5)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
 # scheduler
