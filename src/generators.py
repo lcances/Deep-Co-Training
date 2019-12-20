@@ -45,7 +45,7 @@ class Generator(data.Dataset):
 
         for filename in self.tqdm_func(filenames):
             raw_audio = self.dataset.audio["val"][filename]
-            feature = self.dataset.extract_feature(raw_audio, DatasetManager.SR)
+            feature = self.dataset.extract_feature(raw_audio, self.dataset.sr)
             target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
@@ -73,7 +73,7 @@ class Generator(data.Dataset):
             filename (str):
         """
         LENGTH = DatasetManager.LENGTH
-        SR = DatasetManager.SR
+        SR = self.dataset.sr
 
         # load the raw_audio
         raw_audio = self.x[filename]
@@ -170,7 +170,7 @@ class CoTrainingGenerator(data.Dataset):
 
         for filename in self.tqdm_func(filenames):
             raw_audio = self.dataset.audio["val"][filename]
-            feature = self.dataset.extract_feature(raw_audio, DatasetManager.SR)
+            feature = self.dataset.extract_feature(raw_audio, self.dataset.sr)
             target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
@@ -178,6 +178,7 @@ class CoTrainingGenerator(data.Dataset):
 
         self.X_val = np.asarray(self.X_val)
         self.y_val = np.asarray(self.y_val)
+
         return self.X_val, self.y_val
 
     def __len__(self) -> int:
