@@ -16,9 +16,17 @@ pip install librosa
 pip install tqdm
 ```
 
+# Prepare the dataset
+The system make use of HDF file to greatly reduce loading time
+```bash
+conda activate UbS8k
+cd standalone
+python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
+```
+
 # Full supervised
 ```bash
 conda activate UbS8k
 cd standalone
-python python full_supervised.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
+python full_supervised.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
 ```

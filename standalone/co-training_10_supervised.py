@@ -39,9 +39,9 @@ sys.path.append("../src/")
 from datasetManager import DatasetManager
 from generators import Generator, CoTrainingGenerator
 from samplers import CoTrainingSampler
-import signal_augmentations as sa
+import signal_augmentations as sa 
 
-import models
+from models import cnn
 from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
@@ -53,31 +53,31 @@ from ramps import Warmup, sigmoid_rampup
 
 # In[22]:
 
-parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
-parser.add_argument("--model", default="cnn", type=str, help="The name of the model to load")
-parser.add_argument("--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
-parser.add_argument("--val_folds", nargs="+", default="10", required=True, type=int, help="fold to use for validation")
-parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
-parser.add_argument("--ratio", default=0.1, type=int)
-parser.add_argument('--batchsize', '-b', default=100, type=int)
-parser.add_argument('--lambda_cot_max', default=10, type=int)
-parser.add_argument('--lambda_diff_max', default=0.5, type=float)
-parser.add_argument('--seed', default=1234, type=int)
-parser.add_argument('--epochs', default=600, type=int)
-parser.add_argument('--warm_up', default=80.0, type=float)
-parser.add_argument('--momentum', default=0.0, type=float)
-parser.add_argument('--decay', default=1e-3, type=float)
-parser.add_argument('--epsilon', default=0.02, type=float)
-parser.add_argument('--num_class', default=10, type=int)
-parser.add_argument('--cifar10_dir', default='./data', type=str)
-parser.add_argument('--svhn_dir', default='./data', type=str)
-parser.add_argument('--tensorboard_dir', default='tensorboard/', type=str)
-parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
-parser.add_argument('--base_lr', default=0.05, type=float)
-parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
-parser.add_argument("--job_name", default="default", type=str)
-args = parser.parse_args()
+
+class Args:
+    def __init__(self):
+        self.sess = "default"
+        self.nb_view = 2
+        self.batchsize = 100
+        self.lambda_cot_max = 10
+        self.lambda_diff_max = 0.5
+        self.ratio = 0.1
+        self.seed = 1234
+        self.epochs = 600
+        self.warm_up = 80
+        self.momentum = 0.0
+        self.decay = 1e-3
+        self.epsilon = 0.02
+        self.num_class = 10
+        self.cifar10_dir = "/corpus/corpus/UrbanSound8K"
+        self.tensorboard_dir = "tensoboard_cotraining"
+        self.checkpoint_dir = "checkpoint"
+        self.base_lr = 0.05
+        self.resume = False
+        self.job_name = "default"
+        self.multi_gpu = False
+args = Args()
+
 
 # ## Reproducibility
 
@@ -104,7 +104,9 @@ def get_datetime():
     return str(now)[:10] + "_" + str(now)[11:-7]
 
 
-# # Dataset
+# # Prep Co-Training
+
+# ## dataset
 
 # In[23]:
 
@@ -112,10 +114,7 @@ def get_datetime():
 # load the data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-dataset = DatasetManager(metadata_root, audio_root,
-                         train_fold=args.train_folds,
-                         val_fold=args.val_folds,
-                         verbose=1)
+dataset = DatasetManager(metadata_root, audio_root, verbose=2)
 
 # prepare the sampler with the specified number of supervised file
 nb_train_file = len(dataset.audio["train"])
@@ -128,22 +127,12 @@ sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.n
 train_dataset = CoTrainingGenerator(dataset, sampler)
 
 
-# # Prep training
-
 # ## Models
 
 # In[24]:
 
-def get_model_from_name(model_name):
-    import inspect
 
-    for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
-            if obj.__name__ == model_name:
-                return obj
-
-
-model_func = get_model_from_name(args.model)
+model_func = cnn
 
 m1, m2 = model_func(), model_func()
 
@@ -162,24 +151,22 @@ x = torch.from_numpy(x)
 y = torch.from_numpy(y)
 val_dataset = torch.utils.data.TensorDataset(x, y)
 
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=8)
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=4)
 val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
 
 # adversarial generation
-input_max_value = 0
-input_min_value = -80
 adv_generator_1 = GradientSignAttack(
     m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
+    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
 )
 
 adv_generator_2 = GradientSignAttack(
     m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
+    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
 )
 
 
-# ## optimizers & callbacks
+# ## optimizers & callbacks 
 
 # In[26]:
 
@@ -214,16 +201,14 @@ def reset_all_metrics():
     all_metrics = [*ratioS, *ratioU, *ratioSU, *accS, *accU, *accSU]
     for m in all_metrics:
         m.reset()
-
+        
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_%slr_%se_%slcm_%sldm_%swl" % (
+title = "%s_%s_%slcm_%sldm_%swl" % (
     get_datetime(),
     args.job_name,
-    args.base_lr,
-    args.epsilon,
     args.lambda_cot_max,
     args.lambda_diff_max,
     args.warm_up,
@@ -242,20 +227,20 @@ def train(epoch):
 
     running_loss = 0.0
     ls = 0.0
-    lc = 0.0
+    lc = 0.0 
     ld = 0.0
-
+    
     start_time = time.time()
     print("")
-
+    
     for batch, (X, y) in enumerate(train_loader):
         X = [x.squeeze() for x in X]
         y = [y_.squeeze() for y_ in y]
-
+    
         # separate Supervised (S) and Unsupervised (U) parts
         X_S, X_U = X[:-1], X[-1]
         y_S, y_U = y[:-1], y[-1]
-
+        
         for i in range(len(X_S)):
             X_S[i] = X_S[i].cuda()
             y_S[i] = y_S[i].cuda()
@@ -269,7 +254,7 @@ def train(epoch):
         _, pred_S1 = torch.max(logits_S1, 1)
         _, pred_S2 = torch.max(logits_S2, 1)
 
-        # pseudo labels of U
+        # pseudo labels of U 
         _, pred_U1 = torch.max(logits_U1, 1)
         _, pred_U2 = torch.max(logits_U2, 1)
 
@@ -305,8 +290,8 @@ def train(epoch):
         Loss_sup_S1, Loss_sup_S2, Loss_sup = p_loss_sup(logits_S1, logits_S2, y_S[0], y_S[1])
         Loss_cot = loss_cot(logits_U1, logits_U2)
         pld_S, pld_U, Loss_diff = p_loss_diff(logits_S1, logits_S2, adv_logits_S1, adv_logits_S2, logits_U1, logits_U2, adv_logits_U1, adv_logits_U2)
-
-        total_loss = Loss_sup + lambda_cot() * Loss_cot + lambda_diff() * Loss_diff
+        
+        total_loss = Loss_sup + lambda_cot.next() * Loss_cot + lambda_diff.next() * Loss_diff
         total_loss.backward()
         optimizer.step()
 
@@ -323,7 +308,7 @@ def train(epoch):
         acc_U2 = accU[1](pred_U2, y_U)
         acc_SU1 = accSU[0](pred_SU1, y_SU1)
         acc_SU2 = accSU[1](pred_SU2, y_SU2)
-
+        
         # ratios  ----
         _, adv_pred_S1 = torch.max(adv_logits_S1, 1)
         _, adv_pred_S2 = torch.max(adv_logits_S2, 1)
@@ -342,12 +327,12 @@ def train(epoch):
         ratio_SU1 = ratioSU[0](adv_pred_SU1, adv_y_SU1)
         ratio_SU2 = ratioSU[1](adv_pred_SU2, adv_y_SU2)
         # ========
-
+        
         running_loss += total_loss.item()
         ls += Loss_sup.item()
         lc += Loss_cot.item()
         ld += Loss_diff.item()
-
+        
         # print statistics
         print("Epoch %s: %.2f%% : train acc: %.3f %.3f - Loss: %.3f %.3f %.3f %.3f - time: %.2f" % (
             epoch, (batch / len(sampler)) * 100,
@@ -380,7 +365,7 @@ def train(epoch):
     tensorboard.add_scalar("detail_ratio/ratio U2", ratio_U2, epoch)
     tensorboard.add_scalar("detail_ratio/ratio SU1", ratio_SU1, epoch)
     tensorboard.add_scalar("detail_ratio/ratio SU2", ratio_SU2, epoch)
-
+    
     # Return the total loss to check for NaN
     return total_loss.item()
 
@@ -413,19 +398,17 @@ def test(epoch):
 
     print('\nnet1 test acc: %.3f%% (%d/%d) | net2 test acc: %.3f%% (%d/%d)'
         % (100.*correct1/total1, correct1, total1, 100.*correct2/total2, correct2, total2))
-
+    
     tensorboard.add_scalar("val/acc 1", correct1 / total1, epoch)
     tensorboard.add_scalar("val/acc 2", correct2 / total2, epoch)
-
+    
     tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
 
-    # Apply callbacks and warmup
+    # Apply callbacks
     for c in callbacks:
         c.step()
-    lambda_cot.next()
-    lambda_diff.next()
 
 
 # In[ ]:
@@ -442,4 +425,271 @@ for epoch in range(0, args.epochs):
 # tensorboard.close()
 
 
+# # Prep Supervised training (same ratio)
+
+# ## dataset
+
+# In[56]:
+
+
+# load the data
+audio_root = "../dataset/audio"
+metadata_root = "../dataset/metadata"
+dataset = DatasetManager(metadata_root, audio_root, verbose=2)
+
+# prepare the sampler with the specified number of supervised file
+nb_train_file = len(dataset.audio["train"])
+nb_s_file = int(nb_train_file * args.ratio)
+nb_s_file = nb_s_file - (nb_s_file % DatasetManager.NB_CLASS)  # need to be a multiple of number of class
+nb_u_file = 0
+
+
+sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
+train_dataset = CoTrainingGenerator(dataset, sampler)
+
+
+# ## Model
+
+# In[97]:
+
+
+model_func = cnn
+
+m1 = model_func()
+
+m1 = m1.cuda()
+
+
+# ## Loaders & adversarial generators
+
+# In[86]:
+
+
+x, y = train_dataset.validation
+x = torch.from_numpy(x)
+y = torch.from_numpy(y)
+val_dataset = torch.utils.data.TensorDataset(x, y)
+
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=4)
+val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
+
+# adversarial generation
+adv_generator_1 = GradientSignAttack(
+    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+)
+
+adv_generator_2 = GradientSignAttack(
+    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+)
+
+
+# ## optimizers & callbacks & criterion
+
+# In[98]:
+
+
+params = m1.parameters()
+optimizer = optim.SGD(params, lr=args.base_lr, momentum=args.momentum, weight_decay=args.decay)
+
+lr_lambda = lambda epoch: (1.0 + math.cos((epoch-1)*math.pi/args.epochs))
+lr_scheduler = LambdaLR(optimizer, lr_lambda)
+
+criterion = nn.CrossEntropyLoss()
+
+callbacks = [lr_scheduler]
+
+
+# ## Metrics and hyperparameters
+
+# In[88]:
+
+
+# define the metrics
+acc_func = CategoricalAccuracy()
+
+def reset_all_metrics():
+    acc_func.reset()
+        
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+
+title = "%s_supervised" % (get_datetime())
+tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
+
+
+# # Training
+
+# In[93]:
+
+
+def train(epoch):
+    m1.train()
+
+    running_loss = 0.0
+    
+    start_time = time.time()
+    print("")
+    
+    for batch, (X, y) in enumerate(train_loader):
+        X = [x.squeeze() for x in X]
+        y = [y_.squeeze() for y_ in y]
+    
+        # separate Supervised (S) and Unsupervised (U) parts
+        X_S, X_U = X[:-1], X[-1]
+        y_S, y_U = y[:-1], y[-1]
+        
+        # Only one view interesting, no U
+        X_S = X_S[0]
+        y_S = y_S[0]
+        
+        X_S, y_S = X_S.cuda(), y_S.cuda()
+
+        # ======== perform prediction ========
+        logits_S = m1(X_S)
+        _, pred_S = torch.max(logits_S, 1)
+
+
+        # ======== calculate loss ========
+        loss_sup = criterion(logits_S, y_S)
+        total_loss = loss_sup
+        
+        # ======== backpropagation =======
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+
+        # ======== Calc the metrics ========
+        acc = acc_func(pred_S, y_S)
+        running_loss += total_loss.item()
+        
+        # print statistics
+        print("Epoch %s: %.2f%% : train acc: %.3f - Loss: %.3f - time: %.2f" % (
+            epoch, (batch / len(sampler)) * 100,
+            acc,
+            running_loss / (batch+1),
+            time.time() - start_time,
+        ), end="\r")
+
+    # using tensorboard to monitor loss and acc\n",
+    tensorboard.add_scalar('train/total_loss', total_loss.item(), epoch)
+    tensorboard.add_scalar('train/acc', acc, epoch)
+    
+    # Return the total loss to check for NaN
+    return total_loss.item()
+
+
+# In[100]:
+
+
+def test(epoch):
+    m1.eval()
+    
+    reset_all_metrics()
+    
+    with torch.no_grad():
+        for batch_idx, (X, y) in enumerate(val_loader):
+            X_S = X.cuda()
+            y_S = y.cuda()
+
+            logits_S = m1(X_S)
+            _, pred_S = torch.max(logits_S, 1)
+            
+            loss_val = criterion(logits_S, y_S)
+            
+            acc_val = acc_func(pred_S, y_S)
+        
+        print("\nEpoch %s: Val acc: %.3f - loss: %.3f" % (
+            epoch,
+            acc_val,
+            loss_val.item()
+        ))
+    
+    tensorboard.add_scalar("val/acc", acc_val, epoch)
+    tensorboard.add_scalar("val/loss", loss_val.item(), epoch)
+    
+    tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
+
+    # Apply callbacks
+    for c in callbacks:
+        c.step()
+
+
+# In[101]:
+
+
+for epoch in range(0, args.epochs):
+    total_loss = train(epoch)
+    
+    if np.isnan(total_loss):
+        print("Losses are NaN, stoping the training here")
+        break
+        
+    test(epoch)
+
+
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
+
+# # Statistic on inputs
+
+# In[1]:
+
+
+from scipy.stats import kurtosis
+
+for batch, (X, y) in enumerate(train_loader):
+        X = [x.squeeze() for x in X]
+        y = [y_.squeeze() for y_ in y]
+    
+        # separate Supervised (S) and Unsupervised (U) parts
+        X_S, X_U = X[:-1], X[-1]
+        y_S, y_U = y[:-1], y[-1]
+        
+        X_U = X_U.numpy()
+        print(X_U.shape)
+        
+        # max
+        val = X_U.max(axis=(1, 2))
+        print("max max: ", val.max())
+        print("min max: ", val.min())
+        print("mean max: ", val.mean())
+        print("std max: ", val.std())
+        print("kurosis: ", kurtosis(val))
+        
+        # min
+        print("------------------")
+        val = X_U.min(axis=(1, 2))
+        print("max max: ", val.max())
+        print("min max: ", val.min())
+        print("mean max: ", val.mean())
+        print("std max: ", val.std())
+        print("kurosis: ", kurtosis(val))
+        
+        # mean
+        print("------------------")
+        val = X_U.mean(axis=(1, 2))
+        print("max max: ", val.max())
+        print("min max: ", val.min())
+        print("mean max: ", val.mean())
+        print("std max: ", val.std())
+        print("kurosis: ", kurtosis(val))
+        
+        # std
+        print("------------------")
+        val = X_U.std(axis=(1, 2))
+        print("max max: ", val.max())
+        print("min max: ", val.min())
+        print("mean max: ", val.mean())
+        print("std max: ", val.std())
+        print("kurosis: ", kurtosis(val))
+        
+        break
+
+
+# In[ ]:
+
+
+
+
