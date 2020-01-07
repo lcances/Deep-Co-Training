@@ -206,6 +206,7 @@ class FractalTimeDropout(Augmentation):
 
     def _apply(self, data):
         (h, w) = data.shape
+        mini = data.min()
 
         # Compute min and max column size if needed
         self.min_column_size = int(h * 0.01) if self.min_column_size is None else self.min_column_size
@@ -224,7 +225,7 @@ class FractalTimeDropout(Augmentation):
             chunk_width.append(width)
 
         # each chunk have an <intra_ratio> chance of disapearing.
-        valid_mask = [False if x <= self.intra_ratio else True for x in np.random.uniform(0, 1, size=len(chunks))]
+        valid_mask = [0 if x <= self.intra_ratio else 1 for x in np.random.uniform(0, 1, size=len(chunks))]
 
         # minimum one chunk have to disapear
         if sum(valid_mask) == len(chunks):
@@ -237,11 +238,30 @@ class FractalTimeDropout(Augmentation):
             if valid:
                 reconstructed_S.append(chunk)
             else:
-                reconstructed_S.append(list(np.ones(chunk.shape) * chunk.min()))
+                reconstructed_S.append(list(np.ones(chunk.shape) * mini))
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=1)
 
         return reconstructed_S
+
+
+class RandomTimeDropout(Augmentation):
+    def __init__(self, ratio, dropout: float = 0.5):
+        super().__init__(ratio)
+
+        self.dropout = dropout
+
+    def _apply(self, data):
+        (h, w) = data.shape
+        mini = data.min()
+        valid_mask = [0 if x <= self.dropout else 1 for x in np.random.uniform(0, 1, size=w)]
+
+        print(w)
+        for valid, idx in zip(valid_mask, range(w-1)):
+            if not valid:
+                data[:, idx] = mini
+
+        return data
 
 
 if __name__ == '__main__':
