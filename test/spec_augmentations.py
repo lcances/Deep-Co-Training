@@ -64,6 +64,25 @@ def test_FractalTimeDropout():
     plt.matshow(test_melspectro - fts_melspectro, fignum=0)
     plt.show()
 
-#test_FractalTimeStretch()
-#test_FractalFreqStretch()
+
+# randomTimeDropout
+def test_RandomTimeDropout():
+    from src.spec_augmentations import RandomTimeDropout
+    fts = RandomTimeDropout(1.0, dropout=0.1)
+
+    fts_melspectro = fts(test_melspectro)
+
+    plt.figure(0, figsize=(20, 15))
+    plt.subplot(3, 1, 1)
+    plt.matshow(test_melspectro, fignum=0)
+    plt.subplot(3, 1, 2)
+    plt.matshow(fts_melspectro, fignum=0)
+    plt.subplot(3, 1, 3)
+    plt.matshow(test_melspectro - fts_melspectro, fignum=0)
+    plt.show()
+
+
+test_FractalTimeStretch()
+test_FractalFreqStretch()
 test_FractalTimeDropout()
+test_RandomTimeDropout()
