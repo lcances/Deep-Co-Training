@@ -3,3 +3,6 @@
 /notebooks/.ipynb_checkpoints/
 /notebooks/tensorboard/
 /standalone/test/
+/tensorboard/
+/standalone/tensorboard_full_supervised/
+/standalone/tensorboard/
