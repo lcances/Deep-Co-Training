@@ -39,7 +39,7 @@ sys.path.append("../src/")
 from datasetManager import DatasetManager
 from generators import Generator, CoTrainingGenerator
 from samplers import CoTrainingSampler
-import signal_augmentations as sa 
+import signal_augmentations as sa
 
 import models
 from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
@@ -55,8 +55,8 @@ from ramps import Warmup, sigmoid_rampup
 
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
 parser.add_argument("--model", default="cnn", type=str, help="The name of the model to load")
-parser.add_argument("-t", "--train", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
-parser.add_argument("-v", "--val", nargs="+", default="10", required=True, type=int, help="fold to use for validation")
+parser.add_argument("--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
+parser.add_argument("--val_folds", nargs="+", default="10", required=True, type=int, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=int)
 parser.add_argument('--batchsize', '-b', default=100, type=int)
@@ -78,7 +78,6 @@ parser.add_argument('--resume', '-r', action='store_true', help='resume from che
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
 args = parser.parse_args()
-
 
 # ## Reproducibility
 
@@ -113,7 +112,10 @@ def get_datetime():
 # load the data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-dataset = DatasetManager(metadata_root, audio_root, verbose=1)
+dataset = DatasetManager(metadata_root, audio_root,
+                         train_fold=args.train_folds,
+                         val_fold=args.val_folds,
+                         verbose=1)
 
 # prepare the sampler with the specified number of supervised file
 nb_train_file = len(dataset.audio["train"])
@@ -177,7 +179,7 @@ adv_generator_2 = GradientSignAttack(
 )
 
 
-# ## optimizers & callbacks 
+# ## optimizers & callbacks
 
 # In[26]:
 
@@ -212,7 +214,7 @@ def reset_all_metrics():
     all_metrics = [*ratioS, *ratioU, *ratioSU, *accS, *accU, *accSU]
     for m in all_metrics:
         m.reset()
-        
+
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -240,20 +242,20 @@ def train(epoch):
 
     running_loss = 0.0
     ls = 0.0
-    lc = 0.0 
+    lc = 0.0
     ld = 0.0
-    
+
     start_time = time.time()
     print("")
-    
+
     for batch, (X, y) in enumerate(train_loader):
         X = [x.squeeze() for x in X]
         y = [y_.squeeze() for y_ in y]
-    
+
         # separate Supervised (S) and Unsupervised (U) parts
         X_S, X_U = X[:-1], X[-1]
         y_S, y_U = y[:-1], y[-1]
-        
+
         for i in range(len(X_S)):
             X_S[i] = X_S[i].cuda()
             y_S[i] = y_S[i].cuda()
@@ -267,7 +269,7 @@ def train(epoch):
         _, pred_S1 = torch.max(logits_S1, 1)
         _, pred_S2 = torch.max(logits_S2, 1)
 
-        # pseudo labels of U 
+        # pseudo labels of U
         _, pred_U1 = torch.max(logits_U1, 1)
         _, pred_U2 = torch.max(logits_U2, 1)
 
@@ -303,7 +305,7 @@ def train(epoch):
         Loss_sup_S1, Loss_sup_S2, Loss_sup = p_loss_sup(logits_S1, logits_S2, y_S[0], y_S[1])
         Loss_cot = loss_cot(logits_U1, logits_U2)
         pld_S, pld_U, Loss_diff = p_loss_diff(logits_S1, logits_S2, adv_logits_S1, adv_logits_S2, logits_U1, logits_U2, adv_logits_U1, adv_logits_U2)
-        
+
         total_loss = Loss_sup + lambda_cot() * Loss_cot + lambda_diff() * Loss_diff
         total_loss.backward()
         optimizer.step()
@@ -321,7 +323,7 @@ def train(epoch):
         acc_U2 = accU[1](pred_U2, y_U)
         acc_SU1 = accSU[0](pred_SU1, y_SU1)
         acc_SU2 = accSU[1](pred_SU2, y_SU2)
-        
+
         # ratios  ----
         _, adv_pred_S1 = torch.max(adv_logits_S1, 1)
         _, adv_pred_S2 = torch.max(adv_logits_S2, 1)
@@ -340,12 +342,12 @@ def train(epoch):
         ratio_SU1 = ratioSU[0](adv_pred_SU1, adv_y_SU1)
         ratio_SU2 = ratioSU[1](adv_pred_SU2, adv_y_SU2)
         # ========
-        
+
         running_loss += total_loss.item()
         ls += Loss_sup.item()
         lc += Loss_cot.item()
         ld += Loss_diff.item()
-        
+
         # print statistics
         print("Epoch %s: %.2f%% : train acc: %.3f %.3f - Loss: %.3f %.3f %.3f %.3f - time: %.2f" % (
             epoch, (batch / len(sampler)) * 100,
@@ -378,7 +380,7 @@ def train(epoch):
     tensorboard.add_scalar("detail_ratio/ratio U2", ratio_U2, epoch)
     tensorboard.add_scalar("detail_ratio/ratio SU1", ratio_SU1, epoch)
     tensorboard.add_scalar("detail_ratio/ratio SU2", ratio_SU2, epoch)
-    
+
     # Return the total loss to check for NaN
     return total_loss.item()
 
@@ -411,10 +413,10 @@ def test(epoch):
 
     print('\nnet1 test acc: %.3f%% (%d/%d) | net2 test acc: %.3f%% (%d/%d)'
         % (100.*correct1/total1, correct1, total1, 100.*correct2/total2, correct2, total2))
-    
+
     tensorboard.add_scalar("val/acc 1", correct1 / total1, epoch)
     tensorboard.add_scalar("val/acc 2", correct2 / total2, epoch)
-    
+
     tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
