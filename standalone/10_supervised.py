@@ -179,7 +179,7 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_supervised" % (get_datetime())
+title = "%s_%s_10_supervised" % (args.job_name, get_datetime())
 tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
 
 
