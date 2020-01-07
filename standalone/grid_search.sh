@@ -61,3 +61,9 @@ do
     done
 done
 
+# After this step, the following parameters should be the best
+# base_lr = 0.01
+# epsilon = 0.1
+# lambda_cot_max = 5
+# lambda_diff_max = 0.25
+# warmup = 160
