@@ -56,9 +56,9 @@ from ramps import Warmup, sigmoid_rampup
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
 parser.add_argument("--model", default="cnn", type=str, help="The name of the model to load")
 parser.add_argument("--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
-parser.add_argument("--val_folds", nargs="+", default="10", required=True, type=int, help="fold to use for validation")
+parser.add_argument("--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
-parser.add_argument("--ratio", default=0.1, type=int)
+parser.add_argument("--ratio", default=0.1, type=float)
 parser.add_argument('--batchsize', '-b', default=100, type=int)
 parser.add_argument('--lambda_cot_max', default=10, type=int)
 parser.add_argument('--lambda_diff_max', default=0.5, type=float)
@@ -239,6 +239,7 @@ tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
 def train(epoch):
     m1.train()
     m2.train()
+    reset_all_metrics()
 
     running_loss = 0.0
     ls = 0.0
@@ -392,10 +393,13 @@ def test(epoch):
     global best_acc
     m1.eval()
     m2.eval()
+    reset_all_metrics()
+
     correct1 = 0
     correct2 = 0
     total1 = 0
     total2 = 0
+
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(val_loader):
             inputs = inputs.cuda()
