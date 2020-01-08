@@ -65,15 +65,15 @@ class Level(Augmentation):
 
 
 # TODO better implementation
-# class Noise(Augmentation):
-#     def __init__(self, ratio, noise_factor: tuple = (0.1, 0.4)):
-#         super().__init__(ratio)
-#         self.noise_factor = noise_factor
-#
-#     def _apply(self, data):
-#         noise = np.random.randn(len(data))
-#         noise_factor = np.random.uniform(*self.noise_factor)
-#         return data + noise_factor * noise
+class Noise2(Augmentation):
+     def __init__(self, ratio, noise_factor: tuple = (0.1, 0.4)):
+         super().__init__(ratio)
+         self.noise_factor = noise_factor
+
+     def _apply(self, data):
+         noise = np.random.randn(len(data))
+         noise_factor = np.random.uniform(*self.noise_factor)
+         return data + noise_factor * noise
 
 
 class Noise(Augmentation):
