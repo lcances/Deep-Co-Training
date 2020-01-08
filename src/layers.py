@@ -22,6 +22,7 @@ class ConvReLU(nn.Sequential):
 
 
 class MultisampleDropout2d(nn.Module):
+    #TODO fix
     """https://arxiv.org/pdf/1905.09788.pdf"""
 
     def __init__(self, ratio, nb_sample):
