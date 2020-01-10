@@ -181,6 +181,10 @@ class CoTrainingGenerator(data.Dataset):
 
         return self.X_val, self.y_val
 
+    def invalid(self):
+        self.X_val = None
+        self.y_val = None
+
     def __len__(self) -> int:
         return len(self.sampler)
 
