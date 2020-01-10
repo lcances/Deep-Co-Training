@@ -283,7 +283,7 @@ tensorboard = SummaryWriter(log_dir="%s/%s" % (args.tensorboard_dir, title), com
 # ======================================================================================================================
 acc_func = CategoricalAccuracy()
 
-for epoch in tqdm.tqdm(range(nb_epoch)):
+for epoch in range(nb_epoch):
     start_time = time.time()
     print("")
     
