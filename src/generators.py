@@ -45,7 +45,7 @@ class Generator(data.Dataset):
 
         for filename in self.tqdm_func(filenames):
             raw_audio = self.dataset.audio["val"][filename]
-            feature = self.dataset.extract_feature(raw_audio, self.dataset.sr)
+            feature = self.dataset.extract_feature(raw_audio)
             target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
@@ -95,7 +95,7 @@ class Generator(data.Dataset):
             raw_audio = raw_audio[:LENGTH * SR]
 
         # extract feature
-        feat = self.dataset.extract_feature(raw_audio, SR)
+        feat = self.dataset.extract_feature(raw_audio)
         y = np.asarray(y)
 
         return feat, y
@@ -170,7 +170,7 @@ class CoTrainingGenerator(data.Dataset):
 
         for filename in self.tqdm_func(filenames):
             raw_audio = self.dataset.audio["val"][filename]
-            feature = self.dataset.extract_feature(raw_audio, self.dataset.sr)
+            feature = self.dataset.extract_feature(raw_audio)
             target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
@@ -255,7 +255,7 @@ class CoTrainingGenerator(data.Dataset):
                 raw_audios[i] = raw_audios[i][:LENGTH * SR]
 
         # Extract the features
-        features = [self.dataset.extract_feature(raw, SR) for raw in raw_audios]
+        features = [self.dataset.extract_feature(raw) for raw in raw_audios]
 
         # Convert to np array
         return np.array(features), np.array(targets)
@@ -332,7 +332,7 @@ class CoTrainingGenerator_SA(CoTrainingGenerator):
                 raw_audios[i] = raw_audios[i][:LENGTH * SR]
 
         # Extract the features
-        features = [self.dataset.extract_feature(raw, SR) for raw in raw_audios]
+        features = [self.dataset.extract_feature(raw) for raw in raw_audios]
 
         # Convert to np array
         return np.array(features), np.array(targets)
