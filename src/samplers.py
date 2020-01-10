@@ -1,13 +1,14 @@
 from torch.utils.data.sampler import Sampler
-import math, random
+import math
+import random
 import numpy as np
 
 
 class CoTrainingSampler(Sampler):
     METHODS = ["duplicate", "truncate", "random_truncate", "random_select"]
     
-    def __init__(self, batch_size, supervised_size: int, unsupervised_size: int, shuffle: bool = True,
-                 nb_view: int = 2, ratio: float = None, method: str = "duplicate"):
+    def __init__(self, dataset, batch_size, nb_class: int = 10,
+                 shuffle: bool = True, nb_view: int = 2, ratio: float = None, method: str = "duplicate"):
         """
         The CoTrainingSampler is used to get the index that gonna be used a batch for every views.
         It will output batch_indexes as follow:
@@ -26,12 +27,14 @@ class CoTrainingSampler(Sampler):
                         supervised files, "truncate" will remove unsupervised files and,
                         "random_truncate" will remove random unsupervised files.
         """
+        self.dataset = dataset
         self.batch_size = batch_size
-        self.supervised_size = supervised_size
-        self.unsupervised_size = unsupervised_size
+        self.supervised_size = len(dataset.y_S)
+        self.unsupervised_size = len(dataset.y_U)
         self.nb_view = nb_view
+        self.nb_class = nb_class
         self.shuffle = shuffle
-        self.ratio = ratio if ratio is not None else supervised_size / (supervised_size + unsupervised_size)
+        self.ratio = ratio if ratio is not None else self.supervised_size / (self.supervised_size + self.unsupervised_size)
         self.method = method
         
         # will hold the indexes for supervised and unsupervised sample.
@@ -48,7 +51,7 @@ class CoTrainingSampler(Sampler):
         [random.shuffle(self.views[idx]) for idx in range(self.nb_view)]
         
         # Calc the supervised and unsupervised batch size
-        if unsupervised_size != 0:
+        if self.unsupervised_size != 0:
 
             # split ratio, keep total nb of file = batch_size
             self.nb_batch = int(math.floor((len(self.S_idx) + len(self.U_idx)) / batch_size))
@@ -90,6 +93,14 @@ class CoTrainingSampler(Sampler):
             nb_U = int((self.supervised_size * (1 - self.ratio)) / self.ratio)
             self.U_idx = list(range(self.unsupervised_size))
             self.U_idx = np.random.choice(self.U_idx, nb_U)
+
+        def round_to_multiple():
+            """Adjust the S and U size to be a multiple of number of class (below)"""
+            valid_nb_S = len(self.S_idx) - (len(self.S_idx) % self.nb_class)
+            valid_nb_U = len(self.U_idx) - (len(self.U_idx) % self.nb_class)
+
+            self.S_idx = self.S_idx[:valid_nb_S]
+            self.U_idx = self.U_idx[:valid_nb_U]
         
         if self.ratio == 1: self.ratio -= 0.001
         if self.ratio == 0: self.ratio += 0.001
@@ -102,6 +113,8 @@ class CoTrainingSampler(Sampler):
         if self.method == CoTrainingSampler.METHODS[1]: truncate_unsupervised()
         if self.method == CoTrainingSampler.METHODS[2]: random_truncate_unsupervised()
         if self.method == CoTrainingSampler.METHODS[3]: random_select()
+
+        round_to_multiple()
 
         # Shuffle the indexes
         if self.shuffle:
