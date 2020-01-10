@@ -118,14 +118,8 @@ dataset = DatasetManager(metadata_root, audio_root,
                          verbose=1)
 
 # prepare the sampler with the specified number of supervised file
-nb_train_file = len(dataset.audio["train"])
-nb_s_file = int(nb_train_file * args.ratio)
-nb_s_file = nb_s_file - (nb_s_file % DatasetManager.NB_CLASS)  # need to be a multiple of number of class
-nb_u_file = nb_train_file - nb_s_file
-
-
-sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-train_dataset = CoTrainingGenerator(dataset, sampler)
+train_dataset = CoTrainingGenerator(dataset, args.ratio)
+sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
 # # Prep training
@@ -154,8 +148,6 @@ m2 = m2.cuda()
 # ## Loaders & adversarial generators
 
 # In[25]:
-
-
 
 x, y = train_dataset.validation
 x = torch.from_numpy(x)
@@ -245,6 +237,8 @@ def train(epoch):
     ls = 0.0
     lc = 0.0
     ld = 0.0
+    
+    reset_all_metrics()
 
     start_time = time.time()
     print("")
@@ -399,7 +393,7 @@ def test(epoch):
     correct2 = 0
     total1 = 0
     total2 = 0
-
+    
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(val_loader):
             inputs = inputs.cuda()

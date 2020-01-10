@@ -230,6 +230,8 @@ class FractalTimeDropout(Augmentation):
         # minimum one chunk have to disapear
         if sum(valid_mask) == len(chunks):
             valid_mask[np.random.choice(range(len(chunks)))] = 0
+        
+        # TODO add max limit
 
         print(valid_mask)
         # reconstruct the signal using void or compacting it
