@@ -117,15 +117,8 @@ metadata_root = "../dataset/metadata"
 dataset = DatasetManager(metadata_root, audio_root, verbose=2)
 
 # prepare the sampler with the specified number of supervised file
-nb_train_file = len(dataset.audio["train"])
-nb_s_file = int(nb_train_file * args.ratio)
-nb_s_file = nb_s_file - (nb_s_file % DatasetManager.NB_CLASS)  # need to be a multiple of number of class
-nb_u_file = nb_train_file - nb_s_file
-
-
-sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-train_dataset = CoTrainingGenerator(dataset, sampler)
-
+train_dataset = CoTrainingGenerator(dataset, args.ratio)
+sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 # ## Models
 
