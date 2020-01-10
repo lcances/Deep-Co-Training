@@ -45,7 +45,7 @@ class CoTrainingSampler(Sampler):
         
         # Create view
         self.views = [self.S_idx.copy() for _ in range(self.nb_view)]
-        [random.shuffle(self.views[i]) for i in range(self.nb_view)]
+        [random.shuffle(self.views[idx]) for idx in range(self.nb_view)]
         
         # Calc the supervised and unsupervised batch size
         if unsupervised_size != 0:
@@ -69,7 +69,7 @@ class CoTrainingSampler(Sampler):
         def duplicate_supervised():
             # calc the number of time the supervised part should be copied to keep the ratio
             if self.unsupervised_size != 0:
-                nb_S = int( (self.ratio * self.unsupervised_size) / (1 - self.ratio) )
+                nb_S = int((self.ratio * self.unsupervised_size) / (1 - self.ratio))
 
                 if len(self.S_idx) < nb_S:
                     S_idx = self.S_idx.copy()
@@ -78,8 +78,8 @@ class CoTrainingSampler(Sampler):
                 self.S_idx = self.S_idx[:nb_S]
         
         def truncate_unsupervised():
-            # Calc the number of unsupervised file that must be kept to fullfill the ratio
-            nb_U = int( (self.supervised_size * (1 - self.ratio)) / self.ratio)
+            # Calc the number of unsupervised file that must be kept to fulfill the ratio
+            nb_U = int((self.supervised_size * (1 - self.ratio)) / self.ratio)
             self.U_idx = self.U_idx[:nb_U]
             
         def random_truncate_unsupervised():
@@ -87,7 +87,7 @@ class CoTrainingSampler(Sampler):
             truncate_unsupervised()
 
         def random_select():
-            nb_U = int( (self.supervised_size * (1 - self.ratio)) / self.ratio)
+            nb_U = int((self.supervised_size * (1 - self.ratio)) / self.ratio)
             self.U_idx = list(range(self.unsupervised_size))
             self.U_idx = np.random.choice(self.U_idx, nb_U)
         
@@ -123,15 +123,16 @@ class CoTrainingSampler(Sampler):
             U_batch = self.U_idx[U_start:U_end]
             batch.append(U_batch)
 
-            yield (batch, )     # If a list of list, pytorch will take only the first element. work aroud is to send a 1-element tuple
+            # If a list of list, Pytorch will take only the first element. work around is to send a 1-element tuple
+            yield batch,
 
     def __len__(self):
         return self.nb_batch
 
-if __name__ == '__main__':
-    #s = CoTrainingSampler(64, 1478, 14852, ratio=None)
-    s = CoTrainingSampler(32, 873, 8732-87, ratio=None)
 
+if __name__ == '__main__':
+    # s = CoTrainingSampler(64, 1478, 14852, ratio=None)
+    s = CoTrainingSampler(32, 873, 8732-87, ratio=None)
 
     for i in s:
         print(i)
