@@ -177,7 +177,7 @@ acc_func = CategoricalAccuracy()
 
 def reset_all_metrics():
     acc_func.reset()
-        
+
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -193,24 +193,25 @@ tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
 
 def train(epoch):
     m1.train()
+    reset_all_metrics()
 
     running_loss = 0.0
-    
+
     start_time = time.time()
     print("")
-    
+
     for batch, (X, y) in enumerate(train_loader):
         X = [x.squeeze() for x in X]
         y = [y_.squeeze() for y_ in y]
-    
+
         # separate Supervised (S) and Unsupervised (U) parts
         X_S, X_U = X[:-1], X[-1]
         y_S, y_U = y[:-1], y[-1]
-        
+
         # Only one view interesting, no U
         X_S = X_S[0]
         y_S = y_S[0]
-        
+
         X_S, y_S = X_S.cuda().float(), y_S.cuda().long()
 
         # ======== perform prediction ========
@@ -220,7 +221,7 @@ def train(epoch):
         # ======== calculate loss ========
         loss_sup = criterion(logits_S, y_S)
         total_loss = loss_sup
-        
+
         # ======== backpropagation =======
         optimizer.zero_grad()
         total_loss.backward()
@@ -229,7 +230,7 @@ def train(epoch):
         # ======== Calc the metrics ========
         acc = acc_func(pred_S, y_S)
         running_loss += total_loss.item()
-        
+
         # print statistics
         print("Epoch %s: %.2f%% : train acc: %.3f - Loss: %.3f - time: %.2f" % (
             epoch, (batch / len(sampler)) * 100,
@@ -241,7 +242,7 @@ def train(epoch):
     # using tensorboard to monitor loss and acc\n",
     tensorboard.add_scalar('train/total_loss', total_loss.item(), epoch)
     tensorboard.add_scalar('train/acc', acc, epoch)
-    
+
     # Return the total loss to check for NaN
     return total_loss.item()
 
@@ -251,9 +252,9 @@ def train(epoch):
 
 def test(epoch):
     m1.eval()
-    
+
     reset_all_metrics()
-    
+
     with torch.no_grad():
         for batch_idx, (X, y) in enumerate(val_loader):
             X_S = X.cuda().float()
@@ -261,20 +262,20 @@ def test(epoch):
 
             logits_S = m1(X_S)
             _, pred_S = torch.max(logits_S, 1)
-            
+
             loss_val = criterion(logits_S, y_S)
-            
+
             acc_val = acc_func(pred_S, y_S)
-        
+
         print("\nEpoch %s: Val acc: %.3f - loss: %.3f" % (
             epoch,
             acc_val,
             loss_val.item()
         ))
-    
+
     tensorboard.add_scalar("val/acc", acc_val, epoch)
     tensorboard.add_scalar("val/loss", loss_val.item(), epoch)
-    
+
     tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
 
     # Apply callbacks
@@ -287,11 +288,11 @@ def test(epoch):
 
 for epoch in range(0, args.epochs):
     total_loss = train(epoch)
-    
+
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
-        
+
     test(epoch)
 
 
@@ -306,7 +307,7 @@ for X, y in val_loader:
     y = y.cuda().long()
 
     logits = m1(X)
-    
+
     val_logits.extend(logits.detach().cpu().numpy())
     val_y.extend(y.cpu().numpy())
 

@@ -40,7 +40,7 @@ class Generator(data.Dataset):
 
         for filename in self.tqdm_func(filenames):
             raw_audio = self.dataset.audio["val"][filename]
-            feature = self.dataset.extract_feature(raw_audio, self.dataset.sr)
+            feature = self.dataset.extract_feature(raw_audio)
             target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
@@ -90,7 +90,7 @@ class Generator(data.Dataset):
             raw_audio = raw_audio[:LENGTH * SR]
 
         # extract feature
-        feat = self.dataset.extract_feature(raw_audio, SR)
+        feat = self.dataset.extract_feature(raw_audio)
         y = np.asarray(y)
 
         return feat, y
@@ -98,7 +98,7 @@ class Generator(data.Dataset):
 
 class CoTrainingGenerator(data.Dataset):
     """Must be used with the CoTrainingSampler"""
-    def __init__(self, dataset, sampler, unlabel_target: bool = False, augments: tuple = ()):
+    def __init__(self, dataset, ratio, unlabel_target: bool = False, augments: tuple = ()):
         """
         Args:
             dataset:
@@ -109,7 +109,7 @@ class CoTrainingGenerator(data.Dataset):
         super(CoTrainingGenerator, self).__init__()
 
         self.dataset = dataset
-        self.sampler = sampler
+        self.ratio = ratio
         self.unlabel_target = unlabel_target
         self.augments = augments
 
@@ -143,20 +143,23 @@ class CoTrainingGenerator(data.Dataset):
         file in each class
         """
         metadata = self.dataset.meta["train"]
-        nb_S = len(self.sampler.S_idx)
 
-        # Prepare ground truth
+        # Prepare ground truth, balanced class between S and U
         for i in range(DatasetManager.NB_CLASS):
             class_samples = metadata.loc[metadata.classID == i]
 
-            nb_sample_S = nb_S // DatasetManager.NB_CLASS
+            nb_sample_S = int(np.ceil(len(class_samples) * self.ratio))
+            print("generator, nb_sample_s: ", nb_sample_S)
 
             if i == 0:
                 self.y_S = class_samples[:nb_sample_S]
                 self.y_U = class_samples[nb_sample_S:]
+
             else:
                 class_meta_S = class_samples[:nb_sample_S]
                 class_meta_U = class_samples[nb_sample_S:]
+                print(len(class_samples))
+                print(len(class_meta_S), len(class_meta_U))
                 self.y_S = pd.concat([self.y_S, class_meta_S])
                 self.y_U = pd.concat([self.y_U, class_meta_U])
 
@@ -171,7 +174,7 @@ class CoTrainingGenerator(data.Dataset):
 
         for filename in self.tqdm_func(filenames):
             raw_audio = self.dataset.audio["val"][filename]
-            feature = self.dataset.extract_feature(raw_audio, self.dataset.sr)
+            feature = self.dataset.extract_feature(raw_audio)
             target = self.dataset.meta["val"].at[filename, "classID"]
 
             self.X_val.append(feature)
@@ -182,7 +185,12 @@ class CoTrainingGenerator(data.Dataset):
 
         return self.X_val, self.y_val
 
+    def invalid(self):
+        self.X_val = None
+        self.y_val = None
+
     def __len__(self) -> int:
+        pass
         return len(self.sampler)
 
     def __getitem__(self, batch_idx):
@@ -256,7 +264,7 @@ class CoTrainingGenerator(data.Dataset):
                 raw_audios[i] = raw_audios[i][:LENGTH * SR]
 
         # Extract the features
-        features = [self.dataset.extract_feature(raw, SR) for raw in raw_audios]
+        features = [self.dataset.extract_feature(raw) for raw in raw_audios]
 
         # Convert to np array
         return np.array(features), np.array(targets)
@@ -333,7 +341,7 @@ class CoTrainingGenerator_SA(CoTrainingGenerator):
                 raw_audios[i] = raw_audios[i][:LENGTH * SR]
 
         # Extract the features
-        features = [self.dataset.extract_feature(raw, SR) for raw in raw_audios]
+        features = [self.dataset.extract_feature(raw) for raw in raw_audios]
 
         # Convert to np array
         return np.array(features), np.array(targets)

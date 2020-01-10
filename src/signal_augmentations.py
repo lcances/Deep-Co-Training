@@ -65,15 +65,39 @@ class Level(Augmentation):
 
 
 # TODO better implementation
+class Noise2(Augmentation):
+     def __init__(self, ratio, noise_factor: tuple = (0.1, 0.4)):
+         super().__init__(ratio)
+         self.noise_factor = noise_factor
+
+     def _apply(self, data):
+         noise = np.random.randn(len(data))
+         noise_factor = np.random.uniform(*self.noise_factor)
+         return data + noise_factor * noise
+
+
 class Noise(Augmentation):
-    def __init__(self, ratio, noise_factor: tuple = (0.1, 0.4)):
+    def __init__(self, ratio, target_snr: int = 10):
         super().__init__(ratio)
-        self.noise_factor = noise_factor
+        self.target_snr = target_snr
 
     def _apply(self, data):
-        noise = np.random.randn(len(data))
-        noise_factor = np.random.uniform(*self.noise_factor)
-        return data + noise_factor * noise
+        # calculate noise in signal
+        P_data = data**2
+        average_noise_db = 10 * np.log10(P_data.mean())
+
+        # Adjust target SNR
+        t_snr = average_noise_db - self.target_snr
+
+        # calc scale factor
+        k = 10 ** (t_snr / 10)
+
+        # noise
+        noise = np.random.normal(0, np.sqrt(k), size=len(data))
+
+        return data + noise
+
+
 
 class Occlusion(Augmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, max_size: float = 1):

@@ -88,12 +88,12 @@ class DatasetManager:
         return output
 
     def load_audio(self, file_path):
-        raw_data, sr = librosa.load(file_path, sr=DatasetManager.SR, res_type="kaiser_fast")
+        raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
         return raw_data, sr
 
-    def extract_feature(self, raw_data, sr):
+    def extract_feature(self, raw_data):
         feat = librosa.feature.melspectrogram(
-            raw_data, sr, n_fft=2048, hop_length=512, n_mels=64, fmin=0, fmax=sr // 2)
+            raw_data, self.sr, n_fft=2048, hop_length=512, n_mels=64, fmin=0, fmax=self.sr // 2)
         feat = librosa.power_to_db(feat, ref=np.max)
         return feat
 
