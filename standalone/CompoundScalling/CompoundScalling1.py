@@ -38,9 +38,9 @@ parser.add_argument('--tensorboard_dir', default='tensorboard/compoundScaling', 
 parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
 parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument("--job_name", default="default", type=str)
-parser.add_argument("-a", "--alpha", default=1, type=int)
-parser.add_argument("-b", "--beta", default=1, type=int)
-parser.add_argument("-g", "--gamma", default=1, type=int)
+parser.add_argument("-a", "--alpha", default=1, type=float)
+parser.add_argument("-b", "--beta", default=1, type=float)
+parser.add_argument("-g", "--gamma", default=1, type=float)
 args = parser.parse_args()
 
 # ======================================================================================================================
