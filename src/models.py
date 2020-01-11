@@ -1,7 +1,9 @@
+import numpy as np
+
 import torch
 import torch.nn as nn
 
-from layers import ConvPoolReLU, ConvReLU
+from layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool
 
 
 class cnn(nn.Module):
