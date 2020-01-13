@@ -27,8 +27,8 @@ from models import ScalableCnn1
 #           PARAMETERS
 # ======================================================================================================================
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
-parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
-parser.add_argument("-v", "--val_folds", nargs="+", default="10", required=True, type=int, help="fold to use for validation")
+parser.add_argument("-t", "--train_folds", nargs="*", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int, help="fold to use for training")
+parser.add_argument("-v", "--val_folds", nargs="*", default=[10], type=int, help="fold to use for validation")
 parser.add_argument('--batchsize', default=100, type=int)
 parser.add_argument('--seed', default=1234, type=int)
 parser.add_argument('--epochs', default=100, type=int)
@@ -39,9 +39,15 @@ parser.add_argument('--tensorboard_dir', default='tensorboard/compoundScaling', 
 parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
 parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument("--job_name", default="default", type=str)
+
 parser.add_argument("-a", "--alpha", default=1, type=float)
 parser.add_argument("-b", "--beta", default=1, type=float)
 parser.add_argument("-g", "--gamma", default=1, type=float)
+parser.add_argument("--init_conv_inputs", nargs="*", default=[1, 32, 64, 64], type=int)
+parser.add_argument("--init_conv_outputs", nargs="*", default=[32, 64, 64, 64], type=int)
+parser.add_argument("--init_linear_inputs", nargs="*", default=[1344], type=int)
+parser.add_argument("--init_linear_outputs", nargs="*", default=[10], type=int)
+parser.add_argument("--init_resolution", nargs="*", default=[64, 173], type=int)
 args = parser.parse_args()
 
 # ======================================================================================================================
@@ -73,7 +79,7 @@ def get_valid_scaling_factors():
     for a, b, g in itertools.product(alpha, beta, gamma):
         M = a * b**2 * g**2
 
-        if M <= 4:
+        if M <= 2:
             valid_scaling_factors.append((a, b, g))
 
     return valid_scaling_factors
@@ -93,7 +99,14 @@ torch.cuda.empty_cache()
 
 # ScallableCNN --------
 model_func = ScalableCnn1
-m1 = model_func(compound_scales=(args.alpha, args.beta, args.gamma))
+m1 = model_func(
+    compound_scales=(args.alpha, args.beta, args.gamma),
+    initial_conv_inputs=args.init_conv_inputs,
+    initial_conv_outputs=args.init_conv_outputs,
+    initial_linear_inputs=args.init_linear_inputs,
+    initial_linear_outputs=args.init_linear_outputs,
+    initial_resolution=args.init_resolution,
+)
 m1 = m1.cuda()
 
 # prep dataset --------
