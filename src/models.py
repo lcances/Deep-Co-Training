@@ -68,22 +68,23 @@ class ScalableCnn1(nn.Module):
     Compound Scaling based CNN
     see: https://arxiv.org/pdf/1905.11946.pdf
     """
-    def __init__(self, compound_scales: tuple = (1, 1, 1)):
+    def __init__(self, compound_scales: tuple = (1, 1, 1),
+                 initial_conv_inputs = (1, 32, 64, 64),
+                 initial_conv_outputs = (32, 64, 64, 64),
+                 initial_linear_inputs = (1344,),
+                 initial_linear_outputs = (10,),
+                 initial_resolution = (64, 173)
+                 ):
         super(ScalableCnn1, self).__init__()
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
         
-        initial_conv_inputs = [1, 32, 64, 64]
-        initial_conv_outputs = [32, 64, 64, 64]
-        initial_nb_conv = 4
-        initial_dense_inputs = [1344]
-        initial_dense_outputs = [10]
-        initial_nb_dense = 1
-        initial_resolution = (64, 173)
-        
+        initial_nb_conv = len(initial_conv_inputs)
+        initial_nb_dense = len(initial_linear_inputs)
+
         # Apply compound scaling
         # depth ----
         scaled_nb_conv = np.floor(initial_nb_conv * alpha)
-        scaled_nb_dense = np.floor(initial_nb_dense * alpha)
+        scaled_nb_linear = np.floor(initial_nb_dense * alpha)
         
         if scaled_nb_conv != initial_nb_conv:  # Another conv layer must be created
             print("More conv layer must be created")
@@ -98,21 +99,21 @@ class ScalableCnn1(nn.Module):
             print("inputs: ", initial_conv_inputs)
             print("ouputs: ", initial_conv_outputs)
             
-        if scaled_nb_dense != initial_nb_dense:  # Another dense layer must be created
+        if scaled_nb_linear != initial_nb_dense:  # Another dense layer must be created
             print("More dense layer must be created")
-            dense_list = np.linspace(initial_dense_inputs[0], initial_dense_outputs[-1], scaled_nb_dense+1)
-            initial_dense_inputs = dense_list[:-1]
-            initial_dense_outputs = dense_list[1:]
+            dense_list = np.linspace(initial_linear_inputs[0], initial_linear_outputs[-1], scaled_nb_linear+1)
+            initial_linear_inputs = dense_list[:-1]
+            initial_linear_outputs = dense_list[1:]
             
             print("new dense layers:")
-            print("inputs: ", initial_dense_inputs)
-            print("ouputs: ", initial_dense_outputs)
+            print("inputs: ", initial_linear_inputs)
+            print("ouputs: ", initial_linear_outputs)
                 
         # width ----
         scaled_conv_inputs = [int(np.floor(i * beta)) for i in initial_conv_inputs]
         scaled_conv_outputs = [int(np.floor(i * beta)) for i in initial_conv_outputs]
-        scaled_dense_inputs = [int(np.floor(i * beta)) for i in initial_dense_inputs]
-        scaled_dense_outputs = [int(np.floor(i * beta)) for i in initial_dense_outputs]
+        scaled_dense_inputs = [int(np.floor(i * beta)) for i in initial_linear_inputs]
+        scaled_dense_outputs = [int(np.floor(i * beta)) for i in initial_linear_outputs]
         
         # Check how many conv with pooling layer can be used
         nb_max_pooling = np.min([np.log2(initial_resolution[0]), int(np.log2(initial_resolution[1]))])
