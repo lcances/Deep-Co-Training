@@ -69,11 +69,11 @@ class ScalableCnn1(nn.Module):
     see: https://arxiv.org/pdf/1905.11946.pdf
     """
     def __init__(self, compound_scales: tuple = (1, 1, 1),
-                 initial_conv_inputs = (1, 32, 64, 64),
-                 initial_conv_outputs = (32, 64, 64, 64),
-                 initial_linear_inputs = (1344,),
-                 initial_linear_outputs = (10,),
-                 initial_resolution = (64, 173)
+                 initial_conv_inputs=(1, 32, 64, 64),
+                 initial_conv_outputs=(32, 64, 64, 64),
+                 initial_linear_inputs=(1344,),
+                 initial_linear_outputs=(10,),
+                 initial_resolution=(64, 173)
                  ):
         super(ScalableCnn1, self).__init__()
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
