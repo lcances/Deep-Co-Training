@@ -96,19 +96,6 @@ device = torch.device("cuda:0" if use_cuda else "cpu")
 # ======================================================================================================================
 torch.cuda.empty_cache()
 
-
-# ScallableCNN --------
-model_func = ScalableCnn1
-m1 = model_func(
-    compound_scales=(args.alpha, args.beta, args.gamma),
-    initial_conv_inputs=args.init_conv_inputs,
-    initial_conv_outputs=args.init_conv_outputs,
-    initial_linear_inputs=args.init_linear_inputs,
-    initial_linear_outputs=args.init_linear_outputs,
-    initial_resolution=args.init_resolution,
-)
-m1 = m1.cuda()
-
 # prep dataset --------
 audio_root = "../../dataset/audio"
 metadata_root = "../../dataset/metadata"
@@ -118,6 +105,19 @@ dataset = DatasetManager(
     train_fold=args.train_folds, val_fold=args.val_folds,
     verbose=1
 )
+
+# ScallableCNN --------
+model_func = ScalableCnn1
+m1 = model_func(
+    dataset,
+    compound_scales=(args.alpha, args.beta, args.gamma),
+    initial_conv_inputs=args.init_conv_inputs,
+    initial_conv_outputs=args.init_conv_outputs,
+    initial_linear_inputs=args.init_linear_inputs,
+    initial_linear_outputs=args.init_linear_outputs,
+    initial_resolution=args.init_resolution,
+)
+m1 = m1.cuda()
 
 # loss and optimizer --------
 criterion_bce = nn.CrossEntropyLoss(reduction="mean")
