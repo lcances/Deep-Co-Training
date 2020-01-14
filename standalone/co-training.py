@@ -420,8 +420,8 @@ def test(epoch):
     # Apply callbacks and warmup
     for c in callbacks:
         c.step()
-    lambda_cot.next()
-    lambda_diff.next()
+    lambda_cot.step()
+    lambda_diff.step()
 
 
 # In[ ]:
