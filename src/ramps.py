@@ -36,7 +36,7 @@ class Warmup:
         self.current_epoch = 0
         self.value = 0
 
-    def next(self):
+    def step(self):
         if self.current_epoch < self.nb_epoch:
             self.current_epoch += 1
             ramp = self.method(self.current_epoch, self.nb_epoch)
