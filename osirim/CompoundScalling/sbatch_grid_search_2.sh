@@ -21,7 +21,7 @@ init_linear="--init_linear_inputs 3560 --init_linear_outputs 10"
 init_resolution="--init_resolution 64 173"
 init_model_param="${init_conv} ${init_linear} ${init_resolution}"
 
-fixed_parameters="--job_name grid_search --train_folds 1 2 3 4 5 6 7 8 9 --val_folds 10 ${init_model_param}"
+fixed_parameters="--job_name grid_search --train_folds 1 2 3 4 5 6 7 8 9 --val_folds 10 --epochs 200 ${init_model_param}"
 
 alpha_list=(1.0 1.2 1.4 1.6 1.8 2.0)
 beta_list=(1.0 1.2 1.4 1.6 1.8 2.0)
