@@ -15,6 +15,7 @@ conda install numpy
 pip install tensorboard
 pip install librosa
 pip install tqdm
+pip install h5py
 ```
 
 # Prepare the dataset
