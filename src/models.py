@@ -93,7 +93,8 @@ class ScalableCnn1(nn.Module):
         self.scaled_resolution = (new_n_mels, new_hop_length)
         print("new scaled resolution: ", self.scaled_resolution)
 
-        dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
+        if gamma > 1.0:
+            dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
 
         # depth ----
         scaled_nb_conv = np.floor(initial_nb_conv * alpha)
@@ -190,7 +191,7 @@ class ScalableCnn1(nn.Module):
         return dim1 * dim2 * conv_outputs[-1]
 
     def generate_feature_extractor(self, n_mels, hop_length):
-        def extract_feature(self, raw_data):
+        def extract_feature(raw_data):
             feat = librosa.feature.melspectrogram(
                 raw_data, self.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.sr // 2)
             feat = librosa.power_to_db(feat, ref=np.max)
