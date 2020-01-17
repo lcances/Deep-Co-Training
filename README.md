@@ -8,12 +8,14 @@ dataset:
 # Required package
 ```bash
 conda create -n UbS8k pip
+conda activate Ubs8k
 conda install pytorch
 conda install pandas
 conda install numpy
 pip install tensorboard
 pip install librosa
 pip install tqdm
+pip install h5py
 ```
 
 # Prepare the dataset
