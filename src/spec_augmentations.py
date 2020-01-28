@@ -46,6 +46,22 @@ class Augmentation:
         return self._perform_augmentation(data)
 
 
+class HorizontalFlip(Augmentation):
+    def __init__(self, ratio):
+        super().__init__(ratio)
+
+    def _apply(self, data):
+        return np.flipud(data)
+
+
+class VerticalFlip(Augmentation):
+    def __init__(self, ratio):
+        super().__init__(ratio)
+
+    def _apply(self, data):
+        return np.fliplr(data)
+
+
 class FractalTimeStretch(Augmentation):
     def __init__(self, ratio, intra_ratio: float = 0.3, rate: tuple = (0.8, 1.2),
                  min_chunk_size: int = None, max_chunk_size: int = None):
