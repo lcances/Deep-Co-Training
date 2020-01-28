@@ -24,6 +24,30 @@ class ConvBNReLUPool(nn.Sequential):
             nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
         )
 
+
+class ConvAdvBNReLUPool(nn.Module):
+    def __init__(self, in_size, out_size, kernel_size, stride, padding,
+                 pool_kernel_size, pool_stride, dropout: float = 0.0):
+        super(ConvBNReLUPool, self).__init__()
+
+        self.conv = nn.Conv2d(in_size, out_size, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.bn_normal = nn.BatchNorm2d(out_size)
+        self.bn_adv = nn.BatchNorm2d(out_size)
+
+        self.final = nn.Sequential(
+            nn.Dropout2d(dropout),
+            nn.ReLU6(inplace=True),
+            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
+        )
+
+    def forward(self, x, adv: bool = False):
+        x = self.conv(x)
+
+        x = self.bn_adv(x) if adv else self.bn_normal(x)
+
+        return self.final(x)
+
+
 class ConvReLU(nn.Sequential):
     def __init__(self, in_size, out_size, kernel_size, stride, padding):
         super(ConvReLU, self).__init__(
