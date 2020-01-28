@@ -28,7 +28,7 @@ class ConvBNReLUPool(nn.Sequential):
 class ConvAdvBNReLUPool(nn.Module):
     def __init__(self, in_size, out_size, kernel_size, stride, padding,
                  pool_kernel_size, pool_stride, dropout: float = 0.0):
-        super(ConvBNReLUPool, self).__init__()
+        super(ConvAdvBNReLUPool, self).__init__()
 
         self.conv = nn.Conv2d(in_size, out_size, kernel_size=kernel_size, stride=stride, padding=padding)
         self.bn_normal = nn.BatchNorm2d(out_size)
