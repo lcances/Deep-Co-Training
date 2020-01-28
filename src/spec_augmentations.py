@@ -263,6 +263,62 @@ class FractalTimeDropout(Augmentation):
         return reconstructed_S
 
 
+class FractalFrecDropout(Augmentation):
+    def __init__(self, ratio, intra_ratio: float = 0.1,
+                 min_chunk_size: int = None, max_chunk_size: int = None,
+                 void: bool = True):
+        super().__init__(ratio)
+
+        # This values, if set to None, will be automatically computed when needed
+        self.min_column_size = min_chunk_size  # 1% of the total length
+        self.max_column_size = max_chunk_size  # 10% of the total length
+
+        # ratio to apply or not the stretching on each columns (independantly)
+        self.intra_ratio = intra_ratio
+        self.void = void
+
+    def _apply(self, data):
+        (h, w) = data.shape
+        mini = data.min()
+
+        # Compute min and max column size if needed
+        self.min_column_size = int(h * 0.01) if self.min_column_size is None else self.min_column_size
+        self.max_column_size = int(h * 0.1) if self.max_column_size is None else self.max_column_size
+
+        # Split the spectro into many small chunks (random size)
+        chunk_width = []
+        chunks = []
+
+        while sum(chunk_width) < h:
+            width = np.random.randint(self.min_column_size, self.max_column_size)
+
+            current_index = sum(chunk_width)
+            chunks.append(data[current_index:current_index + width :])
+
+            chunk_width.append(width)
+
+        # each chunk have an <intra_ratio> chance of disapearing.
+        valid_mask = [0 if x <= self.intra_ratio else 1 for x in np.random.uniform(0, 1, size=len(chunks))]
+
+        # minimum one chunk have to disapear
+        if sum(valid_mask) == len(chunks):
+            valid_mask[np.random.choice(range(len(chunks)))] = 0
+
+        # TODO add max limit
+
+        # reconstruct the signal using void or compacting it
+        reconstructed_S = []
+        for valid, chunk in zip(valid_mask, chunks):
+            if valid:
+                reconstructed_S.append(chunk)
+            else:
+                reconstructed_S.append(list(np.ones(chunk.shape) * mini))
+
+        reconstructed_S = np.concatenate(reconstructed_S, axis=0)
+
+        return reconstructed_S
+
+
 class RandomTimeDropout(Augmentation):
     def __init__(self, ratio, dropout: float = 0.5):
         super().__init__(ratio)
