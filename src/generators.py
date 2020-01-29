@@ -8,6 +8,8 @@ import pandas as pd
 
 from torch.utils import data
 from datasetManager import DatasetManager
+from src.signal_augmentations import SignalAugmentation
+from src.spec_augmentations import SpecAugmentation
 
 
 class Generator(data.Dataset):
@@ -76,10 +78,11 @@ class Generator(data.Dataset):
         # recover ground truth
         y = self.y.at[filename, "classID"]
 
-        # data augmentation
+        # signal data augmentation
         np.random.shuffle(self.augments)
         for augment_func in self.augments:
-            raw_audio = augment_func(raw_audio)
+            if isinstance(augment_func, SignalAugmentation):
+                raw_audio = augment_func(raw_audio)
 
         # padding and cropping
         if len(raw_audio) < LENGTH * SR:
@@ -92,6 +95,12 @@ class Generator(data.Dataset):
         # extract feature
         feat = self.dataset.extract_feature(raw_audio)
         y = np.asarray(y)
+
+        # spectro data augmentation
+        np.random.shuffle(self.augments)
+        for augment_func in self.augments:
+            if isinstance(augment_func, SpecAugmentation):
+                feat = augment_func(feat)
 
         return feat, y
 
