@@ -8,3 +8,11 @@
 /standalone/tensorboard/
 /results/
 /standalone/tensorboard_10_supervised/
+/standalone/tmp/
+/standalone/tensorboard_50_supervised/
+/standalone/CompoundScalling/tensorboard/
+/standalone/CompoundScalling/.ipynb_checkpoints/
+/standalone/.ipynb_checkpoints/
+/src/.ipynb_checkpoints/
+/notebooks/tensoboard_cotraining/
+/notebooks/tensoboard_cotraining/
