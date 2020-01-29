@@ -18,9 +18,11 @@ sys.path.append("../src/")
 
 from datasetManager import DatasetManager
 from generators import Generator
-from models import cnn
+import models
 from utils import get_datetime
 from metrics import CategoricalAccuracy
+import signal_augmentations
+import spec_augmentations
 
 import argparse
 
@@ -41,6 +43,7 @@ reset_seed()
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
 print(args.train)
+
 dataset = DatasetManager(
     metadata_root=metadata_root,
     audio_root=audio_root,
@@ -52,7 +55,15 @@ dataset = DatasetManager(
 # prep model
 torch.cuda.empty_cache()
 
-model_func = cnn
+model_func = models.ScalableCnn
+parameters = dict(
+    dataset=dataset,
+    initial_conv_inputs=[1, 44, 89, 89, 89, 111],
+    initial_conv_outputs=[44, 89, 89, 89, 111, 133],
+    initial_linear_inputs=[266,],
+    initial_linear_outputs=[10,]
+)
+
 m1 = model_func()
 m1.cuda()
 
@@ -65,8 +76,15 @@ optimizer = torch.optim.SGD(
     lr=0.05
 )
 
+# Prepare augmentation
+ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
+ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
+
+augments = [ftd, ffd]
+
+
 # train and val loaders
-train_dataset = Generator(dataset, augments=[])
+train_dataset = Generator(dataset, augments=augments)
 
 x, y = train_dataset.validation
 x = torch.from_numpy(x)
