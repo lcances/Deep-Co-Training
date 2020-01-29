@@ -1,0 +1,170 @@
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--num_class NUM_CLASS]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--num_class NUM_CLASS]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--dataset DATAS                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASusage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+ET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+ET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+srun: error: gpu-nc06: task 0: Exited with exit code 2
+srun: error: gpu-nc02: task 0: Exited with exit code 2
+srun: error: gpu-nc04: task 0: Exited with exit code 2
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+srun: error: gpu-nc05: task 0: Exited with exit code 2
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASusage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+ET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+srun: error: gpu-nc06: task 0: Exited with exit code 2
+srun: error: gpu-nc02: task 0: Exited with exit code 2
+srun: error: gpu-nc05: task 0: Exited with exit code 2
+srun: error: gpu-nc04: task 0: Exited with exit code 2
+usage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASusage: xx_supervised_scallable2.py [-h] [--model MODEL] -t TRAIN_FOLDS
+                                   [TRAIN_FOLDS ...] -v VAL_FOLDS
+                                   [VAL_FOLDS ...] [--nb_view NB_VIEW]
+                                   [--ratio RATIO] [--batchsize BATCHSIZE]
+                                   [--lambda_cot_max LAMBDA_COT_MAX]
+                                   [--lambda_diff_max LAMBDA_DIFF_MAX]
+                                   [--seed SEED] [--epochs EPOCHS]
+                                   [--warm_up WARM_UP] [--momentum MOMENTUM]
+                                   [--decay DECAY] [--epsilon EPSILON]
+                                   [--num_class NUM_CLASS]
+                                   [--cifar10_dir CIFAR10_DIR]
+                                   [--svhn_dir SVHN_DIR] [-T TENSORBOARD_DIR]
+                                   [--checkpoint_dir CHECKPOINT_DIR]
+                                   [--base_lr BASE_LR] [--resume]
+                                   [--dataset DATASET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+ET] [--job_name JOB_NAME]
+xx_supervised_scallable2.py: error: argument --ratio: invalid int value: '0.5'
+srun: error: gpu-nc02: task 0: Exited with exit code 2
+srun: error: gpu-nc04: task 0: Exited with exit code 2
