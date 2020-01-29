@@ -2,6 +2,16 @@ import torch
 import torch.nn as nn
 
 
+class Sequential_adv(nn.Sequential):
+    def forward(self, *inputs):
+        for module in self._modules.values():
+            if type(inputs) == tuple:
+                inputs = module(*inputs)
+            else:
+                inputs = module(inputs)
+        return inputs
+
+
 class ConvPoolReLU(nn.Sequential):
     def __init__(self, in_size, out_size, kernel_size, stride, padding,
                  pool_kernel_size, pool_stride):
@@ -23,6 +33,30 @@ class ConvBNReLUPool(nn.Sequential):
             nn.ReLU6(inplace=True),
             nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
         )
+
+
+class ConvAdvBNReLUPool(nn.Module):
+    def __init__(self, in_size, out_size, kernel_size, stride, padding,
+                 pool_kernel_size, pool_stride, dropout: float = 0.0):
+        super().__init__()
+
+        self.conv = nn.Conv2d(in_size, out_size, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.bn_normal = nn.BatchNorm2d(out_size)
+        self.bn_adv = nn.BatchNorm2d(out_size)
+
+        self.final = nn.Sequential(
+            nn.Dropout2d(dropout),
+            nn.ReLU6(inplace=True),
+            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
+        )
+
+    def forward(self, x, adv: bool = False):
+        x = self.conv(x)
+
+        x = self.bn_adv(x) if adv else self.bn_normal(x)
+
+        return self.final(x)
+
 
 class ConvReLU(nn.Sequential):
     def __init__(self, in_size, out_size, kernel_size, stride, padding):

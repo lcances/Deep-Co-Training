@@ -36,7 +36,7 @@ class Warmup:
         self.current_epoch = 0
         self.value = 0
 
-    def next(self):
+    def step(self):
         if self.current_epoch < self.nb_epoch:
             self.current_epoch += 1
             ramp = self.method(self.current_epoch, self.nb_epoch)
@@ -62,9 +62,9 @@ if __name__ == '__main__':
         exp_values.append(exp_warmup.value)
         cosine_values.append(cosine_warmup.value)
 
-        linear_warmup.next()
-        exp_warmup.next()
-        cosine_warmup.next()
+        linear_warmup.step()
+        exp_warmup.step()
+        cosine_warmup.step()
 
     import matplotlib.pyplot as plt
 

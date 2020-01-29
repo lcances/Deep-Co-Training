@@ -1,7 +1,6 @@
-
 #!/usr/bin/env bash
 
-fixed_parameters="-T tensorboard_10_supervised --base_lr 0.01 --ratio 0.1"
+fixed_parameters="-T tensorboard_50_supervised --base_lr 0.01 --ratio 0.5"
 
 python xx_supervised.py --job_name run1 -t 1 2 3 4 5 6 7 8 9 -v 10 ${fixed_parameters}
 python xx_supervised.py --job_name run2 -t 1 2 3 4 5 6 7 8 10 -v 9 ${fixed_parameters}

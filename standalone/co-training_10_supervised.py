@@ -284,7 +284,7 @@ def train(epoch):
         Loss_cot = loss_cot(logits_U1, logits_U2)
         pld_S, pld_U, Loss_diff = p_loss_diff(logits_S1, logits_S2, adv_logits_S1, adv_logits_S2, logits_U1, logits_U2, adv_logits_U1, adv_logits_U2)
         
-        total_loss = Loss_sup + lambda_cot.next() * Loss_cot + lambda_diff.next() * Loss_diff
+        total_loss = Loss_sup + lambda_cot() * Loss_cot + lambda_diff() * Loss_diff
         total_loss.backward()
         optimizer.step()
 
@@ -402,6 +402,8 @@ def test(epoch):
     # Apply callbacks
     for c in callbacks:
         c.step()
+    lambda_cot.step()
+    lambda_diff.step()
 
 
 # In[ ]:
