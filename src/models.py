@@ -314,7 +314,7 @@ class ScalableCnn_advBN(nn.Module):
     def forward(self, x, adv: bool = False):
         x = x.view(-1, 1, *x.shape[1:])
 
-        x = self.features(x)
+        x = self.features(x, adv)
         x = self.classifier(x)
 
         return x
