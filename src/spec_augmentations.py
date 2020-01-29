@@ -13,7 +13,7 @@ def random_interpolation():
     return np.random.choice(filters)
 
 
-class Augmentation:
+class SpecAugmentation:
     def __init__(self, ratio):
         """
         Args:
@@ -46,7 +46,7 @@ class Augmentation:
         return self._perform_augmentation(data)
 
 
-class HorizontalFlip(Augmentation):
+class HorizontalFlip(SpecAugmentation):
     def __init__(self, ratio):
         super().__init__(ratio)
 
@@ -54,7 +54,7 @@ class HorizontalFlip(Augmentation):
         return np.flipud(data)
 
 
-class VerticalFlip(Augmentation):
+class VerticalFlip(SpecAugmentation):
     def __init__(self, ratio):
         super().__init__(ratio)
 
@@ -62,7 +62,7 @@ class VerticalFlip(Augmentation):
         return np.fliplr(data)
 
 
-class FractalTimeStretch(Augmentation):
+class FractalTimeStretch(SpecAugmentation):
     def __init__(self, ratio, intra_ratio: float = 0.3, rate: tuple = (0.8, 1.2),
                  min_chunk_size: int = None, max_chunk_size: int = None):
         """
@@ -134,7 +134,7 @@ class FractalTimeStretch(Augmentation):
         return final_S
 
 
-class FractalFreqStretch(Augmentation):
+class FractalFreqStretch(SpecAugmentation):
     def __init__(self, ratio, intra_ratio: float = 0.3, rate: tuple = (0.8, 1.2),
                  min_chunk_size: int = None, max_chunk_size: int = None):
         """
@@ -206,7 +206,7 @@ class FractalFreqStretch(Augmentation):
         return final_S
 
 
-class FractalTimeDropout(Augmentation):
+class FractalTimeDropout(SpecAugmentation):
     def __init__(self, ratio, intra_ratio: float = 0.1,
                  min_chunk_size: int = None, max_chunk_size: int = None,
                  void: bool = True):
@@ -263,7 +263,7 @@ class FractalTimeDropout(Augmentation):
         return reconstructed_S
 
 
-class FractalFrecDropout(Augmentation):
+class FractalFrecDropout(SpecAugmentation):
     def __init__(self, ratio, intra_ratio: float = 0.1,
                  min_chunk_size: int = None, max_chunk_size: int = None,
                  void: bool = True):
@@ -319,7 +319,7 @@ class FractalFrecDropout(Augmentation):
         return reconstructed_S
 
 
-class RandomTimeDropout(Augmentation):
+class RandomTimeDropout(SpecAugmentation):
     def __init__(self, ratio, dropout: float = 0.5):
         super().__init__(ratio)
 

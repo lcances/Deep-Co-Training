@@ -2,7 +2,7 @@ import numpy as np
 import librosa
 
 
-class Augmentation:
+class SignalAugmentation:
     def __init__(self, ratio):
         self.ratio = ratio
 
@@ -19,7 +19,7 @@ class Augmentation:
         return self._perform_augmentation(data)
 
 
-class TimeStretch(Augmentation):
+class TimeStretch(SignalAugmentation):
     def __init__(self, ratio, rate: tuple = (0.9, 1.1)):
         super().__init__(ratio)
         self.rate = rate
@@ -30,7 +30,7 @@ class TimeStretch(Augmentation):
         return output
 
 
-class PitchShiftRandom(Augmentation):
+class PitchShiftRandom(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, steps: tuple = (-3, 3)):
         super().__init__(ratio)
         self.sr = sampling_rate
@@ -42,7 +42,7 @@ class PitchShiftRandom(Augmentation):
         return output
 
 
-class PitchShiftChoice(Augmentation):
+class PitchShiftChoice(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, choice: tuple = (-2, -1, 1, 2)):
         super().__init__(ratio)
         self.sr = sampling_rate
@@ -54,7 +54,7 @@ class PitchShiftChoice(Augmentation):
         return output
 
 
-class Level(Augmentation):
+class Level(SignalAugmentation):
     def __init__(self, ratio, rate: tuple = (0.8, 1.2)):
         super().__init__(ratio)
         self.rate = rate
@@ -65,7 +65,7 @@ class Level(Augmentation):
 
 
 # TODO better implementation
-class Noise2(Augmentation):
+class Noise2(SignalAugmentation):
      def __init__(self, ratio, noise_factor: tuple = (0.1, 0.4)):
          super().__init__(ratio)
          self.noise_factor = noise_factor
@@ -76,7 +76,7 @@ class Noise2(Augmentation):
          return data + noise_factor * noise
 
 
-class Noise(Augmentation):
+class Noise(SignalAugmentation):
     def __init__(self, ratio, target_snr: int = 10):
         super().__init__(ratio)
         self.target_snr = target_snr
@@ -99,7 +99,7 @@ class Noise(Augmentation):
 
 
 
-class Occlusion(Augmentation):
+class Occlusion(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, max_size: float = 1):
         super().__init__(ratio)
         self.max_size = max_size
