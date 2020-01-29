@@ -93,7 +93,8 @@ class ScalableCnn1(nn.Module):
         self.scaled_resolution = (new_n_mels, new_hop_length)
         print("new scaled resolution: ", self.scaled_resolution)
 
-        dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
+        if gamma > 1.0:
+            dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
 
         # depth ----
         scaled_nb_conv = np.floor(initial_nb_conv * alpha)

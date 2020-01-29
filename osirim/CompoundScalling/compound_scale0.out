@@ -1,0 +1,73 @@
+1.0
+wait
+new scaled resolution:  (70, 190)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (76, 207)
+new scaled resolution:  (83, 224)
+wait
+new scaled resolution:  (64, 173)
+new scaled resolution:  (70, 190)
+wait
+new scaled resolution:  (76, 207)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (70, 190)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (64, 173)
+new scaled resolution:  (70, 190)
+wait
+new scaled resolution:  (76, 207)
+new scaled resolution:  (83, 224)
+wait
+new scaled resolution:  (64, 173)
+new scaled resolution:  (70, 190)
+wait
+new scaled resolution:  (76, 207)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (70, 190)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (64, 173)
+new scaled resolution:  (70, 190)
+wait
+new scaled resolution:  (76, 207)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (70, 190)
+new scaled resolution:  (64, 173)
+wait
+new scaled resolution:  (64, 173)
+More conv layer must be created
+new conv layers:
+inputs:  [1, 32, 64, 64, 64]
+ouputs:  [32, 64, 64, 64, 79]
+new scaled resolution:  (70, 190)
+More conv layer must be created
+new conv layers:
+inputs:  [1, 32, 64, 64, 64]
+ouputs:  [32, 64, 64, 64, 79]
+wait
+new scaled resolution:  (76, 207)
+More conv layer must be created
+new conv layers:
+inputs:  [1, 32, 64, 64, 64]
+ouputs:  [32, 64, 64, 64, 79]
+new scaled resolution:  (64, 173)
+More conv layer must be created
+new conv layers:
+inputs:  [1, 32, 64, 64, 64]
+ouputs:  [32, 64, 64, 64, 79]
+wait
+new scaled resolution:  (70, 190)
+More conv layer must be created
+new conv layers:
+inputs:  [1, 32, 64, 64, 64]
+ouputs:  [32, 64, 64, 64, 79]
+new scaled resolution:  (64, 173)
+More conv layer must be created
+new conv layers:
+inputs:  [1, 32, 64, 64, 64]
+ouputs:  [32, 64, 64, 64, 79]
