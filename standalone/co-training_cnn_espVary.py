@@ -7,27 +7,19 @@
 
 
 import numpy as np
-import os
 import time
 import math
-import pickle
 import argparse
 import random
-from random import shuffle
-from tqdm import tqdm_notebook as tqdm
 
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.models as models
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
-from torch.nn.utils import weight_norm
 
 
 # In[2]:
@@ -39,10 +31,9 @@ sys.path.append("../src/")
 from datasetManager import DatasetManager
 from generators import Generator, CoTrainingGenerator
 from samplers import CoTrainingSampler
-import signal_augmentations as sa
 
 import models
-from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
+from losses import loss_cot, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
 
@@ -423,8 +414,8 @@ def test(epoch):
     # Apply callbacks and warmup
     for c in callbacks:
         c.step()
-    lambda_cot.next()
-    lambda_diff.next()
+    lambda_cot.step()
+    lambda_diff.step()
 
 
 # In[ ]:
