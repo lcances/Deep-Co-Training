@@ -30,6 +30,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
+parser.add_argument("-j", "--job_name", default="default")
 args = parser.parse_args()
 
 
@@ -64,7 +65,7 @@ parameters = dict(
     initial_linear_outputs=[10,]
 )
 
-m1 = model_func()
+m1 = model_func(**parameters)
 m1.cuda()
 
 # loss and optimizer
@@ -92,7 +93,7 @@ y = torch.from_numpy(y)
 val_dataset = torch.utils.data.TensorDataset(x, y)
 
 # training parameters
-nb_epoch = 100
+nb_epoch = 200
 batch_size = 32
 nb_batch = len(train_dataset) // batch_size
 
@@ -106,7 +107,7 @@ callbacks = [lr_scheduler]
 # callbacks = []
 
 # tensorboard
-title = "%s_cnn_Cosd-lr_sgd-0.01lr-wd0.001_%de_0.5n" % (get_datetime(), nb_epoch)
+title = "%s_%s_scallable2_Cosd-lr_sgd-0.05lr-wd0.001_%de_0.5ftd_0.5ffd" % (get_datetime(), args.job_name, nb_epoch)
 tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title), comment=model_func.__name__)
 
 
