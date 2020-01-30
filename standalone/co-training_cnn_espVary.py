@@ -431,6 +431,7 @@ for epoch in range(0, args.epochs):
 
         print("============")
         print("new epsilon: ", epsilon)
+        tensorboard.add_scalar("detail_hyperparameters/epsilon", epsilon, epoch)
         print("============")
 
         adv_generator_1 = GradientSignAttack(
