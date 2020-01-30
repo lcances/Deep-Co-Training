@@ -54,7 +54,7 @@ class Ratio(Metrics):
 
         results = zip(y_pred, y_adv_pred)
         results_bool = [int(r[0] != r[1]) for r in results]
-        self.value = sum(results_bool) / len(results_bool) * 100
+        self.value = sum(results_bool) / len(results_bool)
         self.accumulate_value += self.value
 
         return self.accumulate_value / self.count
