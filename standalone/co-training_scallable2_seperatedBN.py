@@ -137,7 +137,7 @@ def get_model_from_name(model_name):
                 return obj
 
 
-model_func =  models.ScalableCnn1
+model_func =  models.ScalableCnn_advBN
 parameters = dict(
         dataset=dataset,
         initial_conv_inputs=[1, 44, 89, 89, 89, 111],
@@ -292,11 +292,11 @@ def train(epoch):
         m2.train()
 
         # predict adversarial examples ----
-        adv_logits_S1 = m1(adv_data_S2)
-        adv_logits_S2 = m2(adv_data_S1)
+        adv_logits_S1 = m1(adv_data_S2, adv=True)
+        adv_logits_S2 = m2(adv_data_S1, adv=True)
 
-        adv_logits_U1 = m1(adv_data_U2)
-        adv_logits_U2 = m2(adv_data_U1)
+        adv_logits_U1 = m1(adv_data_U2, adv=True)
+        adv_logits_U2 = m2(adv_data_U1, adv=True)
 
         # ======== calculate the differents loss ========
         # zero the parameter gradients ----
