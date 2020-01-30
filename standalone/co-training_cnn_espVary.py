@@ -137,17 +137,10 @@ def get_model_from_name(model_name):
                 return obj
 
 
-model_func =  models.ScalableCnn
-parameters = dict(
-        dataset=dataset,
-        initial_conv_inputs=[1, 44, 89, 89, 89, 111],
-        initial_conv_outputs=[44, 89, 89, 89, 111, 133],
-        initial_linear_inputs=[266,],
-        initial_linear_outputs=[10,]
-)
+model_func =  models.cnn
 
 
-m1, m2 = model_func(**parameters), model_func(**parameters)
+m1, m2 = model_func(), model_func()
 
 m1 = m1.cuda()
 m2 = m2.cuda()
