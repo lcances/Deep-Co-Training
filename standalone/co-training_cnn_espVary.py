@@ -428,6 +428,10 @@ for epoch in range(0, args.epochs):
     if ratio_U < 0.2:
         epsilon *= 2
 
+        print("============")
+        print("new epsilon: ", epsilon)
+        print("============")
+
         adv_generator_1 = GradientSignAttack(
             m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
             eps=epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
