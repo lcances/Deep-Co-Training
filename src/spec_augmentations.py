@@ -249,7 +249,6 @@ class FractalTimeDropout(SpecAugmentation):
         
         # TODO add max limit
 
-        print(valid_mask)
         # reconstruct the signal using void or compacting it
         reconstructed_S = []
         for valid, chunk in zip(valid_mask, chunks):
@@ -260,7 +259,7 @@ class FractalTimeDropout(SpecAugmentation):
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=1)
 
-        return reconstructed_S
+        return np.float32(reconstructed_S)
 
 
 class FractalFrecDropout(SpecAugmentation):
@@ -316,7 +315,7 @@ class FractalFrecDropout(SpecAugmentation):
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=0)
 
-        return reconstructed_S
+        return np.float32(reconstructed_S)
 
 
 class RandomTimeDropout(SpecAugmentation):
@@ -326,16 +325,39 @@ class RandomTimeDropout(SpecAugmentation):
         self.dropout = dropout
 
     def _apply(self, data):
-        (h, w) = data.shape
-        mini = data.min()
+        out = data.copy()
+
+        (h, w) = out.shape
+        mini = out.min()
         valid_mask = [0 if x <= self.dropout else 1 for x in np.random.uniform(0, 1, size=w)]
+
+        for valid, idx in zip(valid_mask, range(w-1)):
+            if not valid:
+                out[:, idx] = mini
+
+        return out
+
+
+
+class RandomFreqDropout(SpecAugmentation):
+    def __init__(self, ratio, dropout: float = 0.5):
+        super().__init__(ratio)
+
+        self.dropout = dropout
+
+    def _apply(self, data):
+        out = data.copy()
+
+        (h, w) = out.shape
+        mini = out.min()
+        valid_mask = [0 if x <= self.dropout else 1 for x in np.random.uniform(0, 1, size=h)]
 
         print(w)
         for valid, idx in zip(valid_mask, range(w-1)):
             if not valid:
-                data[:, idx] = mini
+                out[idx, :] = mini
 
-        return data
+        return out
 
 
 if __name__ == '__main__':
