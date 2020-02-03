@@ -32,10 +32,22 @@ class SpecAugmentation:
         return data
 
     def _apply(self, data):
-        """
-        Args:
-            data: The spectrogram to use
-        """
+        if len(data.shape) == 2:
+            return self.apply_helper(data)
+
+        if len(data.shape) == 3:
+            out = data.copy()
+
+            for i in range(len(out)):
+                out[i] = self.apply_helper(out[i])
+
+            return out
+
+        else:
+            print("Warning, can't be used of more than 3 dimensions, no modification will be apply")
+            return data
+
+    def apply_helper(self, data):
         raise NotImplementedError("This is an abstract class")
 
     def __call__(self, data):
@@ -46,20 +58,36 @@ class SpecAugmentation:
         return self._perform_augmentation(data)
 
 
-class HorizontalFlip(SpecAugmentation):
-    def __init__(self, ratio):
-        super().__init__(ratio)
-
-    def _apply(self, data):
-        return np.flipud(data)
-
-
 class VerticalFlip(SpecAugmentation):
     def __init__(self, ratio):
         super().__init__(ratio)
 
-    def _apply(self, data):
+    def apply_helper(self, data):
+        return np.flipud(data)
+
+
+class HorizontalFlip(SpecAugmentation):
+    def __init__(self, ratio):
+        super().__init__(ratio)
+
+    def apply_helper(self, data):
         return np.fliplr(data)
+
+
+class Noise(SpecAugmentation):
+    def __init__(self, ratio, snr, mini=-80, maxi=0):
+        super().__init__(ratio)
+        self.snr = snr
+        self.mini = mini
+        self.maxi = maxi
+
+    def apply_helper(self, data):
+        random_min = self.mini
+        random_max = self.mini + self.snr
+
+        noise = np.random.uniform(random_min, random_max, size=data.shape)
+        noisy_data = data + noise
+        return np.clip(noisy_data, self.mini, self.maxi)
 
 
 class FractalTimeStretch(SpecAugmentation):
@@ -83,7 +111,7 @@ class FractalTimeStretch(SpecAugmentation):
         self.intra_ratio = intra_ratio
         self.rate = rate
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         (h, w) = data.shape
 
         # Compute min and max column size if needed
@@ -155,7 +183,7 @@ class FractalFreqStretch(SpecAugmentation):
         self.intra_ratio = intra_ratio
         self.rate = rate
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         (h, w) = data.shape
 
         # Compute min and max chunk size if needed
@@ -213,27 +241,27 @@ class FractalTimeDropout(SpecAugmentation):
         super().__init__(ratio)
 
         # This values, if set to None, will be automatically computed when needed
-        self.min_column_size = min_chunk_size  # 1% of the total length
-        self.max_column_size = max_chunk_size  # 10% of the total length
+        self.min_chunk_size = min_chunk_size  # 1% of the total length
+        self.max_chunk_size = max_chunk_size  # 10% of the total length
 
         # ratio to apply or not the stretching on each columns (independantly)
         self.intra_ratio = intra_ratio
         self.void = void
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         (h, w) = data.shape
         mini = data.min()
 
         # Compute min and max column size if needed
-        self.min_column_size = int(h * 0.01) if self.min_column_size is None else self.min_column_size
-        self.max_column_size = int(h * 0.1) if self.max_column_size is None else self.max_column_size
+        self.min_chunk_size = int(h * 0.01) if self.min_chunk_size is None else self.min_chunk_size
+        self.max_chunk_size = int(h * 0.1) if self.max_chunk_size is None else self.max_chunk_size
 
         # Split the spectro into many small chunks (random size)
         chunk_width = []
         chunks = []
 
         while sum(chunk_width) < w:
-            width = np.random.randint(self.min_column_size, self.max_column_size)
+            width = np.random.randint(self.min_chunk_size, self.max_chunk_size)
 
             current_index = sum(chunk_width)
             chunks.append(data[:, current_index:current_index+width])
@@ -246,7 +274,7 @@ class FractalTimeDropout(SpecAugmentation):
         # minimum one chunk have to disapear
         if sum(valid_mask) == len(chunks):
             valid_mask[np.random.choice(range(len(chunks)))] = 0
-        
+
         # TODO add max limit
 
         # reconstruct the signal using void or compacting it
@@ -259,7 +287,7 @@ class FractalTimeDropout(SpecAugmentation):
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=1)
 
-        return np.float32(reconstructed_S)
+        return reconstructed_S
 
 
 class FractalFrecDropout(SpecAugmentation):
@@ -269,27 +297,27 @@ class FractalFrecDropout(SpecAugmentation):
         super().__init__(ratio)
 
         # This values, if set to None, will be automatically computed when needed
-        self.min_column_size = min_chunk_size  # 1% of the total length
-        self.max_column_size = max_chunk_size  # 10% of the total length
+        self.min_chunk_size = min_chunk_size  # 1% of the total length
+        self.max_chunk_size = max_chunk_size  # 10% of the total length
 
         # ratio to apply or not the stretching on each columns (independantly)
         self.intra_ratio = intra_ratio
         self.void = void
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         (h, w) = data.shape
         mini = data.min()
 
         # Compute min and max column size if needed
-        self.min_column_size = int(h * 0.01) if self.min_column_size is None else self.min_column_size
-        self.max_column_size = int(h * 0.1) if self.max_column_size is None else self.max_column_size
+        self.min_chunk_size = int(h * 0.01) if self.min_chunk_size is None else self.min_chunk_size
+        self.max_chunk_size = int(h * 0.1) if self.max_chunk_size is None else self.max_chunk_size
 
         # Split the spectro into many small chunks (random size)
         chunk_width = []
         chunks = []
 
         while sum(chunk_width) < h:
-            width = np.random.randint(self.min_column_size, self.max_column_size)
+            width = np.random.randint(self.min_chunk_size, self.max_chunk_size)
 
             current_index = sum(chunk_width)
             chunks.append(data[current_index:current_index + width :])
@@ -315,7 +343,7 @@ class FractalFrecDropout(SpecAugmentation):
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=0)
 
-        return np.float32(reconstructed_S)
+        return reconstructed_S
 
 
 class RandomTimeDropout(SpecAugmentation):
@@ -324,7 +352,7 @@ class RandomTimeDropout(SpecAugmentation):
 
         self.dropout = dropout
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         out = data.copy()
 
         (h, w) = out.shape
@@ -338,31 +366,21 @@ class RandomTimeDropout(SpecAugmentation):
         return out
 
 
-
 class RandomFreqDropout(SpecAugmentation):
     def __init__(self, ratio, dropout: float = 0.5):
         super().__init__(ratio)
 
         self.dropout = dropout
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         out = data.copy()
 
         (h, w) = out.shape
         mini = out.min()
         valid_mask = [0 if x <= self.dropout else 1 for x in np.random.uniform(0, 1, size=h)]
 
-        print(w)
         for valid, idx in zip(valid_mask, range(w-1)):
             if not valid:
                 out[idx, :] = mini
 
         return out
-
-
-if __name__ == '__main__':
-    from datasetManager import DatasetManager
-
-    audio_root = "../dataset/audio"
-    metadata_root = "../dataset/metadata"
-    dataset = DatasetManager(metadata_root, audio_root, train_fold = [1], val_fold=[])
