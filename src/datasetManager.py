@@ -9,6 +9,24 @@ import tqdm
 import h5py
 import pandas as pd
 
+def conditional_cache(func):
+    def decorator(*args, **kwargs):
+        filename = kwargs["filename"]
+        cached = kwargs["cached"]
+
+        if filename is not None and cached:
+            if filename not in decorator.cache.keys():
+                decorator.cache[filename] = func(*args, **kwargs)
+                return decorator.cache[filename]
+            else:
+                return decorator.cache[filename]
+
+        else:
+            return func(*args, **kwargs)
+
+    decorator.cache = dict()
+
+    return decorator
 
 class DatasetManager:
     class_correspondance = {"Air_conditioner": 0, "car_horn": 1, "Children_laying": 2,
@@ -91,7 +109,14 @@ class DatasetManager:
         raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
         return raw_data, sr
 
-    def extract_feature(self, raw_data):
+    def extract_feature(self, raw_data, filename=None, cached = False):
+        """
+        extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
+        :param raw_data: to audio to transform
+        :param filename: the key used by the cache system
+        :param cached: use or not the cache system
+        :return: the feature extracted from the raw audio
+        """
         feat = librosa.feature.melspectrogram(
             raw_data, self.sr, n_fft=2048, hop_length=512, n_mels=64, fmin=0, fmax=self.sr // 2)
         feat = librosa.power_to_db(feat, ref=np.max)
