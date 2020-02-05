@@ -21,6 +21,8 @@ class Generator(data.Dataset):
         self.sampling = sampling
         self.augments = augments
 
+        self.cached = True if val else False
+
         self._check_arguments()
 
         # dataset access (combine weak and synthetic)
@@ -62,7 +64,7 @@ class Generator(data.Dataset):
         raw_audio = self._pad_and_crop(raw_audio)
 
         # extract feature and apply spec augmentation
-        feat = self.dataset.extract_feature(raw_audio)
+        feat = self.dataset.extract_feature(raw_audio, filename=filename, cached=self.cached)
         feat = self._apply_spec_augmentation(feat)
         y = np.asarray(y)
 
