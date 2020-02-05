@@ -9,6 +9,7 @@ import tqdm
 import h5py
 import pandas as pd
 
+
 def conditional_cache(func):
     def decorator(*args, **kwargs):
         filename = kwargs["filename"]
@@ -109,6 +110,7 @@ class DatasetManager:
         raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
         return raw_data, sr
 
+    @conditional_cache
     def extract_feature(self, raw_data, filename=None, cached = False):
         """
         extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
