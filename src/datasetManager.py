@@ -3,6 +3,7 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NUM_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
+import functools
 
 import librosa
 import tqdm
@@ -28,6 +29,7 @@ def conditional_cache(func):
     decorator.cache = dict()
 
     return decorator
+
 
 class DatasetManager:
     class_correspondance = {"Air_conditioner": 0, "car_horn": 1, "Children_laying": 2,
@@ -111,7 +113,7 @@ class DatasetManager:
         return raw_data, sr
 
     @conditional_cache
-    def extract_feature(self, raw_data, filename=None, cached = False):
+    def extract_feature(self, raw_data, filename, cached = False):
         """
         extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
         :param raw_data: to audio to transform

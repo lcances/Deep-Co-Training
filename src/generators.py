@@ -6,13 +6,14 @@ os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
 import pandas as pd
 
+from datasetManager import DatasetManager
 from torch.utils import data
 from signal_augmentations import SignalAugmentation
 from spec_augmentations import SpecAugmentation
 
 
 class Generator(data.Dataset):
-    def __init__(self, dataset, train:bool = True, val:bool = False, sampling: float = 1.0, augments=()):
+    def __init__(self, dataset: DatasetManager, train: bool = True, val:bool = False, sampling: float = 1.0, augments=()):
         super().__init__()
 
         self.dataset = dataset
