@@ -13,7 +13,7 @@ from spec_augmentations import SpecAugmentation
 
 
 class Generator(data.Dataset):
-    def __init__(self, dataset: DatasetManager, train: bool = True, val:bool = False, sampling: float = 1.0, augments=()):
+    def __init__(self, dataset: DatasetManager, train: bool = True, val:bool = False, sampling: float = 1.0, augments=(), cached=False):
         super().__init__()
 
         self.dataset = dataset
@@ -22,7 +22,11 @@ class Generator(data.Dataset):
         self.sampling = sampling
         self.augments = augments
 
-        self.cached = True if val else False
+        self.cached = cached
+
+        if len(augments) != 0 and cached:
+            print("Cache system deactivate due to usage of online augmentation")
+            self.cached = False
 
         self._check_arguments()
 
