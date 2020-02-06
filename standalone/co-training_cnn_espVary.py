@@ -67,7 +67,7 @@ parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
 parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
-parser.add_argument("--job_name", default="default", type=str)
+parser.add_argument("--job_name", default="espVary_U", type=str)
 args = parser.parse_args()
 
 # ## Reproducibility
@@ -152,14 +152,22 @@ val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
 # adversarial generation
 input_max_value = 0
 input_min_value = -80
-adv_generator_1 = GradientSignAttack(
+S_adv_generator_1 = GradientSignAttack(
     m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
+    eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+)
+U_adv_generator_1 = GradientSignAttack(
+    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+    eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
 )
 
-adv_generator_2 = GradientSignAttack(
+S_adv_generator_2 = GradientSignAttack(
     m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
+    eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+)
+U_adv_generator_2 = GradientSignAttack(
+    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+    eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
 )
 
 
@@ -267,11 +275,11 @@ def train(epoch):
         m2.eval()
 
         #generate adversarial examples ----
-        adv_data_S1 = adv_generator_1.perturb(X_S[0], y_S[0])
-        adv_data_U1 = adv_generator_1.perturb(X_U, pred_U1)
+        adv_data_S1 = S_adv_generator_1.perturb(X_S[0], y_S[0])
+        adv_data_U1 = U_adv_generator_1.perturb(X_U, pred_U1)
 
-        adv_data_S2 = adv_generator_2.perturb(X_S[1], y_S[1])
-        adv_data_U2 = adv_generator_2.perturb(X_U, pred_U2)
+        adv_data_S2 = S_adv_generator_2.perturb(X_S[1], y_S[1])
+        adv_data_U2 = U_adv_generator_2.perturb(X_U, pred_U2)
 
         m1.train()
         m2.train()
@@ -421,33 +429,48 @@ def test(epoch):
 
 # In[ ]:
 
-epsilon = args.epsilon
+U_epsilon = args.epsilon
 
 for epoch in range(0, args.epochs):
     total_loss, ratio_U = train(epoch)
 
-    if ratio_U < 0.2:
-        epsilon *= 2
-
-        print("============")
-        print("new epsilon: ", epsilon)
-        tensorboard.add_scalar("detail_hyperparameters/epsilon", epsilon, epoch)
-        print("============")
-
-        adv_generator_1 = GradientSignAttack(
+    
+    if ratio_U < 0.15 and U_epsilon < 10:
+        U_epsilon *= 2
+        
+        if U_epsilon > 20:
+            print("============")
+            print("new epsilon: ", U_epsilon)
+            tensorboard.add_scalar("detail_hyperparameters/U_epsilon", U_epsilon, epoch)
+            print("============")
+        
+            U_epsilon = 20
+        
+        # adversarial generation
+        S_adv_generator_1 = GradientSignAttack(
             m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-            eps=epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
+            eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+        )
+        U_adv_generator_1 = GradientSignAttack(
+            m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+            eps=U_epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
         )
 
-        adv_generator_2 = GradientSignAttack(
+        S_adv_generator_2 = GradientSignAttack(
             m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-            eps=epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
+            eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
+        )
+        U_adv_generator_2 = GradientSignAttack(
+            m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+            eps=U_epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
         )
 
+        
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
 
+        
     test(epoch)
 
 # tensorboard.export_scalars_to_json('./' + args.tensorboard_dir + 'output.json')
