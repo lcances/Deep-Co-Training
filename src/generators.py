@@ -11,6 +11,8 @@ from torch.utils import data
 from signal_augmentations import SignalAugmentation
 from spec_augmentations import SpecAugmentation
 
+import logging
+
 
 class Generator(data.Dataset):
     def __init__(self, dataset: DatasetManager, train: bool = True, val:bool = False, sampling: float = 1.0, augments=(), cached=False):
@@ -25,7 +27,7 @@ class Generator(data.Dataset):
         self.cached = cached
 
         if len(augments) != 0 and cached:
-            print("Cache system deactivate due to usage of online augmentation")
+            logging.info("Cache system deactivate due to usage of online augmentation")
             self.cached = False
 
         self._check_arguments()
@@ -150,7 +152,6 @@ class CoTrainingGenerator(data.Dataset):
             class_samples = metadata.loc[metadata.classID == i]
 
             nb_sample_S = int(np.ceil(len(class_samples) * self.ratio))
-            print("generator, nb_sample_s: ", nb_sample_S)
 
             if i == 0:
                 self.y_S = class_samples[:nb_sample_S]
@@ -159,8 +160,6 @@ class CoTrainingGenerator(data.Dataset):
             else:
                 class_meta_S = class_samples[:nb_sample_S]
                 class_meta_U = class_samples[nb_sample_S:]
-                print(len(class_samples))
-                print(len(class_meta_S), len(class_meta_U))
                 self.y_S = pd.concat([self.y_S, class_meta_S])
                 self.y_U = pd.concat([self.y_U, class_meta_U])
 
