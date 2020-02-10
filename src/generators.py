@@ -65,12 +65,12 @@ class Generator(data.Dataset):
         # recover ground truth
         y = self.y.at[filename, "classID"]
 
-        raw_audio = self._apply_signal_augmentation(raw_audio)
+        raw_audio = self._apply_augmentation(raw_audio, SignalAugmentation)
         raw_audio = self._pad_and_crop(raw_audio)
 
         # extract feature and apply spec augmentation
         feat = self.dataset.extract_feature(raw_audio, filename=filename, cached=self.cached)
-        feat = self._apply_spec_augmentation(feat)
+        feat = self._apply_augmentation(feat, SpecAugmentation)
         y = np.asarray(y)
 
         return feat, y
@@ -88,21 +88,13 @@ class Generator(data.Dataset):
 
         return raw_audio
 
-    def _apply_signal_augmentation(self, raw_audio):
+    def _apply_augmentation(self, data, augType):
         np.random.shuffle(self.augments)
         for augment_func in self.augments:
-            if isinstance(augment_func, SignalAugmentation):
-                raw_audio = augment_func(raw_audio)
+            if isinstance(augment_func, augType):
+                raw_audio = augment_func(data)
 
-        return raw_audio
-
-    def _apply_spec_augmentation(self, feature):
-        np.random.shuffle(self.augments)
-        for augment_func in self.augments:
-            if isinstance(augment_func, SpecAugmentation):
-                feature = augment_func(feature)
-
-        return feature
+        return data
 
 
 class CoTrainingGenerator(data.Dataset):
