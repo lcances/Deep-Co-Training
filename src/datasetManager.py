@@ -24,6 +24,7 @@ def conditional_cache(func):
                 if filename not in decorator.cache.keys():
                     decorator.cache[filename] = func(*args, **kwargs)
                     return decorator.cache[filename]
+
                 else:
                     if decorator.cache[filename] is None:
                         decorator.cache[filename] = func(*args, **kwargs)
@@ -31,8 +32,7 @@ def conditional_cache(func):
                     else:
                         return decorator.cache[filename]
 
-        else:
-            return func(*args, **kwargs)
+        return func(*args, **kwargs)
 
     decorator.cache = dict()
 
