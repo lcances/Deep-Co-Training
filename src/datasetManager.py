@@ -1,4 +1,8 @@
 import os
+from typing import Union
+
+from numpy.core._multiarray_umath import ndarray
+
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NUM_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
@@ -21,7 +25,11 @@ def conditional_cache(func):
                     decorator.cache[filename] = func(*args, **kwargs)
                     return decorator.cache[filename]
                 else:
-                    return decorator.cache[filename]
+                    if decorator.cache[filename] is None:
+                        decorator.cache[filename] = func(*args, **kwargs)
+                        return decorator.cache[filename]
+                    else:
+                        return decorator.cache[filename]
 
         else:
             return func(*args, **kwargs)
@@ -47,18 +55,30 @@ class DatasetManager:
     NB_CLASS = 10
     LENGTH = 4
 
-    def __init__(self, metadata_root, audio_root, hdf_file: str = None,
-                 hdf_augments_file: str = None, augments: tuple = (),
-                 sr: int = 22050, train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9),
-                 val_fold: list = (10, ), verbose=1):
+    def __init__(self, metadata_root, audio_root, sr: int = 22050, augments: tuple = (),
+                 train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10, ),
+                 subsampling: float = 1.0, subsampling_method: str = "random", verbose=1):
 
+        """
+
+        :param metadata_root: base for metadata files
+        :param audio_root: base for audio files
+        :param sr: sampling rate
+        :param augments: augmentation to apply (must be from signal_augmentation, spec_augmentation, img_augmentations)
+        :param train_fold: can be empty
+        :param val_fold: can be empty
+        :param subsampling: percentage of the dataset to load (0 < subsampling <= 1.0)
+        :param subsampling_method: [random | balance]
+        :param verbose: 1 terminal, 2 notebooks
+        """
         self.sr = sr
         self.metadata_root = metadata_root
         self.audio_root = audio_root
         self.train_fold = train_fold
         self.val_fold = val_fold
-        self.hdf_file = "urbansound8k_%s.hdf5" % self.sr if hdf_file is None else hdf_file
-        self.hdf_augments_file = hdf_augments_file
+        self.subsampling = subsampling
+        self.subsampling_method = subsampling_method
+        self.hdf_file = "urbansound8k_%s.hdf5" % self.sr
         self.augments = augments
         self.feat_val = None
         self.y_val = None
@@ -78,16 +98,55 @@ class DatasetManager:
             "val": self._hdf_to_dict(os.path.join(audio_root, self.hdf_file), val_fold)
         }
 
-        # Preparation for the gathering the static augmentations
-        if self.hdf_augments_file is not None:
-            self.augmentations = {}
-
-            for key in self.augments:
-                self.augmentations[key] = self._hdf_to_dict(os.path.join(audio_root, self.hdf_augments_file), train_fold, key)
-
     @property
     def validation(self):
         raise NotImplementedError()
+
+    def _load_metadata(self):
+        metadata_path = os.path.join(self.metadata_root, "UrbanSound8K.csv")
+
+        data = pd.read_csv(metadata_path, sep=",")
+        data = data.set_index("slice_file_name")
+
+        self.meta["train"] = data.loc[data.fold.isin(self.train_fold)]
+        self.meta["val"] = data.loc[data.fold.isin(self.val_fold)]
+
+    def _subsample(self, filenames, fold) -> list:
+        """Select a fraction of the file following the picking method specified while creating the Manager
+        Since a fold of data is loaded at once, must specified on which fold we are working.
+
+        Return a list of indexes
+        """
+
+        def random_pick() -> list:
+            nb_file = len(filenames)
+            rnd_idx = np.random.randint(0, nb_file, int(nb_file * self.subsampling))
+
+            return rnd_idx
+
+        def balanced_pick() -> list:
+            nb_file = len(filenames)
+            subset_meta = "train" if fold in self.train_fold else "val"
+            meta = self.meta[subset_meta].loc[self.meta[subset_meta].fold == fold]
+            meta["idx"] = list(range(len(meta)))
+
+            # calc fold class distribution
+            meta["distribution"] = [0] * len(meta)
+            for c_idx in range(10):
+                meta_class = meta.loc[meta.classID == c_idx]
+                distribution = len(meta_class) / nb_file
+                meta.loc[meta.classID == c_idx, "distribution"] = [distribution] * len(meta_class)
+
+            # sample the dataframe
+            sample = meta.sample(frac=self.subsampling)
+            return sample.idx.values
+
+        if self.subsampling_method == "random":
+            return random_pick()
+        elif self.subsampling_method == "balance":
+            return balanced_pick()
+        else:
+            raise AttributeError("Subsampling method: %s does not exist" % self.subsampling_method)
 
     def _hdf_to_dict(self, hdf_path, folds: list, key: str = "data") -> dict:
         output = dict()
@@ -98,10 +157,14 @@ class DatasetManager:
         for fold in self.tqdm_func(folds):
             hdf_fold = hdf["fold%d" % fold]
 
-            filenames = hdf_fold["filenames"]
-            raw_audios = hdf_fold[key]
+            filenames = np.asarray(hdf_fold["filenames"])
+            raw_audios = np.asarray(hdf_fold[key])
 
-            fold_dict = dict(zip(filenames, raw_audios))
+            # Apply subsampling
+
+            selection_idx = self._subsample(filenames, fold)
+
+            fold_dict = dict(zip(filenames[selection_idx], raw_audios[selection_idx]))
             output = dict(**output, **fold_dict)
 
         # close hdf file
@@ -126,24 +189,13 @@ class DatasetManager:
         feat = librosa.power_to_db(feat, ref=np.max)
         return feat
 
-    def _load_metadata(self):
-        metadata_path = os.path.join(self.metadata_root, "UrbanSound8K.csv")
-
-        data = pd.read_csv(metadata_path, sep=",")
-        data = data.set_index("slice_file_name")
-
-        self.meta["train"] = data.loc[data.fold.isin(self.train_fold)]
-        self.meta["val"] = data.loc[data.fold.isin(self.val_fold)]
 
 
 if __name__ == '__main__':
     audio_root = "../dataset/audio"
     metadata_root = "../dataset/metadata"
-    #dataset = DatasetManager(metadata_root, audio_root)
 
-    augmentation_to_load = ("PitchShiftChoice", "Noise")
-    dataset = DatasetManager(metadata_root, audio_root,
-                             hdf_augments_file="urbansound8k_22050_default_config_1.hdf5",
-                             augments=("PitchShiftChoice", "Noise")
-                             )
+    dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
+    print(len(dataset.audio["train"]))
+    print(len(dataset.audio["val"]))
 
