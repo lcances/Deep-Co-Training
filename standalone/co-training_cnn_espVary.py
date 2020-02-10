@@ -383,7 +383,6 @@ def train(epoch):
 
 # In[29]:
 
-
 def test(epoch):
     global best_acc
     m1.eval()
@@ -439,13 +438,13 @@ for epoch in range(0, args.epochs):
         U_epsilon *= 2
         
         if U_epsilon > 20:
-            print("============")
-            print("new epsilon: ", U_epsilon)
-            tensorboard.add_scalar("detail_hyperparameters/U_epsilon", U_epsilon, epoch)
-            print("============")
-        
             U_epsilon = 20
-        
+
+        print("============")
+        print("new epsilon: ", U_epsilon)
+        tensorboard.add_scalar("detail_hyperparameters/U_epsilon", U_epsilon, epoch)
+        print("============")
+
         # adversarial generation
         S_adv_generator_1 = GradientSignAttack(
             m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
