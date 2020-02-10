@@ -13,15 +13,16 @@ import pandas as pd
 
 def conditional_cache(func):
     def decorator(*args, **kwargs):
-        filename = kwargs["filename"]
-        cached = kwargs["cached"]
+        if "filename" in kwargs.keys() and "cached" in kwargs.keys():
+            filename = kwargs["filename"]
+            cached = kwargs["cached"]
 
-        if filename is not None and cached:
-            if filename not in decorator.cache.keys():
-                decorator.cache[filename] = func(*args, **kwargs)
-                return decorator.cache[filename]
-            else:
-                return decorator.cache[filename]
+            if filename is not None and cached:
+                if filename not in decorator.cache.keys():
+                    decorator.cache[filename] = func(*args, **kwargs)
+                    return decorator.cache[filename]
+                else:
+                    return decorator.cache[filename]
 
         else:
             return func(*args, **kwargs)
@@ -113,7 +114,7 @@ class DatasetManager:
         return raw_data, sr
 
     @conditional_cache
-    def extract_feature(self, raw_data, filename, cached = False):
+    def extract_feature(self, raw_data, filename = None, cached = False):
         """
         extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
         :param raw_data: to audio to transform
