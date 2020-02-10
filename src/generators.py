@@ -73,7 +73,6 @@ class Generator(data.Dataset):
         feat = self._apply_augmentation(feat, SpecAugmentation)
         y = np.asarray(y)
 
-        print(feat, y)
         return feat, y
 
     def _pad_and_crop(self, raw_audio):
