@@ -73,6 +73,7 @@ class Generator(data.Dataset):
         feat = self._apply_augmentation(feat, SpecAugmentation)
         y = np.asarray(y)
 
+        print(feat, y)
         return feat, y
 
     def _pad_and_crop(self, raw_audio):
@@ -92,7 +93,7 @@ class Generator(data.Dataset):
         np.random.shuffle(self.augments)
         for augment_func in self.augments:
             if isinstance(augment_func, augType):
-                raw_audio = augment_func(data)
+                return augment_func(data)
 
         return data
 
