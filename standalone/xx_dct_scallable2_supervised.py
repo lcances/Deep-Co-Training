@@ -99,7 +99,7 @@ train_sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb
 # ======== Prepare the model =========
 model_func = scallable2
 
-m1 = model_func()
+m1 = model_func(manager)
 
 m1 = m1.cuda()
 
