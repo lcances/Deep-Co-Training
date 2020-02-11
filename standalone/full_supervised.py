@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
 parser.add_argument("-s", "--subsampling", default=1.0, type=float, help="subsampling ratio")
-parser.add_argument("-sm", "--subsampling_method", default="balance", type=float, help="subsampling method [random|balance]")
+parser.add_argument("-sm", "--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
 parser.add_argument("--base_lr", default=0.05, type=float, help="initiation learning rate to train model")
 parser.add_argument("--decay", default=0.001, type=float, help="L2 regularization")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
@@ -71,7 +71,7 @@ optimizer = torch.optim.SGD(
 )
 
 # train and val loaders
-train_dataset = Dataset(dataset, train=True, val=True, augments=[], cached=True)
+train_dataset = Dataset(dataset, train=True, val=False, augments=[], cached=True)
 val_dataset = Dataset(dataset, train=False, val=True, cached=True)
 
 # training parameters
