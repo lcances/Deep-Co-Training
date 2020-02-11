@@ -1,22 +1,7 @@
 import numpy as np
 import librosa
 
-
-class SignalAugmentation:
-    def __init__(self, ratio):
-        self.ratio = ratio
-
-    def _perform_augmentation(self, data):
-        """Perform augmentation if needed"""
-        if np.random.random() < self.ratio:
-            return self._apply(data)
-        return data
-
-    def _apply(self, data):
-        raise NotImplementedError("This is an abstract class")
-
-    def __call__(self, data):
-        return self._perform_augmentation(data)
+from augmentations import SignalAugmentation
 
 
 class TimeStretch(SignalAugmentation):
