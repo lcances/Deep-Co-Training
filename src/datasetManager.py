@@ -13,7 +13,6 @@ import tqdm
 import h5py
 import pandas as pd
 
-
 def conditional_cache(func):
     def decorator(*args, **kwargs):
         if "filename" in kwargs.keys() and "cached" in kwargs.keys():
@@ -98,6 +97,10 @@ class DatasetManager:
             "val": self._hdf_to_dict(os.path.join(audio_root, self.hdf_file), val_fold)
         }
 
+        # while using subsampling, the metadata still contain the complete dataset. Since the
+        # CoTrainingDataset uses this metadata to pick the file to load, it needs to be curated
+        self._clean_metadata()
+
     @property
     def validation(self):
         raise NotImplementedError()
@@ -120,7 +123,8 @@ class DatasetManager:
 
         def random_pick() -> list:
             nb_file = len(filenames)
-            rnd_idx = np.random.randint(0, nb_file, int(nb_file * self.subsampling))
+            idx = list(range(nb_file))
+            rnd_idx = np.random.choice(idx, size=int(nb_file * self.subsampling), replace=False)
 
             return rnd_idx
 
@@ -128,6 +132,10 @@ class DatasetManager:
             nb_file = len(filenames)
             subset_meta = "train" if fold in self.train_fold else "val"
             meta = self.meta[subset_meta].loc[self.meta[subset_meta].fold == fold]
+
+            # order the dataframe following the filenames list
+            meta = meta.reindex(index=filenames)
+
             meta["idx"] = list(range(len(meta)))
 
             # calc fold class distribution
@@ -136,9 +144,10 @@ class DatasetManager:
                 meta_class = meta.loc[meta.classID == c_idx]
                 distribution = len(meta_class) / nb_file
                 meta.loc[meta.classID == c_idx, "distribution"] = [distribution] * len(meta_class)
+            meta["distribution"] /= sum(meta["distribution"])
 
             # sample the dataframe
-            sample = meta.sample(frac=self.subsampling)
+            sample = meta.sample(frac=self.subsampling, weights="distribution", replace=False)
             return sample.idx.values
 
         if self.subsampling_method == "random":
@@ -160,16 +169,27 @@ class DatasetManager:
             filenames = np.asarray(hdf_fold["filenames"])
             raw_audios = np.asarray(hdf_fold[key])
 
-            # Apply subsampling
-
-            selection_idx = self._subsample(filenames, fold)
+            # Apply subsampling if needed
+            selection_idx = list(range(len(filenames)))
+            if self.subsampling != 1.0:
+                print("apply subsampling ...")
+                selection_idx = self._subsample(filenames, fold)
 
             fold_dict = dict(zip(filenames[selection_idx], raw_audios[selection_idx]))
             output = dict(**output, **fold_dict)
 
         # close hdf file
         hdf.close()
+
+        print("nb file loaded: %d" % len(output))
         return output
+
+    def _clean_metadata(self):
+        final_train_filenames = list(self.audio["train"].keys())
+        final_val_filenames = list(self.audio["val"].keys())
+
+        self.meta["train"] = self.meta["train"].loc[self.meta["train"].index.isin(final_train_filenames)]
+        self.meta["val"] = self.meta["val"].loc[self.meta["val"].index.isin(final_val_filenames)]
 
     def load_audio(self, file_path):
         raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
@@ -196,6 +216,4 @@ if __name__ == '__main__':
     metadata_root = "../dataset/metadata"
 
     dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
-    print(len(dataset.audio["train"]))
-    print(len(dataset.audio["val"]))
 
