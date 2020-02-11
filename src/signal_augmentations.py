@@ -83,7 +83,6 @@ class Noise(SignalAugmentation):
         return data + noise
 
 
-
 class Occlusion(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, max_size: float = 1):
         super().__init__(ratio)
