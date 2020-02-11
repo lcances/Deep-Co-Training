@@ -29,6 +29,8 @@ parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="f
 parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
 parser.add_argument("-s", "--subsampling", default=1.0, type=float, help="subsampling ratio")
 parser.add_argument("-sm", "--subsampling_method", default="balance", type=float, help="subsampling method [random|balance]")
+parser.add_argument("--base_lr", default=0.05, type=float, help="initiation learning rate to train model")
+parser.add_argument("--decay", default=0.001, type=float, help="L2 regularization")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
 args = parser.parse_args()
 
@@ -64,8 +66,8 @@ criterion_bce = nn.CrossEntropyLoss(reduction="mean")
 
 optimizer = torch.optim.SGD(
     m1.parameters(),
-    weight_decay=1e-3,
-    lr=0.05
+    weight_decay=args.decay,
+    lr=args.base_lr
 )
 
 # train and val loaders
