@@ -1,16 +1,13 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # Import
-
-# In[1]:
-
-
+import os
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NU M_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
 import time
 import math
 import random
 import argparse
+import datetime
 
 import torch
 import torch.nn as nn
@@ -18,7 +15,6 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
-from advertorch.attacks import GradientSignAttack
 
 
 # In[2]:
@@ -28,7 +24,7 @@ import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import CoTrainingGenerator
+from generators import CoTrainingDataset
 from samplers import CoTrainingSampler
 
 from models import cnn
@@ -45,8 +41,11 @@ parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervis
 parser.add_argument("--model", default="cnn", type=str, help="The name of the model to load")
 parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", required=True, type=int, help="fold to use for validation")
+parser.add_argument("-T", '--tensorboard_dir', required=True, type=str)
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=float)
+parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
+parser.add_argument("--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
 parser.add_argument('--batchsize', '-b', default=100, type=int)
 parser.add_argument('--lambda_cot_max', default=10, type=int)
 parser.add_argument('--lambda_diff_max', default=0.5, type=float)
@@ -59,7 +58,6 @@ parser.add_argument('--epsilon', default=0.02, type=float)
 parser.add_argument('--num_class', default=10, type=int)
 parser.add_argument('--cifar10_dir', default='./data', type=str)
 parser.add_argument('--svhn_dir', default='./data', type=str)
-parser.add_argument("-T", '--tensorboard_dir', default='tensorboard_10_supervised/', type=str)
 parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
 parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
@@ -67,11 +65,8 @@ parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn 
 parser.add_argument("--job_name", default="default", type=str)
 args = parser.parse_args()
 
-# ## Reproducibility
 
-# In[4]:
-
-
+# Reproducibility
 def reset_seed(seed):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -82,44 +77,26 @@ def reset_seed(seed):
 reset_seed(args.seed)
 
 
-# In[5]:
-
-
-import datetime
-
+# Utils
 def get_datetime():
     now = datetime.datetime.now()
     return str(now)[:10] + "_" + str(now)[11:-7]
 
-
-
-# # Prep Supervised training (same ratio)
-
-# ## dataset
-
-# In[56]:
-
-
-# load the data
+# ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-dataset = DatasetManager(metadata_root, audio_root,
+manager = DatasetManager(metadata_root, audio_root,
                          train_fold=args.train_folds,
                          val_fold=args.val_folds,
+                         subsampling=args.subsampling,
+                         subsampling_method=args.subsampling_method,
                          verbose=1)
 
-# prepare the sampler with the specified number of supervised file
-nb_train_file = len(dataset.audio["train"])
+train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=(), cached=True)
+val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
+train_sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
-train_dataset = CoTrainingGenerator(dataset, args.ratio)
-sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-
-
-# ## Model
-
-# In[97]:
-
-
+# ======== Prepare the model =========
 model_func = cnn
 
 m1 = model_func()
@@ -127,31 +104,14 @@ m1 = model_func()
 m1 = m1.cuda()
 
 
-# ## Loaders & adversarial generators
-
-# In[86]:
-
-
-x, y = train_dataset.validation
-x = torch.from_numpy(x)
-y = torch.from_numpy(y)
-val_dataset = torch.utils.data.TensorDataset(x, y)
-
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=4)
-val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
-
-# adversarial generation
-adv_generator_1 = GradientSignAttack(
-    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
-)
+# ---- Loaders ----
+nb_epoch = 100
+train_loader = data.DataLoader(train_dataset, batch_sampler=train_sampler)
+val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 
-# ## optimizers & callbacks & criterion
 
-# In[98]:
-
-
+# -------- optimizers & callbacks & criterion --------
 params = m1.parameters()
 optimizer = optim.SGD(params, lr=args.base_lr, momentum=args.momentum, weight_decay=args.decay)
 
@@ -159,16 +119,10 @@ lr_lambda = lambda epoch: (1.0 + math.cos((epoch-1)*math.pi/args.epochs))
 lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
 criterion = nn.CrossEntropyLoss()
-
 callbacks = [lr_scheduler]
 
 
-# ## Metrics and hyperparameters
-
-# In[88]:
-
-
-# define the metrics
+# ---- metrics ----
 acc_func = CategoricalAccuracy()
 
 def reset_all_metrics():
@@ -178,8 +132,9 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_10_supervised" % (args.job_name, get_datetime())
-tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
+# ---- title ----
+title = "%s_%s_cnn_Cosd-lr_sgd-%slr-%swd_%de" % (args.job_name, get_datetime(), args.base_lr, args.decay, nb_epoch)
+tensorboard = SummaryWriter("tensorboard/%s/%s" % (args.tensorboard_dir, title))
 
 
 # # Training
@@ -229,7 +184,7 @@ def train(epoch):
 
         # print statistics
         print("Epoch %s: %.2f%% : train acc: %.3f - Loss: %.3f - time: %.2f" % (
-            epoch, (batch / len(sampler)) * 100,
+            epoch, (batch / len(train_sampler)) * 100,
             acc,
             running_loss / (batch+1),
             time.time() - start_time,
@@ -253,15 +208,19 @@ def test(epoch):
 
     with torch.no_grad():
         for batch_idx, (X, y) in enumerate(val_loader):
-            X_S = X.cuda().float()
-            y_S = y.cuda().long()
+            X = X.squeeze()
+            y = y.squeeze()
 
-            logits_S = m1(X_S)
-            _, pred_S = torch.max(logits_S, 1)
+            # separate Supervised (S) and Unsupervised (U) parts
+            X = X.cuda()
+            y = y.cuda()
 
-            loss_val = criterion(logits_S, y_S)
+            logits = m1(X)
+            _, pred = torch.max(logits, 1)
 
-            acc_val = acc_func(pred_S, y_S)
+            loss_val = criterion(logits, y)
+
+            acc_val = acc_func(pred, y)
 
         print("\nEpoch %s: Val acc: %.3f - loss: %.3f" % (
             epoch,
@@ -290,27 +249,6 @@ for epoch in range(0, args.epochs):
         break
 
     test(epoch)
-
-
-# Save the prediction of the model for both training and validation
-m1.eval()
-val_logits = []
-val_y = []
-val_filenames = list(dataset.audio["val"].keys())
-
-for X, y in val_loader:
-    X = X.cuda().float()
-    y = y.cuda().long()
-
-    logits = m1(X)
-
-    val_logits.extend(logits.detach().cpu().numpy())
-    val_y.extend(y.cpu().numpy())
-
-final_results = dict(zip(val_filenames, zip(val_logits, val_y)))
-
-np.save("../results/10_supervised_val_%s_dict.npy" % args.val_folds[0], final_results)
-print(final_results)
 
 
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
