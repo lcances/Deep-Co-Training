@@ -337,3 +337,15 @@ class ScalableCnn_advBN(nn.Module):
             return feat
 
         return extract_feature
+
+
+def scallable2(dataset):
+    parameters = dict(
+        dataset=dataset,
+        initial_conv_inputs=[1, 44, 89, 89, 89, 111],
+        initial_conv_outputs=[44, 89, 89, 89, 111, 133],
+        initial_linear_inputs=[266, ],
+        initial_linear_outputs=[10, ]
+    )
+
+    return ScalableCnn(**parameters)
