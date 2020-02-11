@@ -115,7 +115,7 @@ class FractalTimeStretch(SpecAugmentation):
 
         final_S = np.array(tmp)
 
-        return final_S
+        return np.float32(final_S)
 
 
 class FractalFreqStretch(SpecAugmentation):
@@ -187,7 +187,7 @@ class FractalFreqStretch(SpecAugmentation):
 
         final_S = np.array(tmp)
 
-        return final_S
+        return np.float32(final_S)
 
 
 class FractalTimeDropout(SpecAugmentation):
@@ -243,7 +243,7 @@ class FractalTimeDropout(SpecAugmentation):
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=1)
 
-        return reconstructed_S
+        return np.float32(reconstructed_S)
 
 
 class FractalFrecDropout(SpecAugmentation):
@@ -299,7 +299,7 @@ class FractalFrecDropout(SpecAugmentation):
 
         reconstructed_S = np.concatenate(reconstructed_S, axis=0)
 
-        return reconstructed_S
+        return np.float32(reconstructed_S)
 
 
 class RandomTimeDropout(SpecAugmentation):
@@ -319,7 +319,7 @@ class RandomTimeDropout(SpecAugmentation):
             if not valid:
                 out[:, idx] = mini
 
-        return out
+        return np.float32(out)
 
 
 class RandomFreqDropout(SpecAugmentation):
@@ -339,4 +339,4 @@ class RandomFreqDropout(SpecAugmentation):
             if not valid:
                 out[idx, :] = mini
 
-        return out
+        return np.float32(out)
