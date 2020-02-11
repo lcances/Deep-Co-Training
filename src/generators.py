@@ -16,13 +16,12 @@ import logging
 
 
 class Dataset(data.Dataset):
-    def __init__(self, manager: DatasetManager, train: bool = True, val:bool = False, sampling: float = 1.0, augments=(), cached=False):
+    def __init__(self, manager: DatasetManager, train: bool = True, val:bool = False, augments=(), cached=False):
         super().__init__()
 
         self.dataset = manager
         self.train = train
         self.val = val
-        self.sampling = sampling
         self.augments = augments
 
         self.cached = cached
@@ -49,9 +48,6 @@ class Dataset(data.Dataset):
     def _check_arguments(self):
         if sum([self.train, self.val]) != 1:
             raise AssertionError("Train and val and mutually exclusive")
-
-        if 0 > self.sampling > 1.0:
-            raise AssertionError("Sampling ratio must be between 0 and 1")
 
     def __len__(self):
         nb_file = len(self.filenames)
