@@ -69,20 +69,16 @@ optimizer = torch.optim.SGD(
 )
 
 # train and val loaders
-train_dataset = Dataset(dataset, augments=[])
-
-x, y = train_dataset.validation
-x = torch.from_numpy(x)
-y = torch.from_numpy(y)
-val_dataset = torch.utils.data.TensorDataset(x, y)
+train_dataset = Dataset(dataset, train=True, val=True, augments=[], cached=True)
+val_dataset = Dataset(dataset, train=False, val=True, cached=True)
 
 # training parameters
 nb_epoch = 100
 batch_size = 32
 nb_batch = len(train_dataset) // batch_size
 
-training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # scheduler
 lr_lambda = lambda epoch: 0.5 * (np.cos(np.pi * epoch / nb_epoch) + 1)
