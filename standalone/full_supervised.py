@@ -17,7 +17,7 @@ import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import Generator
+from generators import Dataset
 from models import cnn
 from utils import get_datetime
 from metrics import CategoricalAccuracy
@@ -27,6 +27,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
+parser.add_argument("-s", "--subsampling", default=1.0, type=float, help="subsampling ratio")
+parser.add_argument("-sm", "--subsampling_method", default="balance", type=float, help="subsampling method [random|balance]")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
 args = parser.parse_args()
 
@@ -45,6 +47,8 @@ dataset = DatasetManager(
     audio_root=audio_root,
     train_fold=args.train,
     val_fold=args.val,
+    subsampling=args.subsampling,
+    subsampling_method=args.subsampling_method,
     verbose=1
 )
 
@@ -65,7 +69,7 @@ optimizer = torch.optim.SGD(
 )
 
 # train and val loaders
-train_dataset = Generator(dataset, augments=[])
+train_dataset = Dataset(dataset, augments=[])
 
 x, y = train_dataset.validation
 x = torch.from_numpy(x)
