@@ -8,7 +8,7 @@ from layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Se
 
 
 class cnn(nn.Module):
-    def __init__(self, *args):
+    def __init__(self, **kwargs):
         super(cnn, self).__init__()
 
         self.features = nn.Sequential(
@@ -41,7 +41,7 @@ class cnn_advBN(nn.Module):
     Basic CNN model with adversarial dedicated Batch Normalization
 
     """
-    def __init__(self, *args):
+    def __init__(self, *kwargs):
         super(cnn_advBN, self).__init__()
 
         self.features = nn.Sequential(
@@ -81,7 +81,8 @@ class ScalableCnn(nn.Module):
                  initial_conv_outputs=[32, 64, 64, 64],
                  initial_linear_inputs=[1344, ],
                  initial_linear_outputs=[10, ],
-                 initial_resolution=[64, 173]
+                 initial_resolution=[64, 173],
+                 **kwargs
                  ):
         super(ScalableCnn, self).__init__()
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
@@ -217,7 +218,8 @@ class ScalableCnn_advBN(nn.Module):
                  initial_conv_outputs=[32, 64, 64, 64],
                  initial_linear_inputs=[1344, ],
                  initial_linear_outputs=[10, ],
-                 initial_resolution=[64, 173]
+                 initial_resolution=[64, 173],
+                 **kwargs
                  ):
         super(ScalableCnn_advBN, self).__init__()
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
@@ -339,7 +341,8 @@ class ScalableCnn_advBN(nn.Module):
         return extract_feature
 
 
-def scallable2(dataset):
+def scallable2(**kwargs):
+    dataset = kwargs["dataset"]
     parameters = dict(
         dataset=dataset,
         initial_conv_inputs=[1, 44, 89, 89, 89, 111],
