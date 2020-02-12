@@ -8,7 +8,7 @@ from layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Se
 
 
 class cnn(nn.Module):
-    def __init__(self):
+    def __init__(self, *args):
         super(cnn, self).__init__()
 
         self.features = nn.Sequential(
@@ -41,7 +41,7 @@ class cnn_advBN(nn.Module):
     Basic CNN model with adversarial dedicated Batch Normalization
 
     """
-    def __init__(self):
+    def __init__(self, *args):
         super(cnn_advBN, self).__init__()
 
         self.features = nn.Sequential(
