@@ -5,6 +5,7 @@ os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
 import tqdm
+import random
 import time
 
 import torch
@@ -28,6 +29,7 @@ parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="f
 parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
 parser.add_argument("-s", "--subsampling", default=1.0, type=float, help="subsampling ratio")
 parser.add_argument("-sm", "--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
+parser.add_argument('--seed', default=1234, type=int)
 parser.add_argument("--base_lr", default=0.05, type=float, help="initiation learning rate to train model")
 parser.add_argument("--decay", default=0.001, type=float, help="L2 regularization")
 parser.add_argument("-T", "--log_dir", default="Test", required=True, help="Tensorboard working directory")
@@ -35,10 +37,16 @@ parser.add_argument("--model", default="cnn", type=str, help="model to load")
 args = parser.parse_args()
 
 
-def reset_seed(seed=42):
-    np.random.seed(seed)
+# ## Reproducibility
+def reset_seed(seed):
+    random.seed(seed)
     torch.manual_seed(seed)
-reset_seed()
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
+reset_seed(args.seed)
+
 
 # Prep data
 audio_root = "../dataset/audio"
