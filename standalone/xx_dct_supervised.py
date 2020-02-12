@@ -115,6 +115,7 @@ def get_model_from_name(model_name):
     for name, obj in inspect.getmembers(models):
         if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__name__ == model_name:
+                logging.info("Model loaded: %s" % model_func.__name__)
                 return obj
     raise AttributeError("This model does not exist: %s " % model_name)
 
@@ -122,7 +123,6 @@ def get_model_from_name(model_name):
 model_func = get_model_from_name(args.model)
 m1 = model_func(dataset=manager)
 m1.cuda()
-logging.info("Model loaded: %s" % model_func.__name__)
 
 # ---- Loaders ----
 nb_epoch = 100
