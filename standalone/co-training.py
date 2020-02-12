@@ -6,28 +6,23 @@
 # In[1]:
 
 
-import numpy as np
 import os
+os.environ["MKL_NUM_THREADS"] = "2"
+os.environ["NUMEXPR_NU M_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "2"
+import numpy as np
 import time
 import math
-import pickle
 import argparse
 import random
-from random import shuffle
-from tqdm import tqdm_notebook as tqdm
 
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
-from torch.nn.utils import weight_norm
 
 
 # In[2]:
@@ -330,9 +325,6 @@ def train(epoch):
     return total_loss.item()
 
 
-# In[29]:
-
-
 def test(epoch):
     global best_acc
     m1.eval()
@@ -376,18 +368,11 @@ def test(epoch):
     lambda_diff.step()
 
 
-# In[ ]:
-
-
 for epoch in range(0, args.epochs):
     total_loss = train(epoch)
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
     test(epoch)
-
-# tensorboard.export_scalars_to_json('./' + args.tensorboard_dir + 'output.json')
-# tensorboard.close()
-
 
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
