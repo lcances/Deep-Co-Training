@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # Import
-
-# In[1]:
-
-
 import numpy as np
 import time
 import math
@@ -14,7 +6,6 @@ import random
 
 import torch
 import torch.nn as nn
-import torchvision.models as models
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
@@ -29,7 +20,7 @@ import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import Generator, CoTrainingGenerator
+from generators import Dataset, CoTrainingDataset
 from samplers import CoTrainingSampler
 
 import models
@@ -50,6 +41,8 @@ parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=float)
+parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
+parser.add_argument("--subsampling_method", default="balance", type=str, help="method to perform subsampling [random | balance]")
 parser.add_argument('--batchsize', '-b', default=100, type=int)
 parser.add_argument('--lambda_cot_max', default=10, type=int)
 parser.add_argument('--lambda_diff_max', default=0.5, type=float)
@@ -71,10 +64,6 @@ parser.add_argument("--job_name", default="espVary_U", type=str)
 args = parser.parse_args()
 
 # ## Reproducibility
-
-# In[4]:
-
-
 def reset_seed(seed):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -85,9 +74,7 @@ def reset_seed(seed):
 reset_seed(args.seed)
 
 
-# In[5]:
-
-
+# UTILITY ========
 import datetime
 
 def get_datetime():
@@ -95,41 +82,23 @@ def get_datetime():
     return str(now)[:10] + "_" + str(now)[11:-7]
 
 
-# # Dataset
-
-# In[23]:
-
-
-# load the data
+# ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-dataset = DatasetManager(metadata_root, audio_root,
-                         train_fold=args.train_folds,
-                         val_fold=args.val_folds,
-                         verbose=1)
+manager = DatasetManager(metadata_root, audio_root,
+        subsampling=args.subsampling, subsampling_method=args.subsampling_method,
+        train_fold=args.train_folds, val_fold=args.val_folds,
+        verbose=1
+)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingGenerator(dataset, args.ratio)
+train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, cached=True)
+val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
 sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
-# # Prep training
-
-# ## Models
-
-# In[24]:
-
-def get_model_from_name(model_name):
-    import inspect
-
-    for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
-            if obj.__name__ == model_name:
-                return obj
-
-
+# ======== Prepare model ========
 model_func =  models.cnn
-
 
 m1, m2 = model_func(), model_func()
 
@@ -137,21 +106,14 @@ m1 = m1.cuda()
 m2 = m2.cuda()
 
 
-# ## Loaders & adversarial generators
+# ======== Prepare training ========
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
+val_loader = data.DataLoader(val_dataset, batch_size=128)
 
-# In[25]:
-
-x, y = train_dataset.validation
-x = torch.from_numpy(x)
-y = torch.from_numpy(y)
-val_dataset = torch.utils.data.TensorDataset(x, y)
-
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=8)
-val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
-
-# adversarial generation
+# ---- adversarial generation
 input_max_value = 0
 input_min_value = -80
+
 S_adv_generator_1 = GradientSignAttack(
     m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
     eps= args.epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
@@ -171,11 +133,7 @@ U_adv_generator_2 = GradientSignAttack(
 )
 
 
-# ## optimizers & callbacks
-
-# In[26]:
-
-
+# ---- optimizers & callbacks
 params = list(m1.parameters()) + list(m2.parameters())
 optimizer = optim.SGD(params, lr=args.base_lr, momentum=args.momentum, weight_decay=args.decay)
 
@@ -185,12 +143,7 @@ lr_scheduler = LambdaLR(optimizer, lr_lambda)
 callbacks = [lr_scheduler]
 
 
-# ## Metrics and hyperparameters
-
-# In[27]:
-
-
-# define the metrics
+# ---- Metrics and hyperparameters
 ratioS = [Ratio(), Ratio()]
 ratioU = [Ratio(), Ratio()]
 ratioSU = [Ratio(), Ratio()]
@@ -224,11 +177,7 @@ title = "%s_%s_%s_%slr_%se_%slcm_%sldm_%swl" % (
 tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
 
 
-# # Training
-
-# In[28]:
-
-
+# ======== Training ========
 def train(epoch):
     m1.train()
     m2.train()
@@ -238,7 +187,7 @@ def train(epoch):
     ls = 0.0
     lc = 0.0
     ld = 0.0
-    
+
     reset_all_metrics()
 
     start_time = time.time()
@@ -393,9 +342,10 @@ def test(epoch):
     correct2 = 0
     total1 = 0
     total2 = 0
-    
+
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(val_loader):
+            print(inputs)
             inputs = inputs.cuda()
             targets = targets.cuda()
 
@@ -433,12 +383,12 @@ U_epsilon = args.epsilon
 for epoch in range(0, args.epochs):
     total_loss, ratio_U = train(epoch)
 
-    
-    if ratio_U < 0.15 and U_epsilon < 10:
+
+    if ratio_U < 0.15 and U_epsilon < 3.2:
         U_epsilon *= 2
-        
-        if U_epsilon > 20:
-            U_epsilon = 20
+
+        if U_epsilon > 3.2:
+            U_epsilon = 3.2
 
         print("============")
         print("new epsilon: ", U_epsilon)
@@ -464,12 +414,11 @@ for epoch in range(0, args.epochs):
             eps=U_epsilon, clip_min=-math.inf, clip_max=math.inf, targeted=False
         )
 
-        
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
 
-        
+
     test(epoch)
 
 # tensorboard.export_scalars_to_json('./' + args.tensorboard_dir + 'output.json')
