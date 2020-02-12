@@ -27,8 +27,7 @@ from datasetManager import DatasetManager
 from generators import CoTrainingDataset
 from samplers import CoTrainingSampler
 
-from models import cnn
-from metrics import CategoricalAccuracy, Ratio
+from metrics import CategoricalAccuracy
 
 
 # # Utils
