@@ -53,6 +53,7 @@ parser.add_argument('--warm_up', default=80.0, type=float)
 parser.add_argument('--momentum', default=0.0, type=float)
 parser.add_argument('--decay', default=1e-3, type=float)
 parser.add_argument('--epsilon', default=0.02, type=float)
+parser.add_argument("--max_epsilon", default=3.2, type=float, help="Maximum epsilon value for adversarial generation")
 parser.add_argument('--num_class', default=10, type=int)
 parser.add_argument('--cifar10_dir', default='./data', type=str)
 parser.add_argument('--svhn_dir', default='./data', type=str)
@@ -389,16 +390,14 @@ for epoch in range(0, args.epochs):
     total_loss, ratio_U = train(epoch)
 
 
-    if ratio_U < 0.15 and U_epsilon < 3.2:
+    if ratio_U < 0.15 and U_epsilon < args.max_epsilon:
         U_epsilon *= 2
 
-        if U_epsilon > 3.2:
-            U_epsilon = 3.2
+        if U_epsilon > args.max_epsilon:
+            U_epsilon = args.max_epsilon
+            logging.info("New epsilon value: %.2f" % U_epsilon)
 
-        print("============")
-        print("new epsilon: ", U_epsilon)
         tensorboard.add_scalar("detail_hyperparameters/U_epsilon", U_epsilon, epoch)
-        print("============")
 
         # adversarial generation
         S_adv_generator_1 = GradientSignAttack(
@@ -422,7 +421,6 @@ for epoch in range(0, args.epochs):
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
-
 
     test(epoch)
 
