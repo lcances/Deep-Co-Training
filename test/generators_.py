@@ -1,11 +1,11 @@
-from datasetManager import DatasetManager
-from generators import Generator
-
-import matplotlib.pyplot as plt
-import numpy as np
 import time
+
+import numpy as np
 import tqdm
-import librosa.display
+
+from datasetManager import DatasetManager
+from generators import Dataset
+
 
 def timit(func):
     def decorator(*args, **kwargs):
@@ -22,8 +22,8 @@ metadata_root = "../dataset/metadata"
 dataset = DatasetManager(metadata_root, audio_root, train_fold=[1], val_fold=[2])
 
 # test generator train / val
-train_loader = Generator(dataset, train=True, val=False, sampling=1.0, augments=["test"], cached=True)
-val_loader = Generator(dataset, train=False, val=True, sampling=1.0, augments=[], cached=True)
+train_loader = Dataset(dataset, train=True, val=False, sampling=1.0, augments=["test"], cached=True)
+val_loader = Dataset(dataset, train=False, val=True, sampling=1.0, augments=[], cached=True)
 
 # test really different
 print(np.array(train_loader.y.index.values) == np.array(val_loader.y.index.values))
