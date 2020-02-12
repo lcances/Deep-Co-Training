@@ -4,7 +4,6 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
-import tqdm
 import time
 import random
 
@@ -33,6 +32,7 @@ parser.add_argument("-v", "--val_folds", nargs="+", required=True, type=int, hel
 parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
 parser.add_argument("--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
 parser.add_argument("--seed", default=1234, type=int, help="Seed for random generation. Use for reproductability")
+parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
 parser.add_argument("-j", "--job_name", default="default")
 args = parser.parse_args()
@@ -60,19 +60,19 @@ manager = DatasetManager(metadata_root, audio_root,
                          verbose=1
 )
 
-# prep model
-torch.cuda.empty_cache()
+# Prepare the model ========
+def get_model_from_name(model_name):
+    import models
+    import inspect
 
-model_func = models.ScalableCnn
-parameters = dict(
-    dataset=manager,
-    initial_conv_inputs=[1, 44, 89, 89, 89, 111],
-    initial_conv_outputs=[44, 89, 89, 89, 111, 133],
-    initial_linear_inputs=[266,],
-    initial_linear_outputs=[10,]
-)
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj):
+            if obj.__name__ == model_name:
+                return obj
 
-m1 = model_func(**parameters)
+
+model_func = get_model_from_name(args.model)
+m1 = model_func(dataset=manager)
 m1.cuda()
 
 # loss and optimizer
