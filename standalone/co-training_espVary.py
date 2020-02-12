@@ -1,29 +1,25 @@
-import numpy as np
-import time
-import math
 import argparse
+import math
 import random
+import sys
+import time
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
-from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
-
+from torch.optim.lr_scheduler import LambdaLR
+from torch.utils.tensorboard import SummaryWriter
 
 # In[2]:
-
-
-import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import Dataset, CoTrainingDataset
+from generators import CoTrainingDataset
 from samplers import CoTrainingSampler
 
-import models
 from losses import loss_cot, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
@@ -177,7 +173,7 @@ title = "%s_%s_%s_%slr_%se_%slcm_%sldm_%swl" % (
     args.lambda_diff_max,
     args.warm_up,
 )
-tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
+tensorboard = SummaryWriter("tensorboard/%s/%s" % (args.tensorboard_dir, title))
 
 
 # ======== Training ========
