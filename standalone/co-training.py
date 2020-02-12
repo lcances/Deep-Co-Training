@@ -37,7 +37,7 @@ import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import Generator, CoTrainingGenerator
+from generators import Dataset, CoTrainingDataset
 from samplers import CoTrainingSampler
 import signal_augmentations as sa
 
@@ -118,7 +118,7 @@ dataset = DatasetManager(metadata_root, audio_root,
                          verbose=1)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingGenerator(dataset, args.ratio)
+train_dataset = CoTrainingDataset(dataset, args.ratio)
 sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
@@ -237,7 +237,7 @@ def train(epoch):
     ls = 0.0
     lc = 0.0
     ld = 0.0
-    
+
     reset_all_metrics()
 
     start_time = time.time()
@@ -393,7 +393,7 @@ def test(epoch):
     correct2 = 0
     total1 = 0
     total2 = 0
-    
+
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(val_loader):
             inputs = inputs.cuda()
