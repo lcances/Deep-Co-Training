@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # Import
-
-# In[1]:
-
-
 import os
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
@@ -24,10 +16,6 @@ import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
-
-# In[2]:
-
-
 import sys
 sys.path.append("../src/")
 
@@ -36,7 +24,6 @@ from generators import Dataset, CoTrainingDataset
 from samplers import CoTrainingSampler
 from utils import get_datetime, get_model_from_name
 
-import models
 from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
