@@ -129,8 +129,6 @@ nb_epoch = 100
 train_loader = data.DataLoader(train_dataset, batch_sampler=train_sampler)
 val_loader = data.DataLoader(val_dataset, batch_size=128)
 
-
-
 # -------- optimizers & callbacks & criterion --------
 params = m1.parameters()
 optimizer = optim.SGD(params, lr=args.base_lr, momentum=args.momentum, weight_decay=args.decay)
