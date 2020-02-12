@@ -46,13 +46,7 @@ from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
 
-
-# # Utils
-
-# ## Arguments
-
-# In[22]:
-
+# ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
 parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
 parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
@@ -77,13 +71,19 @@ parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
+parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
 
+# ---- Logging system ----
+import logging
+loglevel = args.log
+numeric_level = getattr(logging, loglevel.upper(), None)
+if not isinstance(numeric_level, int):
+    raise ValueError('Invalid log level: %s' % loglevel)
+logging.basicConfig(level=numeric_level)
+
+
 # ## Reproducibility
-
-# In[4]:
-
-
 def reset_seed(seed):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -131,6 +131,7 @@ def get_model_from_name(model_name):
     for name, obj in inspect.getmembers(models):
         if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__name__ == model_name:
+                logging.info("Model loaded: %s" % model_func.__name__)
                 return obj
     raise AttributeError("This model does not exist: %s " % model_name)
 
