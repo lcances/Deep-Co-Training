@@ -64,7 +64,16 @@ parser.add_argument('--resume', '-r', action='store_true', help='resume from che
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
 parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
+parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
+
+# Logging system
+import logging
+loglevel = args.log
+numeric_level = getattr(logging, loglevel.upper(), None)
+if not isinstance(numeric_level, int):
+    raise ValueError('Invalid log level: %s' % loglevel)
+logging.basicConfig(level=numeric_level)
 
 
 # Reproducibility
@@ -113,6 +122,7 @@ def get_model_from_name(model_name):
 model_func = get_model_from_name(args.model)
 m1 = model_func(dataset=manager)
 m1.cuda()
+logging.info("Model loaded: %s" % model_func.__name__)
 
 # ---- Loaders ----
 nb_epoch = 100
