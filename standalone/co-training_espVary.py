@@ -163,10 +163,11 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_%s_%slr_%se_%slcm_%sldm_%swl" % (
+title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl" % (
     get_datetime(),
     args.job_name,
     model_func.__name__,
+    args.subsampling,
     args.base_lr,
     args.epsilon,
     args.lambda_cot_max,
