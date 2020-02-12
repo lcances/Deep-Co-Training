@@ -18,9 +18,9 @@ sys.path.append("../src/")
 
 from datasetManager import DatasetManager
 from generators import Dataset
-from models import cnn
 from utils import get_datetime
 from metrics import CategoricalAccuracy
+import models
 
 import argparse
 
@@ -31,7 +31,8 @@ parser.add_argument("-s", "--subsampling", default=1.0, type=float, help="subsam
 parser.add_argument("-sm", "--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
 parser.add_argument("--base_lr", default=0.05, type=float, help="initiation learning rate to train model")
 parser.add_argument("--decay", default=0.001, type=float, help="L2 regularization")
-parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
+parser.add_argument("-T", "--log_dir", default="Test", required=True, help="Tensorboard working directory")
+parser.add_argument("--model", default="cnn", type=str, help="model to load")
 args = parser.parse_args()
 
 
@@ -54,10 +55,21 @@ dataset = DatasetManager(
     verbose=1
 )
 
-# prep model
+
+# Prepare the model ========
+def get_model_from_name(model_name):
+    import models
+    import inspect
+
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj):
+            if obj.__name__ == model_name:
+                return obj
+
+
 torch.cuda.empty_cache()
 
-model_func = cnn
+model_func = get_model_from_name(args.model)
 m1 = model_func()
 m1.cuda()
 
