@@ -24,8 +24,8 @@ from metrics import CategoricalAccuracy
 import spec_augmentations
 import signal_augmentations
 
+# Arguments ========
 import argparse
-
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", "--train_folds", nargs="+", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val_folds", nargs="+", required=True, type=int, help="fold to use for validation")
@@ -35,7 +35,16 @@ parser.add_argument("--seed", default=1234, type=int, help="Seed for random gene
 parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
 parser.add_argument("-j", "--job_name", default="default")
+parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
+
+# Logging system
+import logging
+loglevel = args.log
+numeric_level = getattr(logging, loglevel.upper(), None)
+if not isinstance(numeric_level, int):
+    raise ValueError('Invalid log level: %s' % loglevel)
+logging.basicConfig(level=numeric_level)
 
 
 # Reproducibility
@@ -66,14 +75,17 @@ def get_model_from_name(model_name):
     import inspect
 
     for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
+        if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__name__ == model_name:
                 return obj
+    raise AttributeError("This model does not exist: %s " % model_name)
 
 
 model_func = get_model_from_name(args.model)
 m1 = model_func(dataset=manager)
 m1.cuda()
+logging.info("Model loaded: %s" % model_func.__name__)
+
 
 # loss and optimizer
 criterion_bce = nn.CrossEntropyLoss(reduction="mean")
