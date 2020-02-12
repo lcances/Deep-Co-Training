@@ -18,8 +18,7 @@ sys.path.append("../src/")
 
 from datasetManager import DatasetManager
 from generators import Dataset
-import models
-from utils import get_datetime
+from utils import get_datetime, get_model_from_name
 from metrics import CategoricalAccuracy
 import spec_augmentations
 import signal_augmentations
@@ -68,17 +67,6 @@ manager = DatasetManager(metadata_root, audio_root,
                          subsampling_method=args.subsampling_method,
                          verbose=1
 )
-
-# Prepare the model ========
-def get_model_from_name(model_name):
-    import models
-    import inspect
-
-    for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj) or inspect.isfunction(obj):
-            if obj.__name__ == model_name:
-                return obj
-    raise AttributeError("This model does not exist: %s " % model_name)
 
 
 model_func = get_model_from_name(args.model)
