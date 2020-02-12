@@ -54,7 +54,7 @@ from ramps import Warmup, sigmoid_rampup
 # In[22]:
 
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
-parser.add_argument("--model", default="cnn", type=str, help="The name of the model to load")
+parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
 parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
@@ -112,34 +112,32 @@ def get_datetime():
 # load the data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-dataset = DatasetManager(metadata_root, audio_root,
+manager = DatasetManager(metadata_root, audio_root,
                          train_fold=args.train_folds,
                          val_fold=args.val_folds,
                          verbose=1)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingDataset(dataset, args.ratio)
+train_dataset = CoTrainingDataset(manager, args.ratio)
 sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
-# # Prep training
-
-# ## Models
-
-# In[24]:
-
+# ======== Prepare the model ========
 def get_model_from_name(model_name):
+    import models
     import inspect
 
     for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
+        if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__name__ == model_name:
                 return obj
+    raise AttributeError("This model does not exist: %s " % model_name)
 
 
 model_func = get_model_from_name(args.model)
 
-m1, m2 = model_func(), model_func()
+m1 = model_func(dataset=manager)
+m2 = model_func(dataset=manager)
 
 m1 = m1.cuda()
 m2 = m2.cuda()
