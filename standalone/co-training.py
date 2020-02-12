@@ -345,8 +345,8 @@ def test(epoch):
     print('\nnet1 test acc: %.3f%% (%d/%d) | net2 test acc: %.3f%% (%d/%d)'
         % (100.*correct1/total1, correct1, total1, 100.*correct2/total2, correct2, total2))
 
-    tensorboard.add_scalar("val/acc 1", correct1 / total1, epoch)
-    tensorboard.add_scalar("val/acc 2", correct2 / total2, epoch)
+    tensorboard.add_scalar("val/acc_1", correct1 / total1, epoch)
+    tensorboard.add_scalar("val/acc_2", correct2 / total2, epoch)
 
     tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
