@@ -63,6 +63,7 @@ parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
+parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
 args = parser.parse_args()
 
 
@@ -96,13 +97,22 @@ train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, au
 val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
 train_sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
-# ======== Prepare the model =========
-model_func = cnn
 
-m1 = model_func()
+# ======== Prepare the model ========
+def get_model_from_name(model_name):
+    import models
+    import inspect
 
-m1 = m1.cuda()
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj) or inspect.isfunction(obj):
+            if obj.__name__ == model_name:
+                return obj
+    raise AttributeError("This model does not exist: %s " % model_name)
 
+
+model_func = get_model_from_name(args.model)
+m1 = model_func(dataset=manager)
+m1.cuda()
 
 # ---- Loaders ----
 nb_epoch = 100
