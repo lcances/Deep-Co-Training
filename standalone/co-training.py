@@ -39,7 +39,7 @@ sys.path.append("../src/")
 from datasetManager import DatasetManager
 from generators import Dataset, CoTrainingDataset
 from samplers import CoTrainingSampler
-import signal_augmentations as sa
+from utils import get_datetime, get_model_from_name
 
 import models
 from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
@@ -93,23 +93,7 @@ def reset_seed(seed):
     torch.backends.cudnn.benchmark = False
 reset_seed(args.seed)
 
-
-# In[5]:
-
-
-import datetime
-
-def get_datetime():
-    now = datetime.datetime.now()
-    return str(now)[:10] + "_" + str(now)[11:-7]
-
-
-# # Dataset
-
-# In[23]:
-
-
-# load the data
+# ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
 manager = DatasetManager(metadata_root, audio_root,
@@ -124,26 +108,12 @@ sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=
 
 
 # ======== Prepare the model ========
-def get_model_from_name(model_name):
-    import models
-    import inspect
-
-    for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj) or inspect.isfunction(obj):
-            if obj.__name__ == model_name:
-                logging.info("Model loaded: %s" % model_func.__name__)
-                return obj
-    raise AttributeError("This model does not exist: %s " % model_name)
-
-
 model_func = get_model_from_name(args.model)
-
 m1 = model_func(dataset=manager)
 m2 = model_func(dataset=manager)
 
 m1 = m1.cuda()
 m2 = m2.cuda()
-
 
 # ======== Loaders & adversarial generators ========
 train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
@@ -163,11 +133,7 @@ adv_generator_2 = GradientSignAttack(
 )
 
 
-# ## optimizers & callbacks
-
-# In[26]:
-
-
+# ======== optimizers & callbacks =========
 params = list(m1.parameters()) + list(m2.parameters())
 optimizer = optim.SGD(params, lr=args.base_lr, momentum=args.momentum, weight_decay=args.decay)
 
@@ -177,11 +143,7 @@ lr_scheduler = LambdaLR(optimizer, lr_lambda)
 callbacks = [lr_scheduler]
 
 
-# ## Metrics and hyperparameters
-
-# In[27]:
-
-
+# ========= Metrics and hyperparameters ========
 # define the metrics
 ratioS = [Ratio(), Ratio()]
 ratioU = [Ratio(), Ratio()]
@@ -215,11 +177,7 @@ title = "%s_%s_%slr_%se_%slcm_%sldm_%swl" % (
 tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
 
 
-# # Training
-
-# In[28]:
-
-
+# ======== Training ========
 def train(epoch):
     m1.train()
     m2.train()
