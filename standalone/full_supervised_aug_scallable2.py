@@ -130,7 +130,10 @@ augmentation_title_part = ""
 for augment in augments:
     augmentation_title_part += "_%s" % augment.initial
 
-title = "%s_%s_scallable2_Cosd-lr_sgd-0.05lr-wd0.001_%de%s" % (args.job_name, get_datetime(), nb_epoch, augmentation_title_part)
+title = "%s_%s_%s_Cosd-lr_sgd-0.05lr-wd0.001_%de%s" % (
+    args.job_name, get_datetime(), model_func.__name__,
+    nb_epoch, augmentation_title_part
+)
 tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title), comment=model_func.__name__)
 
 
