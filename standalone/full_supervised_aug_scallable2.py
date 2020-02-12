@@ -6,6 +6,7 @@ os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
 import tqdm
 import time
+import random
 
 import torch
 import torch.nn as nn
@@ -17,40 +18,46 @@ import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import Generator
+from generators import Dataset
 import models
 from utils import get_datetime
 from metrics import CategoricalAccuracy
-import signal_augmentations
 import spec_augmentations
+import signal_augmentations
 
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="fold to use for training")
-parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
+parser.add_argument("-t", "--train_folds", nargs="+", required=True, type=int, help="fold to use for training")
+parser.add_argument("-v", "--val_folds", nargs="+", required=True, type=int, help="fold to use for validation")
+parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
+parser.add_argument("--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
+parser.add_argument("--seed", default=1234, type=int, help="Seed for random generation. Use for reproductability")
 parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
 parser.add_argument("-j", "--job_name", default="default")
 args = parser.parse_args()
 
 
-def reset_seed(seed=42):
-    np.random.seed(seed)
+# Reproducibility
+def reset_seed(seed):
+    random.seed(seed)
     torch.manual_seed(seed)
-reset_seed()
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
+reset_seed(args.seed)
 
 
 # Prep data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-print(args.train)
-
-dataset = DatasetManager(
-    metadata_root=metadata_root,
-    audio_root=audio_root,
-    train_fold=args.train,
-    val_fold=args.val,
-    verbose=1
+manager = DatasetManager(metadata_root, audio_root,
+                         train_fold=args.train_folds,
+                         val_fold=args.val_folds,
+                         subsampling=args.subsampling,
+                         subsampling_method=args.subsampling_method,
+                         verbose=1
 )
 
 # prep model
@@ -58,7 +65,7 @@ torch.cuda.empty_cache()
 
 model_func = models.ScalableCnn
 parameters = dict(
-    dataset=dataset,
+    dataset=manager,
     initial_conv_inputs=[1, 44, 89, 89, 89, 111],
     initial_conv_outputs=[44, 89, 89, 89, 111, 133],
     initial_linear_inputs=[266,],
@@ -80,25 +87,25 @@ optimizer = torch.optim.SGD(
 # Prepare augmentation
 ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
 ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
+ps1 = signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))
+ps2 = signal_augmentations.PitchShiftChoice(0.5, choice=(-1, -0.5, 0.5, 1))
+n1 = signal_augmentations.Noise(0.5, target_snr=15)
 
-augments = [ftd, ffd]
+augments = [ftd, ffd, ps1, ps2, n1]
 
 
 # train and val loaders
-train_dataset = Generator(dataset, augments=augments)
-
-x, y = train_dataset.validation
-x = torch.from_numpy(x)
-y = torch.from_numpy(y)
-val_dataset = torch.utils.data.TensorDataset(x, y)
+# train and val loaders
+train_dataset = Dataset(manager, train=True, val=False, augments=augments, cached=False)
+val_dataset = Dataset(manager, train=False, val=True, cached=True)
 
 # training parameters
 nb_epoch = 200
 batch_size = 32
 nb_batch = len(train_dataset) // batch_size
 
-training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=20)
+val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # scheduler
 lr_lambda = lambda epoch: 0.5 * (np.cos(np.pi * epoch / nb_epoch) + 1)
@@ -107,7 +114,11 @@ callbacks = [lr_scheduler]
 # callbacks = []
 
 # tensorboard
-title = "%s_%s_scallable2_Cosd-lr_sgd-0.05lr-wd0.001_%de_0.5ftd_0.5ffd" % (get_datetime(), args.job_name, nb_epoch)
+augmentation_title_part = ""
+for augment in augments:
+    augmentation_title_part += "_%s" % augment.initial
+
+title = "%s_%s_scallable2_Cosd-lr_sgd-0.05lr-wd0.001_%de%s" % (args.job_name, get_datetime(), nb_epoch, augmentation_title_part)
 tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title), comment=model_func.__name__)
 
 
@@ -118,7 +129,7 @@ tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title),
 # ======================================================================================================================
 acc_func = CategoricalAccuracy()
 
-for epoch in tqdm.tqdm_notebook(range(nb_epoch)):
+for epoch in range(nb_epoch):
     start_time = time.time()
     print("")
 
@@ -198,3 +209,4 @@ for epoch in tqdm.tqdm_notebook(range(nb_epoch)):
 
     for callback in callbacks:
         callback.step()
+
