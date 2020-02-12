@@ -101,7 +101,7 @@ callbacks = [lr_scheduler]
 # callbacks = []
 
 # tensorboard
-title = "%s_cnn_Cosd-lr_sgd-%slr-%swd_%de" % (get_datetime(), args.base_lr, args.decay, nb_epoch)
+title = "%s_%s_Cosd-lr_sgd-%slr-%swd_%de" % (get_datetime(), model_func.__name__, args.base_lr, args.decay, nb_epoch)
 tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title), comment=model_func.__name__)
 
 
