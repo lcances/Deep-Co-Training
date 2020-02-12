@@ -118,7 +118,8 @@ manager = DatasetManager(metadata_root, audio_root,
                          verbose=1)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingDataset(manager, args.ratio)
+train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, cached=True)
+val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
 sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
@@ -143,17 +144,9 @@ m1 = m1.cuda()
 m2 = m2.cuda()
 
 
-# ## Loaders & adversarial generators
-
-# In[25]:
-
-x, y = train_dataset.validation
-x = torch.from_numpy(x)
-y = torch.from_numpy(y)
-val_dataset = torch.utils.data.TensorDataset(x, y)
-
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=8)
-val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
+# ======== Loaders & adversarial generators ========
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
+val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 # adversarial generation
 input_max_value = 0
