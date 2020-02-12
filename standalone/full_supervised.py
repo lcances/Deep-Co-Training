@@ -18,9 +18,8 @@ sys.path.append("../src/")
 
 from datasetManager import DatasetManager
 from generators import Dataset
-from utils import get_datetime
+from utils import get_datetime, get_model_from_name
 from metrics import CategoricalAccuracy
-import models
 
 import argparse
 
@@ -54,17 +53,6 @@ dataset = DatasetManager(
     subsampling_method=args.subsampling_method,
     verbose=1
 )
-
-
-# Prepare the model ========
-def get_model_from_name(model_name):
-    import models
-    import inspect
-
-    for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj):
-            if obj.__name__ == model_name:
-                return obj
 
 
 model_func = get_model_from_name(args.model)
