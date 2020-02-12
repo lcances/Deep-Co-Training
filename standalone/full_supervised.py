@@ -67,8 +67,6 @@ def get_model_from_name(model_name):
                 return obj
 
 
-torch.cuda.empty_cache()
-
 model_func = get_model_from_name(args.model)
 m1 = model_func()
 m1.cuda()
