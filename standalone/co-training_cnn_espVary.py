@@ -27,6 +27,7 @@ import models
 from losses import loss_cot, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
+from utils import get_model_from_name, get_datetime
 
 
 # # Utils
@@ -74,14 +75,6 @@ def reset_seed(seed):
 reset_seed(args.seed)
 
 
-# UTILITY ========
-import datetime
-
-def get_datetime():
-    now = datetime.datetime.now()
-    return str(now)[:10] + "_" + str(now)[11:-7]
-
-
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
@@ -97,10 +90,10 @@ val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True
 sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
-# ======== Prepare model ========
-model_func =  models.cnn
-
-m1, m2 = model_func(), model_func()
+# ======== Prepare the model ========
+model_func = get_model_from_name(args.model)
+m1 = model_func(dataset=manager)
+m2 = model_func(dataset=manager)
 
 m1 = m1.cuda()
 m2 = m2.cuda()
