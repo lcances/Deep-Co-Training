@@ -33,7 +33,7 @@ parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling 
 parser.add_argument("--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
 parser.add_argument("--seed", default=1234, type=int, help="Seed for random generation. Use for reproductability")
 parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
-parser.add_argument("-T", "--log_dir", required=True, help="Tensorboard working directory")
+parser.add_argument("-T", "--log_dir", default="Test", required=True, help="Tensorboard working directory")
 parser.add_argument("-j", "--job_name", default="default")
 parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
