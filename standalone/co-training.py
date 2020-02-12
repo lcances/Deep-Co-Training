@@ -291,22 +291,22 @@ def train(epoch):
     tensorboard.add_scalar("train/acc_1", acc_SU1, epoch )
     tensorboard.add_scalar("train/acc_2", acc_SU2, epoch )
 
-    tensorboard.add_scalar("detail_loss/Lsus S1", Loss_sup_S1.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Lsus S2", Loss_sup_S2.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Ldiff S", pld_S.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Ldiff U", pld_U.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Lsus_S1", Loss_sup_S1.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Lsus_S2", Loss_sup_S2.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Ldiff_S", pld_S.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Ldiff_U", pld_U.item(), epoch)
 
-    tensorboard.add_scalar("detail_acc/acc S1", acc_S1, epoch)
-    tensorboard.add_scalar("detail_acc/acc S2", acc_S2, epoch)
-    tensorboard.add_scalar("detail_acc/acc U1", acc_U1, epoch)
-    tensorboard.add_scalar("detail_acc/acc U2", acc_U2, epoch)
+    tensorboard.add_scalar("detail_acc/acc_S1", acc_S1, epoch)
+    tensorboard.add_scalar("detail_acc/acc_2", acc_S2, epoch)
+    tensorboard.add_scalar("detail_acc/acc_1", acc_U1, epoch)
+    tensorboard.add_scalar("detail_acc/acc_2", acc_U2, epoch)
 
-    tensorboard.add_scalar("detail_ratio/ratio S1", ratio_S1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio S2", ratio_S2, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio U1", ratio_U1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio U2", ratio_U2, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio SU1", ratio_SU1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio SU2", ratio_SU2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_S1", ratio_S1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_2", ratio_S2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_1", ratio_U1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_2", ratio_U2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_U1", ratio_SU1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_U2", ratio_SU2, epoch)
 
     # Return the total loss to check for NaN
     return total_loss.item()
@@ -324,19 +324,23 @@ def test(epoch):
     total2 = 0
 
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(val_loader):
-            inputs = inputs.cuda()
-            targets = targets.cuda()
+        for batch_idx, (X, y) in enumerate(val_loader):
+            X = X.squeeze()
+            y = y.squeeze()
 
-            outputs1 = m1(inputs)
+            # separate Supervised (S) and Unsupervised (U) parts
+            X = X.cuda()
+            y = y.cuda()
+
+            outputs1 = m1(X)
             predicted1 = outputs1.max(1)
-            total1 += targets.size(0)
-            correct1 += predicted1[1].eq(targets).sum().item()
+            total1 += y.size(0)
+            correct1 += predicted1[1].eq(y).sum().item()
 
-            outputs2 = m2(inputs)
+            outputs2 = m2(X)
             predicted2 = outputs2.max(1)
-            total2 += targets.size(0)
-            correct2 += predicted2[1].eq(targets).sum().item()
+            total2 += y.size(0)
+            correct2 += predicted2[1].eq(y).sum().item()
 
     print('\nnet1 test acc: %.3f%% (%d/%d) | net2 test acc: %.3f%% (%d/%d)'
         % (100.*correct1/total1, correct1, total1, 100.*correct2/total2, correct2, total2))
