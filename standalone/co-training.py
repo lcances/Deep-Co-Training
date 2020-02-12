@@ -35,6 +35,8 @@ parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=float)
+parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
+parser.add_argument("--subsampling_method", default="balance", type=str, help="method to perform subsampling [random | balance]")
 parser.add_argument('--batchsize', '-b', default=100, type=int)
 parser.add_argument('--lambda_cot_max', default=10, type=int)
 parser.add_argument('--lambda_diff_max', default=0.5, type=float)
@@ -79,9 +81,10 @@ reset_seed(args.seed)
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
 manager = DatasetManager(metadata_root, audio_root,
-                         train_fold=args.train_folds,
-                         val_fold=args.val_folds,
-                         verbose=1)
+                         subsampling=args.subsampling, subsampling_method=args.subsampling_method,
+                         train_fold=args.train_folds, val_fold=args.val_folds,
+                         verbose=1
+                         )
 
 # prepare the sampler with the specified number of supervised file
 train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, cached=True)
