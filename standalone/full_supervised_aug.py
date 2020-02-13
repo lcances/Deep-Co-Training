@@ -20,8 +20,6 @@ from datasetManager import DatasetManager
 from generators import Dataset
 from utils import get_datetime, get_model_from_name
 from metrics import CategoricalAccuracy
-import spec_augmentations
-import signal_augmentations
 
 # Arguments ========
 import argparse
@@ -35,7 +33,9 @@ parser.add_argument("--model", default="cnn", type=str, help="Model to load, see
 parser.add_argument("-T", "--log_dir", default="Test", required=True, help="Tensorboard working directory")
 parser.add_argument("-j", "--job_name", default="default")
 parser.add_argument("--log", default="warning", help="Log level")
+parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script" )
 args = parser.parse_args()
+
 
 # Logging system
 import logging
@@ -85,13 +85,14 @@ optimizer = torch.optim.SGD(
 )
 
 # Prepare augmentation
-ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
-ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
-ps1 = signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))
-ps2 = signal_augmentations.PitchShiftChoice(0.5, choice=(-1, -0.5, 0.5, 1))
-n1 = signal_augmentations.Noise(0.5, target_snr=15)
-
-augments = [ftd, ffd, ps1, ps2, n1]
+# ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
+# ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
+# ps1 = signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))
+# ps2 = signal_augmentations.PitchShiftChoice(0.5, choice=(-1, -0.5, 0.5, 1))
+# n1 = signal_augmentations.Noise(0.5, target_snr=15)
+#
+# augments = [ftd, ffd, ps1, ps2, n1]
+augments = list(map(eval, args.augments))
 
 
 # train and val loaders
