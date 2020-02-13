@@ -84,6 +84,11 @@ class SpecAugmentation(Augmentation):
         super().__init__(ratio)
 
 
+class ImgAugmentation(Augmentation):
+    def __init__(self ,ratio):
+        super().__init__(ratio)
+
+
 if __name__ == '__main__':
     test = SignalAugmentation(1.0)
     print(test.initial)
