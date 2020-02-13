@@ -20,6 +20,8 @@ from datasetManager import DatasetManager
 from generators import Dataset
 from utils import get_datetime, get_model_from_name
 from metrics import CategoricalAccuracy
+import signal_augmentations
+import spec_augmentations
 
 # Arguments ========
 import argparse
