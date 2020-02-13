@@ -1,6 +1,25 @@
 import numpy as np
 
 
+def call_counter(func):
+    """ use for initial to count number of time a same augmentation is called in a script.
+    Noise called once will return N1
+    Noise called Thrice will return N1 N2 N3
+    """
+    def decorator(*args, **kwargs):
+        value = func(*args, **kwargs)
+
+        if value not in call_counter.counter:
+            call_counter.counter[value] = 1
+        else:
+            call_counter.counter[value] += 1
+
+        return value+str(call_counter.counter[value])
+
+    call_counter.counter = dict()
+    return decorator
+
+
 class Augmentation:
     def __init__(self, ratio):
         """
@@ -46,6 +65,7 @@ class Augmentation:
         return self._perform_augmentation(data)
 
     @property
+    @call_counter
     def initial(self):
         class_name = self.__class__.__name__
 
