@@ -103,6 +103,14 @@ class Occlusion(SignalAugmentation):
         return cp_data
 
 
+class Clip(SignalAugmentation):
+    def __init__(self, ratio, range: tuple = (-0.9, 0.9)):
+        super().__init__(ratio)
+        self.range = range
+
+    def apply_helper(self, data):
+        return np.clip(data, *range)
+
 
 if __name__ == '__main__':
     ts = TimeStretch(0.01, rate=(0.9, 1.1))
