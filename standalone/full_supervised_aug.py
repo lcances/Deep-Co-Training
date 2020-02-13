@@ -1,8 +1,8 @@
 import os
 
-os.environ["MKL_NUM_THREADS"] = "2"
-os.environ["NUMEXPR_NU M_THREADS"] = "2"
-os.environ["OMP_NUM_THREADS"] = "2"
+os.environ["MKL_NUM_THREADS"] = "4"
+os.environ["NUMEXPR_NU M_THREADS"] = "4"
+os.environ["OMP_NUM_THREADS"] = "4"
 import numpy as np
 import time
 import random
@@ -20,8 +20,6 @@ from datasetManager import DatasetManager
 from generators import Dataset
 from utils import get_datetime, get_model_from_name
 from metrics import CategoricalAccuracy
-import signal_augmentations
-import spec_augmentations
 
 # Arguments ========
 import argparse
@@ -107,7 +105,7 @@ nb_epoch = 200
 batch_size = 64
 nb_batch = len(train_dataset) // batch_size
 
-training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=20)
+training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=10)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # scheduler
