@@ -9,7 +9,7 @@ class TimeStretch(SignalAugmentation):
         super().__init__(ratio)
         self.rate = rate
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         rate = np.random.uniform(*self.rate)
         output = librosa.effects.time_stretch(data, rate)
         return output
@@ -21,7 +21,7 @@ class PitchShiftRandom(SignalAugmentation):
         self.sampling_rate = sampling_rate
         self.steps = steps
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         nb_steps = np.random.uniform(*self.steps)
         output = librosa.effects.pitch_shift(data, sr=self.sampling_rate, n_steps=nb_steps)
         return output
@@ -33,7 +33,7 @@ class PitchShiftChoice(SignalAugmentation):
         self.sampling_rate = sampling_rate
         self.choice = choice
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         nb_steps = np.random.choice(self.choice)
         output = librosa.effects.pitch_shift(data, sr=self.sampling_rate, n_steps=nb_steps)
         return output
@@ -44,7 +44,7 @@ class Level(SignalAugmentation):
         super().__init__(ratio)
         self.rate = rate
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         rate = np.random.uniform(*self.rate)
         return rate*data
 
@@ -55,7 +55,7 @@ class Noise2(SignalAugmentation):
          super().__init__(ratio)
          self.noise_factor = noise_factor
 
-     def _apply(self, data):
+     def apply_helper(self, data):
          noise = np.random.randn(len(data))
          noise_factor = np.random.uniform(*self.noise_factor)
          return data + noise_factor * noise
@@ -66,7 +66,7 @@ class Noise(SignalAugmentation):
         super().__init__(ratio)
         self.target_snr = target_snr
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         # calculate noise in signal
         P_data = data**2
         average_noise_db = 10 * np.log10(P_data.mean())
@@ -89,7 +89,7 @@ class Occlusion(SignalAugmentation):
         self.max_size = max_size
         self.sampling_rate = sampling_rate
 
-    def _apply(self, data):
+    def apply_helper(self, data):
         max_occlu_size = self.sampling_rate * self.max_size
         if max_occlu_size > len(data):
             max_occlu_size = len(data) // 4
