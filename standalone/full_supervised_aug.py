@@ -101,7 +101,7 @@ val_dataset = Dataset(manager, train=False, val=True, cached=True)
 
 # training parameters
 nb_epoch = 200
-batch_size = 32
+batch_size = 64
 nb_batch = len(train_dataset) // batch_size
 
 training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=20)
