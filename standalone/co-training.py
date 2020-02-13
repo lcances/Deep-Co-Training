@@ -150,7 +150,7 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl" % (
+title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl_%swd" % (
     get_datetime(),
     args.job_name,
     model_func.__name__,
@@ -160,8 +160,9 @@ title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl" % (
     args.lambda_cot_max,
     args.lambda_diff_max,
     args.warm_up,
+    args.decay
 )
-tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
+tensorboard = SummaryWriter("tensorboard/%s/%s" % (args.tensorboard_dir, title))
 
 
 # ======== Training ========
@@ -293,25 +294,25 @@ def train(epoch):
     tensorboard.add_scalar('train/Lsup', Loss_sup.item(), epoch )
     tensorboard.add_scalar('train/Lcot', Loss_cot.item(), epoch )
     tensorboard.add_scalar('train/Ldiff', Loss_diff.item(), epoch )
-    tensorboard.add_scalar("train/acc_1", acc_SU1, epoch )
-    tensorboard.add_scalar("train/acc_2", acc_SU2, epoch )
+    tensorboard.add_scalar("train/acc_SU1", acc_SU1, epoch )
+    tensorboard.add_scalar("train/acc_SU2", acc_SU2, epoch )
 
-    tensorboard.add_scalar("detail_loss/Lsus_S1", Loss_sup_S1.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Lsus_S2", Loss_sup_S2.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Lsup_S1", Loss_sup_S1.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Lsup_S2", Loss_sup_S2.item(), epoch)
     tensorboard.add_scalar("detail_loss/Ldiff_S", pld_S.item(), epoch)
     tensorboard.add_scalar("detail_loss/Ldiff_U", pld_U.item(), epoch)
 
     tensorboard.add_scalar("detail_acc/acc_S1", acc_S1, epoch)
-    tensorboard.add_scalar("detail_acc/acc_2", acc_S2, epoch)
-    tensorboard.add_scalar("detail_acc/acc_1", acc_U1, epoch)
-    tensorboard.add_scalar("detail_acc/acc_2", acc_U2, epoch)
+    tensorboard.add_scalar("detail_acc/acc_S2", acc_S2, epoch)
+    tensorboard.add_scalar("detail_acc/acc_U1", acc_U1, epoch)
+    tensorboard.add_scalar("detail_acc/acc_U2", acc_U2, epoch)
 
     tensorboard.add_scalar("detail_ratio/ratio_S1", ratio_S1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_2", ratio_S2, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_1", ratio_U1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_2", ratio_U2, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_U1", ratio_SU1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_U2", ratio_SU2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_S2", ratio_S2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_U1", ratio_U1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_U2", ratio_U2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_SU1", ratio_SU1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_SU2", ratio_SU2, epoch)
 
     # Return the total loss to check for NaN
     return total_loss.item()
