@@ -1,5 +1,5 @@
-import numpy as np
 import librosa
+import numpy as np
 
 from augmentations import SignalAugmentation
 
@@ -18,24 +18,24 @@ class TimeStretch(SignalAugmentation):
 class PitchShiftRandom(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, steps: tuple = (-3, 3)):
         super().__init__(ratio)
-        self.sr = sampling_rate
+        self.sampling_rate = sampling_rate
         self.steps = steps
 
     def _apply(self, data):
         nb_steps = np.random.uniform(*self.steps)
-        output = librosa.effects.pitch_shift(data, sr=self.sr, n_steps=nb_steps)
+        output = librosa.effects.pitch_shift(data, sr=self.sampling_rate, n_steps=nb_steps)
         return output
 
 
 class PitchShiftChoice(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, choice: tuple = (-2, -1, 1, 2)):
         super().__init__(ratio)
-        self.sr = sampling_rate
+        self.sampling_rate = sampling_rate
         self.choice = choice
 
     def _apply(self, data):
         nb_steps = np.random.choice(self.choice)
-        output = librosa.effects.pitch_shift(data, sr=self.sr, n_steps=nb_steps)
+        output = librosa.effects.pitch_shift(data, sr=self.sampling_rate, n_steps=nb_steps)
         return output
 
 
@@ -106,7 +106,7 @@ class Occlusion(SignalAugmentation):
 
 if __name__ == '__main__':
     ts = TimeStretch(0.01, rate=(0.9, 1.1))
-    ps = PitchShift(0.01, 8000, steps=(-2, 2))
+    ps = PitchShiftRandom(0.01, 8000, steps=(-2, 2))
     l = Level(0.01, rate=(0.8, 1.2))
     n = Noise(0.01, noise_factor=(0.1, 0.4))
     o = Occlusion(0.01, 0.5, 8000)
