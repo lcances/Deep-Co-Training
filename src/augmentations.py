@@ -78,6 +78,22 @@ class SignalAugmentation(Augmentation):
     def __init__(self, ratio):
         super().__init__(ratio)
 
+    def _apply(self, data):
+        if len(data.shape) == 1:
+            return self.apply_helper(data)
+
+        if len(data.shape) == 2:
+            out = data.copy()
+
+            for i in range(len(out)):
+                out[i] = self.apply_helper(out[i])
+
+            return out
+
+        else:
+            print("Warning, can't be used of more than 3 dimensions, no modification will be apply")
+            return data
+
 
 class SpecAugmentation(Augmentation):
     def __init__(self, ratio):
