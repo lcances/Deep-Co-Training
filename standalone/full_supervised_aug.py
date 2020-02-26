@@ -37,6 +37,7 @@ parser.add_argument("-T", "--log_dir", default="Test", required=True, help="Tens
 parser.add_argument("-j", "--job_name", default="default")
 parser.add_argument("--log", default="warning", help="Log level")
 parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script" )
+parser.add_argument("--num_workers", default=4, type=int, help="Choose numver of worker to train the model")
 args = parser.parse_args()
 
 # Logging system
@@ -83,7 +84,7 @@ nb_epoch = 200
 batch_size = 64
 nb_batch = len(train_dataset) // batch_size
 
-training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=20)
+training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=args.num_workers)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # scheduler
