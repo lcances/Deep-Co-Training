@@ -5,7 +5,7 @@ os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
 import time
-import random
+import logging
 
 import torch
 import torch.nn as nn
@@ -18,11 +18,8 @@ sys.path.append("../src/")
 
 from datasetManager import DatasetManager
 from generators import Dataset
-from utils import get_datetime, get_model_from_name
+from utils import get_datetime, get_model_from_name, reset_seed, set_logs
 from metrics import CategoricalAccuracy
-import signal_augmentations
-import spec_augmentations
-import img_augmentations
 
 # Arguments ========
 import argparse
@@ -41,44 +38,43 @@ args = parser.parse_args()
 
 
 # Logging system
-import logging
-loglevel = args.log
-numeric_level = getattr(logging, loglevel.upper(), None)
-if not isinstance(numeric_level, int):
-    raise ValueError('Invalid log level: %s' % loglevel)
-logging.basicConfig(level=numeric_level)
-
+set_logs(args.log)
 
 # Reproducibility
-def reset_seed(seed):
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
-    torch.backends.cudnn.deterministic=True
-    torch.backends.cudnn.benchmark = False
 reset_seed(args.seed)
 
 
-# Prep data
+# ======== Prep data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-manager = DatasetManager(metadata_root, audio_root,
-                         train_fold=args.train_folds,
-                         val_fold=args.val_folds,
-                         subsampling=args.subsampling,
-                         subsampling_method=args.subsampling_method,
-                         verbose=1
+manager = DatasetManager(
+    metadata_root, audio_root,
+    train_fold=args.train_folds,
+    val_fold=args.val_folds,
+    subsampling=args.subsampling,
+    subsampling_method=args.subsampling_method,
+    verbose=1
 )
 
+# ---- Prepare augmentation ----
+# ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
+# ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
+# ps1 = signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))
+# ps2 = signal_augmentations.PitchShiftChoice(0.5, choice=(-1, -0.5, 0.5, 1))
+# n1 = signal_augmentations.Noise(0.5, target_snr=15)
+# augments = [ftd, ffd, ps1, ps2, n1]
+augments = list(map(eval, args.augments))
 
+#  ---- loaders ----
+train_dataset = Dataset(manager, train=True, val=False, augments=augments, cached=False)
+val_dataset = Dataset(manager, train=False, val=True, cached=True)
+
+# ======== model, loss and optimizer ========
 model_func = get_model_from_name(args.model)
 m1 = model_func(dataset=manager)
 m1.cuda()
 logging.info("Model loaded: %s" % model_func.__name__)
 
-
-# loss and optimizer
 criterion_bce = nn.CrossEntropyLoss(reduction="mean")
 
 optimizer = torch.optim.SGD(
@@ -86,22 +82,6 @@ optimizer = torch.optim.SGD(
     weight_decay=1e-3,
     lr=0.05
 )
-
-# Prepare augmentation
-# ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
-# ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
-# ps1 = signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))
-# ps2 = signal_augmentations.PitchShiftChoice(0.5, choice=(-1, -0.5, 0.5, 1))
-# n1 = signal_augmentations.Noise(0.5, target_snr=15)
-#
-# augments = [ftd, ffd, ps1, ps2, n1]
-augments = list(map(eval, args.augments))
-
-
-# train and val loaders
-# train and val loaders
-train_dataset = Dataset(manager, train=True, val=False, augments=augments, cached=False)
-val_dataset = Dataset(manager, train=False, val=True, cached=True)
 
 # training parameters
 nb_epoch = 200
