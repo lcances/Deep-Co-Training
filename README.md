@@ -7,7 +7,7 @@ dataset:
 
 # Required package
 ```bash
-conda create -n UbS8k pip
+conda create -n ubS8k pip
 conda activate Ubs8k
 conda install pytorch
 conda install pandas
@@ -25,7 +25,7 @@ The system make use of HDF file to greatly reduce loading time.
 - **-sr** set the sampling rate used to load the audio
 - **-a** path to the audio (hdf file will be save here)
 ```bash
-conda activate UbS8k
+conda activate ubS8k
 cd standalone
 python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
 ```
@@ -34,7 +34,7 @@ python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
 ### Full supervised with and without augmentation
 simple run, default parameters
 ```bash
-conda activate UbS8k
+conda activate ubS8k
 cd standalone
 python full_supervised.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
 ```
@@ -58,4 +58,43 @@ python full_supervised_aug.py \
     --num_workers 8 \                                     # use 8 process for training
     --log info \                                          # display log of level INFO and above
     -T full_supervised_example                            # tensorboard directory output
+```
+
+### Co-Training with and without augmentation
+Simple run, default parameters
+```bash
+conda activate ubs8k
+cd standalone
+python co-training.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
+```
+
+Detailed run:
+- model should be available under the form of a class or a function in *models.py*
+- augmentation available are the one describe in:
+    - signal_augmentations.py
+    - spec_augmentations.py
+    - img_augmentations.py
+```bash
+conda activate ubs8k
+cd standalone
+python co-training.py \
+    -t 1 2 3 4 5 6 7 8 9 \
+    -v 10
+    --subsampling 0.1 \                                   # use 10% of the dataset
+    --subsampling_method balance \                        # pick sample fairly among each class
+    --model scallable2 \                                  # model to use
+    --nb_view 2 \                                         # nb view for co-training (must be multiple of 2)
+    --ratio 0.1 \                                         # amount of supervised file to use
+    --batchsize 100 \                                     
+    --lambda_cot_max 10 \                                 # co-training variable
+    --lambda_diff_max 0.5 \                               # co-training variable
+    --epsilon 0.02 \                                      # epsilon for adversarial generation
+    --warm_up 80 \                                        # warmup length for concerned variables
+    --base_lr 0.05 \                                      # initial learning rate
+    --decay 0.001 \                                       # weight decay for optimizer (SGD)
+    --momentum 0.0 \                                      # momentum for optimizer (SGD)
+    -a="signal_augmentations.Noise(0.5, target_snr=15)" \ # augmentation to apply for training
+    --num_workers 8 \                                     # use 8 process for training
+    --log info \                                          # display log of level INFO and above
+    -T co-training_example                                # tensorboard directory output
 ```
