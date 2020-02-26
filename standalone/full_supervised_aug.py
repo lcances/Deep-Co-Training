@@ -4,22 +4,12 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
-import time
-import logging
-
-import torch
-import torch.nn as nn
-import torch.utils.data as data
-from torch.optim.lr_scheduler import LambdaLR
-from torch.utils.tensorboard import SummaryWriter
 
 import sys
 sys.path.append("../src/")
 
 from datasetManager import DatasetManager
-from generators import Dataset
-from utils import get_datetime, get_model_from_name, reset_seed, set_logs
-from metrics import CategoricalAccuracy
+from utils import reset_seed, set_logs
 
 # Arguments ========
 import argparse
@@ -56,6 +46,8 @@ manager = DatasetManager(
 
 # ---- Prepare augmentation ----
 augments = list(map(eval, args.augments))
+print(augments)
+sys.exit(1)
 
 #  ---- loaders ----
 train_dataset = Dataset(manager, train=True, val=False, augments=augments, cached=False)
