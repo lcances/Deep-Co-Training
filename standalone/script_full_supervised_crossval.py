@@ -14,4 +14,4 @@ for i in range(0, 10):
 # execution
 for i in range(len(train_fold)):
     print(["python", "full_supervised_aug.py", "-t", *train_fold[i], "-v", val_fold[i], *sys.argv[1:]])
-    subprocess.call(["python", "full_supervised_aug.py", "-t", *train_fold[i], "-v", val_fold[i], *sys.argv[1:]])
+    subprocess.call(["python", "full_supervised_aug.py", "--job_name", "run%s" % i, "-t", *train_fold[i], "-v", val_fold[i], *sys.argv[1:]])
