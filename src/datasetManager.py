@@ -172,7 +172,6 @@ class DatasetManager:
             # Apply subsampling if needed
             selection_idx = list(range(len(filenames)))
             if self.subsampling != 1.0:
-                print("apply subsampling ...")
                 selection_idx = self._subsample(filenames, fold)
 
             fold_dict = dict(zip(filenames[selection_idx], raw_audios[selection_idx]))
