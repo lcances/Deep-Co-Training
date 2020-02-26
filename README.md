@@ -32,7 +32,7 @@ python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
 
 # Some standalone scripts
 ### Full supervised with and without augmentation
-simple run, default parameters
+##### Simple run, default parameters
 ```bash
 conda activate ubS8k
 cd standalone
@@ -59,6 +59,26 @@ python full_supervised_aug.py \
     --log info \                                          # display log of level INFO and above
     -T full_supervised_example                            # tensorboard directory output
 ```
+
+##### Cross-validation
+The script *script_full_supervised_crossval.py* perform the cross validation sequentially.
+There is no need to mention the training folds neither the validation fold since all 10
+combinations will be run.
+
+The --job_name parameters is automatically fill will runX where X is validation fold
+```bash
+conda activate ubs8k
+cd standalone
+pyython script_full_supervised_crossval.py \
+    --subsampling 0.1 \                                   # use only 10 % of the dataset
+    --subsampling_method balance \                        # pick sampling fairly among each class
+    --model scallable2 \                                  # use model call scallable2
+    -a="signal_augmentations.Noise(0.5, target_snr=15)" \ # augmentation to apply for training
+    --num_workers 8 \                                     # use 8 process for training
+    --log info \                                          # display log of level INFO and above
+    -T cross_validation                                   # tensorboard directory output
+```
+
 
 ### Co-Training with and without augmentation
 Simple run, default parameters
