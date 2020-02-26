@@ -30,3 +30,10 @@ def reset_seed(seed):
     np.random.seed(seed)
     torch.backends.cudnn.deterministic=True
     torch.backends.cudnn.benchmark = False
+
+
+def set_logs(loglevel):
+    numeric_level = getattr(logging, loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    logging.basicConfig(level=numeric_level)
