@@ -1,5 +1,9 @@
 import datetime
 import logging
+import random
+
+import numpy as np
+import torch
 
 
 def get_datetime():
@@ -17,3 +21,12 @@ def get_model_from_name(model_name):
                 logging.info("Model loaded: %s" % model_name)
                 return obj
     raise AttributeError("This model does not exist: %s " % model_name)
+
+
+def reset_seed(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
