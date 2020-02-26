@@ -12,6 +12,7 @@ conda activate Ubs8k
 conda install pytorch
 conda install pandas
 conda install numpy
+pip install advertorch
 pip install tensorboard
 pip install librosa
 pip install tqdm
@@ -19,16 +20,42 @@ pip install h5py
 ```
 
 # Prepare the dataset
-The system make use of HDF file to greatly reduce loading time
+The system make use of HDF file to greatly reduce loading time.
+- **-l** set the cropping & padding size of each file
+- **-sr** set the sampling rate used to load the audio
+- **-a** path to the audio (hdf file will be save here)
 ```bash
 conda activate UbS8k
 cd standalone
 python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
 ```
 
-# Full supervised
+# Some standalone scripts
+### Full supervised with and without augmentation
+simple run, default parameters
 ```bash
 conda activate UbS8k
 cd standalone
 python full_supervised.py -t 1 2 3 4 5 6 7 8 9 -v 10 -T test
+```
+
+Detailed run:
+- model should be available under the form of a class or a function in *models.py*
+- augmentation available are the one describe in:
+    - signal_augmentations.py
+    - spec_augmentations.py
+    - img_augmentations.py
+```bash
+conda activate ubs8k
+cd standalone
+python full_supervised_aug.py \
+    -t 1 2 3 4 5 6 7 8 9 \                                # training folds
+    -v 10 \                                               # validation fold(s)
+    --subsampling 0.1 \                                   # use only 10 % of the dataset
+    --subsampling_method balance \                        # pick sampling fairly among each class
+    --model scallable2 \                                  # use model call scallable2
+    -a="signal_augmentations.Noise(0.5, target_snr=15)" \ # augmentation to apply for training
+    --num_workers 8 \                                     # use 8 process for training
+    --log info \                                          # display log of level INFO and above
+    -T full_supervised_example                            # tensorboard directory output
 ```
