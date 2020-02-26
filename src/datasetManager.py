@@ -12,6 +12,7 @@ import librosa
 import tqdm
 import h5py
 import pandas as pd
+import logging
 
 def conditional_cache(func):
     def decorator(*args, **kwargs):
@@ -180,7 +181,7 @@ class DatasetManager:
         # close hdf file
         hdf.close()
 
-        print("nb file loaded: %d" % len(output))
+        logging.info("nb file loaded: %d" % len(output))
         return output
 
     def _clean_metadata(self):
