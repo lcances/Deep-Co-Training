@@ -60,12 +60,11 @@ python full_supervised_aug.py \
     -T full_supervised_example                            # tensorboard directory output
 ```
 
-##### Cross-validation
-The script *script_full_supervised_crossval.py* perform the cross validation sequentially.
-There is no need to mention the training folds neither the validation fold since all 10
-combinations will be run.
+##### Grid search
+The script *script_augmentation.py* perform a grid search by applying unique augmentation and
+train a model with **-t 1 2 3 4 5 6 7 8 9** and **-v 10**.
 
-The --job_name parameters is automatically fill will runX where X is validation fold
+The --job_name parameters is automatically fill with the augmentation name
 ```bash
 conda activate ubs8k
 cd standalone
@@ -73,10 +72,9 @@ pyython script_full_supervised_crossval.py \
     --subsampling 0.1 \                                   # use only 10 % of the dataset
     --subsampling_method balance \                        # pick sampling fairly among each class
     --model scallable2 \                                  # use model call scallable2
-    -a="signal_augmentations.Noise(0.5, target_snr=15)" \ # augmentation to apply for training
     --num_workers 8 \                                     # use 8 process for training
     --log info \                                          # display log of level INFO and above
-    -T cross_validation                                   # tensorboard directory output
+    -T GS_unique_augmentation                             # tensorboard directory output
 ```
 
 
