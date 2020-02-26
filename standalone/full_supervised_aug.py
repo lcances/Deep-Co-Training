@@ -36,13 +36,11 @@ parser.add_argument("--log", default="warning", help="Log level")
 parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script" )
 args = parser.parse_args()
 
-
 # Logging system
 set_logs(args.log)
 
 # Reproducibility
 reset_seed(args.seed)
-
 
 # ======== Prep data ========
 audio_root = "../dataset/audio"
@@ -57,12 +55,6 @@ manager = DatasetManager(
 )
 
 # ---- Prepare augmentation ----
-# ftd = spec_augmentations.FractalTimeDropout(0.5, intra_ratio=0.1, min_chunk_size=10, max_chunk_size=40)
-# ffd = spec_augmentations.FractalFrecDropout(0.5, intra_ratio=0.1, min_chunk_size=4, max_chunk_size=10)
-# ps1 = signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))
-# ps2 = signal_augmentations.PitchShiftChoice(0.5, choice=(-1, -0.5, 0.5, 1))
-# n1 = signal_augmentations.Noise(0.5, target_snr=15)
-# augments = [ftd, ffd, ps1, ps2, n1]
 augments = list(map(eval, args.augments))
 
 #  ---- loaders ----
