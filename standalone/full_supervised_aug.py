@@ -59,8 +59,6 @@ manager = DatasetManager(
 
 # ---- Prepare augmentation ----
 augments = list(map(eval, args.augments))
-print(augments)
-sys.exit(1)
 
 #  ---- loaders ----
 train_dataset = Dataset(manager, train=True, val=False, augments=augments, cached=False)
