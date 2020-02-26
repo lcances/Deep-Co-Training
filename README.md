@@ -68,7 +68,7 @@ The --job_name parameters is automatically fill with the augmentation name
 ```bash
 conda activate ubs8k
 cd standalone
-pyython script_full_supervised_crossval.py \
+python script_full_supervised_crossval.py \
     --subsampling 0.1 \                                   # use only 10 % of the dataset
     --subsampling_method balance \                        # pick sampling fairly among each class
     --model scallable2 \                                  # use model call scallable2
