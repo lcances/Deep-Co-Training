@@ -22,7 +22,7 @@ sys.path.append("../src/")
 from datasetManager import DatasetManager
 from generators import CoTrainingDataset
 from samplers import CoTrainingSampler
-from utils import get_datetime, get_model_from_name
+from utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
 from losses import loss_cot, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
