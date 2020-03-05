@@ -28,6 +28,10 @@ from losses import loss_cot, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
 
+import img_augmentations
+import spec_augmentations
+import signal_augmentations
+
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
 parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
