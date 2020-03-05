@@ -22,8 +22,8 @@ metadata_root = "../dataset/metadata"
 dataset = DatasetManager(metadata_root, audio_root, train_fold=[1], val_fold=[2])
 
 # test generator train / val
-train_loader = Dataset(dataset, train=True, val=False, sampling=1.0, augments=["test"], cached=True)
-val_loader = Dataset(dataset, train=False, val=True, sampling=1.0, augments=[], cached=True)
+train_loader = Dataset(dataset, train=True, val=False, augments=["test"], cached=True)
+val_loader = Dataset(dataset, train=False, val=True, augments=[], cached=True)
 
 # test really different
 print(np.array(train_loader.y.index.values) == np.array(val_loader.y.index.values))

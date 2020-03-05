@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def call_counter(func):
@@ -35,24 +36,31 @@ class Augmentation:
             data: The spectrogram to use
         """
         if np.random.random() < self.ratio:
-            return self._apply(data)
+            return self._convert_and_apply(data)
         return data
+    
+    def _convert_and_apply(self, data):
+        if isinstance(data, torch.Tensor):
+            return torch.from_numpy(self._apply(data.cpu().numpy()))
+        elif isinstance(data, np.ndarray):
+            return self._apply(data)
+        else:
+            raise TypeError("The type %s can't be used" % type(data))
 
     def _apply(self, data):
         if len(data.shape) == 2:
             return self.apply_helper(data)
 
         if len(data.shape) == 3:
-            out = data.copy()
+            for i in range(len(data)):
+                data[i] = self.apply_helper(data[i])
 
-            for i in range(len(out)):
-                out[i] = self.apply_helper(out[i])
-
-            return out
+            return data
 
         else:
             print("Warning, can't be used of more than 3 dimensions, no modification will be apply")
             return data
+
 
     def apply_helper(self, data):
         raise NotImplementedError("This is an abstract class")
