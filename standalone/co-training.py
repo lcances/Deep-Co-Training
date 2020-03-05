@@ -61,6 +61,7 @@ parser.add_argument("--job_name", default="default", type=str)
 parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script")
 parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
 parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
+parser.add_argument("--num_workers", default=0, type=int, help="Choose number of worker to train the model")
 parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
 
@@ -97,7 +98,7 @@ m1 = m1.cuda()
 m2 = m2.cuda()
 
 # ======== Loaders & adversarial generators ========
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=args.num_workers)
 val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 # adversarial generation
