@@ -28,6 +28,10 @@ from losses import loss_cot, p_loss_diff, p_loss_sup
 from metrics import CategoricalAccuracy, Ratio
 from ramps import Warmup, sigmoid_rampup
 
+import img_augmentations
+import spec_augmentations
+import signal_augmentations
+
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
 parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
@@ -53,7 +57,6 @@ parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
-parser.add_argument("-a","--augment", action="append", help="Augmentation. use as if python script" )
 parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
 
@@ -92,17 +95,11 @@ train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
 val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 # adversarial generation
-input_max_value = 0
-input_min_value = -80
-adv_generator_1 = GradientSignAttack(
-    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
-)
+# Replace by augmentations
+# Choose the best augmentation (see notebooks on osirim)
 
-adv_generator_2 = GradientSignAttack(
-    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
-)
+adv_generator_1 = spec_augmentations.VerticalFlip(1.0)
+adv_generator_2 = spec_augmentations.VerticalFlip(1.0)
 
 
 # ======== optimizers & callbacks =========
@@ -199,11 +196,16 @@ def train(epoch):
         m2.eval()
 
         #generate adversarial examples ----
-        adv_data_S1 = adv_generator_1.perturb(X_S[0], y_S[0])
-        adv_data_U1 = adv_generator_1.perturb(X_U, pred_U1)
+        adv_data_S1 = adv_generator_1(X_S[0])
+        adv_data_U1 = adv_generator_1(X_U)
 
-        adv_data_S2 = adv_generator_2.perturb(X_S[1], y_S[1])
-        adv_data_U2 = adv_generator_2.perturb(X_U, pred_U2)
+        adv_data_S2 = adv_generator_2(X_S[1])
+        adv_data_U2 = adv_generator_2(X_U)
+
+        adv_data_S1 = adv_data_S1.cuda()
+        adv_data_U1 = adv_data_U1.cuda()
+        adv_data_S2 = adv_data_S2.cuda()
+        adv_data_U2 = adv_data_U2.cuda()
 
         m1.train()
         m2.train()
