@@ -99,7 +99,8 @@ class Dataset(data.Dataset):
 class CoTrainingDataset(data.Dataset):
     """Must be used with the CoTrainingSampler"""
     def __init__(self, manager: DatasetManager, ratio: float = 0.1, train: bool = True, val: bool = False,
-                 unlabel_target: bool = False, augments: tuple = (), cached=False):
+            unlabel_target: bool = False, augments: tuple = (), S_augment: bool = True, U_augment: bool = True,
+            cached:bool = False):
         """
         Args:
             manager:
@@ -115,6 +116,8 @@ class CoTrainingDataset(data.Dataset):
         self.val = val
         self.unlabel_target = unlabel_target
         self.augments = augments
+        self.S_augment = S_augment
+        self.U_augment = U_augment
         self.cached = cached
 
         if self.train:
@@ -182,6 +185,7 @@ class CoTrainingDataset(data.Dataset):
                 vi,
                 target_filenames=self.filenames_S,
                 target_meta=self.y_S,
+                augment=self.S_augment
             )
             X.append(X_V)
             y.append(y_V)
@@ -191,14 +195,15 @@ class CoTrainingDataset(data.Dataset):
         X_U, y_U = self._generate_data(
             U_indexes,
             target_filenames=self.filenames_U,
-            target_meta=target_meta
+            target_meta=target_meta,
+            augment=self.U_augment
         )
         X.append(X_U)
         y.append(y_U)
 
         return X, y
 
-    def _generate_data(self, indexes: list, target_filenames: list, target_meta: pd.DataFrame = None):
+    def _generate_data(self, indexes: list, target_filenames: list, target_meta: pd.DataFrame = None, augment: bool = False):
         """
         Args:
             indexes (list):
@@ -219,11 +224,15 @@ class CoTrainingDataset(data.Dataset):
 
         features = []
         for i in range(len(raw_audios)):
-            raw_audios[i] = self._apply_augmentation(raw_audios[i], SignalAugmentation)
-            raw_audios[i] = self._pad_and_crop(raw_audios[i])
+            if augment:
+                raw_audios[i] = self._apply_augmentation(raw_audios[i], SignalAugmentation)
 
+            raw_audios[i] = self._pad_and_crop(raw_audios[i])
             feat = self.manager.extract_feature(raw_audios[i], filename=filenames[i], cached=self.cached)
-            feat = self._apply_augmentation(feat, SpecAugmentation)
+
+            if augment:
+                feat = self._apply_augmentation(feat, SpecAugmentation)
+
             features.append(feat)
 
         # Convert to np array
