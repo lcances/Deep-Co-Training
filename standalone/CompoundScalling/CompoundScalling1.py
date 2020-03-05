@@ -18,7 +18,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 
 from datasetManager import DatasetManager
-from generators import Generator
+from generators import Dataset
 from metrics import CategoricalAccuracy
 from models import ScalableCnn1
 
@@ -132,7 +132,7 @@ optimizer = torch.optim.SGD(
 augments = []
 
 # train and val loaders --------
-train_dataset = Generator(dataset, augments=augments)
+train_dataset = Dataset(dataset, augments=augments)
 
 x, y = train_dataset.validation
 x = torch.from_numpy(x)
