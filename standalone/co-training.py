@@ -72,7 +72,10 @@ set_logs(args.log)
 reset_seed(args.seed)
 
 # ---- Prepare augmentation ----
-augments = list(map(eval, args.augments))
+if args.augments is None:
+    augments = []
+else:
+    augments = list(map(eval, args.augments))
 
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
