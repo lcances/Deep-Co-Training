@@ -46,8 +46,10 @@ folds=(
 	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
 )
 
-job_number=0
+job_number=1
 for i in ${!folds[*]}
 do
-  srun -n1 -N1 singularity exec ${container} ${python} ${script} ${parameters} ${folds[$i]}
+  job_name="--job_name none_${parser_ratio}pr_run${job_number}"
+  srun -n1 -N1 singularity exec ${container} ${python} ${script} ${parameters} ${folds[$i]} ${job_name}
+  job_number=$(( $job_number + 1 ))
 done
