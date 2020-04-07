@@ -20,3 +20,6 @@
 /notebooks/tensoboard_cotraining/
 *.out
 *.err
+osirim/tensorboard/
+test/.ipynb_checkpoints/
+**/.ipynb_checkpoints/
