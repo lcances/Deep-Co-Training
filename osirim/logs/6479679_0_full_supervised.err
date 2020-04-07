@@ -1,90 +1,0 @@
-  0%|          | 0/9 [00:00<?, ?it/s] 11%|█         | 1/9 [00:01<00:11,  1.41s/it]  0%|          | 0/9 [00:00<?, ?it/s] 22%|██▏       | 2/9 [00:02<00:09,  1.41s/it] 11%|█         | 1/9 [00:01<00:09,  1.24s/it] 33%|███▎      | 3/9 [00:04<00:08,  1.40s/it] 22%|██▏       | 2/9 [00:02<00:08,  1.23s/it] 44%|████▍     | 4/9 [00:05<00:07,  1.41s/it] 33%|███▎      | 3/9 [00:03<00:07,  1.24s/it]  0%|          | 0/9 [00:00<?, ?it/s] 56%|█████▌    | 5/9 [00:07<00:05,  1.44s/it] 44%|████▍     | 4/9 [00:05<00:06,  1.27s/it] 11%|█         | 1/9 [00:01<00:10,  1.33s/it] 67%|██████▋   | 6/9 [00:08<00:04,  1.43s/it] 56%|█████▌    | 5/9 [00:06<00:05,  1.26s/it] 22%|██▏       | 2/9 [00:02<00:09,  1.31s/it] 67%|██████▋   | 6/9 [00:07<00:03,  1.24s/it] 78%|███████▊  | 7/9 [00:09<00:02,  1.40s/it] 33%|███▎      | 3/9 [00:04<00:08,  1.37s/it] 78%|███████▊  | 7/9 [00:08<00:02,  1.21s/it] 89%|████████▉ | 8/9 [00:11<00:01,  1.37s/it] 44%|████▍     | 4/9 [00:05<00:07,  1.45s/it] 89%|████████▉ | 8/9 [00:09<00:01,  1.19s/it]100%|██████████| 9/9 [00:12<00:00,  1.36s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 9/9 [00:10<00:00,  1.17s/it] 56%|█████▌    | 5/9 [00:07<00:06,  1.50s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:01<00:00,  1.33s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-100%|██████████| 1/1 [00:01<00:00,  1.06s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
- 67%|██████▋   | 6/9 [00:08<00:04,  1.44s/it]srun: error: gpu-nc04: task 0: Exited with exit code 1
- 78%|███████▊  | 7/9 [00:09<00:02,  1.38s/it]srun: error: gpu-nc06: task 0: Exited with exit code 1
- 89%|████████▉ | 8/9 [00:11<00:01,  1.37s/it]100%|██████████| 9/9 [00:12<00:00,  1.37s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:01<00:00,  1.38s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-srun: error: gpu-nc07: task 0: Exited with exit code 1
-  0%|          | 0/9 [00:00<?, ?it/s] 11%|█         | 1/9 [00:01<00:09,  1.20s/it] 22%|██▏       | 2/9 [00:02<00:08,  1.19s/it] 33%|███▎      | 3/9 [00:03<00:07,  1.26s/it] 44%|████▍     | 4/9 [00:05<00:06,  1.32s/it] 56%|█████▌    | 5/9 [00:06<00:05,  1.34s/it] 67%|██████▋   | 6/9 [00:07<00:03,  1.30s/it] 78%|███████▊  | 7/9 [00:08<00:02,  1.25s/it] 89%|████████▉ | 8/9 [00:10<00:01,  1.23s/it]100%|██████████| 9/9 [00:11<00:00,  1.25s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:01<00:00,  1.37s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-srun: error: gpu-nc05: task 0: Exited with exit code 1
-  0%|          | 0/9 [00:00<?, ?it/s]  0%|          | 0/9 [00:00<?, ?it/s]  0%|          | 0/9 [00:00<?, ?it/s]  0%|          | 0/9 [00:00<?, ?it/s] 11%|█         | 1/9 [00:01<00:12,  1.51s/it] 11%|█         | 1/9 [00:01<00:09,  1.18s/it] 11%|█         | 1/9 [00:01<00:11,  1.45s/it] 11%|█         | 1/9 [00:01<00:13,  1.72s/it] 22%|██▏       | 2/9 [00:02<00:08,  1.18s/it] 22%|██▏       | 2/9 [00:03<00:11,  1.66s/it] 22%|██▏       | 2/9 [00:02<00:10,  1.43s/it] 22%|██▏       | 2/9 [00:03<00:12,  1.72s/it] 33%|███▎      | 3/9 [00:03<00:07,  1.19s/it] 33%|███▎      | 3/9 [00:04<00:08,  1.47s/it] 33%|███▎      | 3/9 [00:05<00:10,  1.73s/it] 44%|████▍     | 4/9 [00:04<00:06,  1.20s/it] 33%|███▎      | 3/9 [00:05<00:10,  1.83s/it] 44%|████▍     | 4/9 [00:05<00:07,  1.42s/it] 56%|█████▌    | 5/9 [00:05<00:04,  1.17s/it] 44%|████▍     | 4/9 [00:07<00:09,  1.89s/it] 67%|██████▋   | 6/9 [00:06<00:03,  1.15s/it] 56%|█████▌    | 5/9 [00:07<00:05,  1.40s/it] 44%|████▍     | 4/9 [00:07<00:09,  1.88s/it] 78%|███████▊  | 7/9 [00:08<00:02,  1.12s/it] 67%|██████▋   | 6/9 [00:08<00:04,  1.38s/it] 56%|█████▌    | 5/9 [00:09<00:07,  1.87s/it] 56%|█████▌    | 5/9 [00:09<00:07,  1.84s/it] 89%|████████▉ | 8/9 [00:09<00:01,  1.11s/it] 78%|███████▊  | 7/9 [00:09<00:02,  1.43s/it]100%|██████████| 9/9 [00:10<00:00,  1.10s/it] 67%|██████▋   | 6/9 [00:11<00:05,  1.79s/it] 67%|██████▋   | 6/9 [00:10<00:05,  1.78s/it]
-  0%|          | 0/1 [00:00<?, ?it/s] 78%|███████▊  | 7/9 [00:12<00:03,  1.66s/it] 89%|████████▉ | 8/9 [00:11<00:01,  1.56s/it]100%|██████████| 1/1 [00:01<00:00,  1.32s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
- 78%|███████▊  | 7/9 [00:12<00:03,  1.71s/it] 89%|████████▉ | 8/9 [00:13<00:01,  1.59s/it]100%|██████████| 9/9 [00:13<00:00,  1.64s/it]srun: error: gpu-nc06: task 0: Exited with exit code 1
- 89%|████████▉ | 8/9 [00:13<00:01,  1.65s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 9/9 [00:15<00:00,  1.54s/it]100%|██████████| 9/9 [00:15<00:00,  1.48s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]
-  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:02<00:00,  2.01s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-100%|██████████| 1/1 [00:01<00:00,  1.14s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-100%|██████████| 1/1 [00:01<00:00,  1.64s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-srun: error: gpu-nc05: task 0: Exited with exit code 1
-srun: error: gpu-nc04: task 0: Exited with exit code 1
-srun: error: gpu-nc07: task 0: Exited with exit code 1
-  0%|          | 0/9 [00:00<?, ?it/s]  0%|          | 0/9 [00:00<?, ?it/s] 11%|█         | 1/9 [00:01<00:08,  1.03s/it] 22%|██▏       | 2/9 [00:02<00:07,  1.07s/it] 11%|█         | 1/9 [00:01<00:10,  1.37s/it] 33%|███▎      | 3/9 [00:03<00:06,  1.14s/it] 22%|██▏       | 2/9 [00:02<00:09,  1.38s/it] 44%|████▍     | 4/9 [00:04<00:05,  1.16s/it] 33%|███▎      | 3/9 [00:04<00:08,  1.40s/it] 56%|█████▌    | 5/9 [00:05<00:04,  1.14s/it] 44%|████▍     | 4/9 [00:05<00:06,  1.36s/it] 67%|██████▋   | 6/9 [00:06<00:03,  1.15s/it] 56%|█████▌    | 5/9 [00:06<00:05,  1.30s/it] 78%|███████▊  | 7/9 [00:08<00:02,  1.12s/it] 67%|██████▋   | 6/9 [00:07<00:03,  1.27s/it] 89%|████████▉ | 8/9 [00:09<00:01,  1.13s/it] 78%|███████▊  | 7/9 [00:09<00:02,  1.25s/it]100%|██████████| 9/9 [00:10<00:00,  1.11s/it]
-  0%|          | 0/1 [00:00<?, ?it/s] 89%|████████▉ | 8/9 [00:10<00:01,  1.24s/it]100%|██████████| 1/1 [00:01<00:00,  1.23s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-100%|██████████| 9/9 [00:11<00:00,  1.22s/it]
-  0%|          | 0/1 [00:00<?, ?it/s]srun: error: gpu-nc04: task 0: Exited with exit code 1
-100%|██████████| 1/1 [00:01<00:00,  1.23s/it]
-Traceback (most recent call last):
-  File "../standalone/xx_supervised_scallable2.py", line 118, in <module>
-    sampler = CoTrainingSampler(args.batchsize, nb_s_file, nb_u_file, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-  File "../src/samplers.py", line 32, in __init__
-    self.supervised_size = len(dataset.y_S)
-AttributeError: 'int' object has no attribute 'y_S'
-srun: error: gpu-nc05: task 0: Exited with exit code 1
