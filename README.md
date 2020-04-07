@@ -13,6 +13,7 @@ conda install pytorch
 conda install pandas
 conda install numpy
 conda install h5py
+conda install pillow
 pip install advertorch
 pip install tensorboard
 pip install librosa
