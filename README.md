@@ -7,7 +7,7 @@ dataset:
 
 # Required package
 ```bash
-conda create -n ubS8k pip
+conda create -n ubS8k python=3 pip
 conda activate Ubs8k
 conda install pytorch
 conda install pandas
@@ -17,6 +17,14 @@ pip install tensorboard
 pip install librosa
 pip install tqdm
 pip install h5py
+```
+
+For my personnal usage, workaround on CALMIP (limited user space and hardlink not working between different divice)
+```Bash
+CONDA_ALWAYS_COPY=true conda create -p /path/to/venv/ python=3 pip
+cd ~/miniconda3/envs
+ln -s /path/to/venv/ ubs8k
+conda activate ubs8k
 ```
 
 # Prepare the dataset
