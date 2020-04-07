@@ -12,11 +12,11 @@ conda activate Ubs8k
 conda install pytorch
 conda install pandas
 conda install numpy
+conda install h5py
 pip install advertorch
 pip install tensorboard
 pip install librosa
 pip install tqdm
-pip install h5py
 ```
 
 
