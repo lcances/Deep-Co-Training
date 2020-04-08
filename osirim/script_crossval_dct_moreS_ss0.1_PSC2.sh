@@ -41,7 +41,7 @@ aug1="signal_augmentations.PitchShiftChoice(0.5, choice=(-1.5, -1, 1, 1.5))"
 # global parameters
 subsampling="--subsampling 0.1 --subsampling_method balance"
 augmentation="--augment_S"
-parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} -num_workers 4 --epochs 400 -T moreS_ss0.1_PSC2 --log info"
+parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_PSC2 --log info"
 
 # Sbatch configuration
 container=/logiciels/containerCollections/CUDA10/pytorch.sif

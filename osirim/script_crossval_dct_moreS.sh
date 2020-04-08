@@ -32,7 +32,9 @@ if [ "$2" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
 
-parameters="${model} ${parser_ratio} ${hyper_parameters} -T moreS"
+# global parameters
+subsampling="--subsampling 0.1 --subsampling_method balance"
+parameters="${model} ${parser_ratio} ${hyper_parameters} ${subsampling} -T moreS_ss1.0"
 
 folds=(
 	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
@@ -51,6 +53,6 @@ job_number=1
 for i in ${!folds[*]}
 do
   job_name="--job_name none_$1pr_run${job_number}"
-  srun -n1 -N1 singularity exec ${container} ${python} ${script} ${parameters} ${folds[$i]} ${job_name}
+  srun -n1 -N1 singularity exec ${container} ${python} ${script} ${parameters} ${folds[$i]} ${job_name}"
   job_number=$(( $job_number + 1 ))
 done
