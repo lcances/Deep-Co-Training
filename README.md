@@ -18,6 +18,9 @@ pip install advertorch
 pip install tensorboard
 pip install librosa
 pip install tqdm
+
+# if not automatically install
+pip install torchvision # dependency for advertorch
 ```
 
 
