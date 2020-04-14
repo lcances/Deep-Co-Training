@@ -191,17 +191,21 @@ class FractalFreqStretch(SpecAugmentation):
 
 
 class FractalTimeDropout(SpecAugmentation):
-    def __init__(self, ratio, intra_ratio: float = 0.1,
+    def __init__(self, ratio,
                  min_chunk_size: int = None, max_chunk_size: int = None,
+                 min_chunk: int = 1, max_chunk: int = 3,
                  void: bool = True):
         super().__init__(ratio)
 
         # This values, if set to None, will be automatically computed when needed
         self.min_chunk_size = min_chunk_size  # 1% of the total length
         self.max_chunk_size = max_chunk_size  # 10% of the total length
+        
+        # limit the minimum and maximum amount of chunk to be drop
+        self.min_chunk = min_chunk
+        self.max_chunk = max_chunk
 
         # ratio to apply or not the stretching on each columns (independantly)
-        self.intra_ratio = intra_ratio
         self.void = void
 
     def apply_helper(self, data):
@@ -224,14 +228,11 @@ class FractalTimeDropout(SpecAugmentation):
 
             chunk_width.append(width)
 
-        # each chunk have an <intra_ratio> chance of disapearing.
-        valid_mask = [0 if x <= self.intra_ratio else 1 for x in np.random.uniform(0, 1, size=len(chunks))]
-
-        # minimum one chunk have to disapear
-        if sum(valid_mask) == len(chunks):
-            valid_mask[np.random.choice(range(len(chunks)))] = 0
-
-        # TODO add max limit
+        # create the valid mask to select the chunk to drop
+        valid_mask = np.ones(len(chunks))
+        nb_chunk_to_drop = np.random.randint(self.min_chunk, self.max_chunk+1)
+        
+        valid_mask[np.random.choice(range(len(chunks)), size=nb_chunk_to_drop)] = 0
 
         # reconstruct the signal using void or compacting it
         reconstructed_S = []
@@ -247,17 +248,20 @@ class FractalTimeDropout(SpecAugmentation):
 
 
 class FractalFrecDropout(SpecAugmentation):
-    def __init__(self, ratio, intra_ratio: float = 0.1,
+    def __init__(self, ratio,
                  min_chunk_size: int = None, max_chunk_size: int = None,
+                 min_chunk: int = 1, max_chunk: int = 3,
                  void: bool = True):
         super().__init__(ratio)
 
-        # This values, if set to None, will be automatically computed when needed
+        # These values, if set to None, will be automatically computed when needed
         self.min_chunk_size = min_chunk_size  # 1% of the total length
         self.max_chunk_size = max_chunk_size  # 10% of the total length
 
-        # ratio to apply or not the stretching on each columns (independantly)
-        self.intra_ratio = intra_ratio
+        # limit the minimum and maximum amount of chunk to be drop
+        self.min_chunk = min_chunk
+        self.max_chunk = max_chunk
+        
         self.void = void
 
     def apply_helper(self, data):
@@ -280,14 +284,11 @@ class FractalFrecDropout(SpecAugmentation):
 
             chunk_width.append(width)
 
-        # each chunk have an <intra_ratio> chance of disapearing.
-        valid_mask = [0 if x <= self.intra_ratio else 1 for x in np.random.uniform(0, 1, size=len(chunks))]
-
-        # minimum one chunk have to disapear
-        if sum(valid_mask) == len(chunks):
-            valid_mask[np.random.choice(range(len(chunks)))] = 0
-
-        # TODO add max limit
+        # create the valid mask to select the chunk to drop
+        valid_mask = np.ones(len(chunks))
+        nb_chunk_to_drop = np.random.randint(self.min_chunk, self.max_chunk+1)
+        
+        valid_mask[np.random.choice(range(len(chunks)), size=nb_chunk_to_drop)] = 0
 
         # reconstruct the signal using void or compacting it
         reconstructed_S = []
