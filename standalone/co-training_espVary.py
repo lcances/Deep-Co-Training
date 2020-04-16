@@ -16,14 +16,14 @@ from torch.utils.tensorboard import SummaryWriter
 # In[2]:
 sys.path.append("../ubs8k/")
 
-from datasetManager import DatasetManager
-from generators import CoTrainingDataset
-from samplers import CoTrainingSampler
+from ubs8k.datasetManager import DatasetManager
+from ubs8k.generators import CoTrainingDataset
+from ubs8k.samplers import CoTrainingSampler
 
-from losses import loss_cot, p_loss_diff, p_loss_sup
-from metrics import CategoricalAccuracy, Ratio
-from ramps import Warmup, sigmoid_rampup
-from utils import get_model_from_name, get_datetime
+from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
+from ubs8k.metrics import CategoricalAccuracy, Ratio
+from ubs8k.ramps import Warmup, sigmoid_rampup
+from ubs8k.utils import get_model_from_name, get_datetime
 
 
 # # Utils
