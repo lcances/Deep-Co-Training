@@ -23,11 +23,11 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 sys.path.append("../ubs8k/")
 
-from datasetManager import DatasetManager
-from generators import CoTrainingDataset
-from samplers import CoTrainingSampler
+from ubs8k.datasetManager import DatasetManager
+from ubs8k.generators import CoTrainingDataset
+from ubs8k.samplers import CoTrainingSampler
 
-from metrics import CategoricalAccuracy
+from ubs8k.metrics import CategoricalAccuracy
 
 
 # # Utils
