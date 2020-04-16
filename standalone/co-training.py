@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
 import sys
-sys.path.append("../src/")
+sys.path.append("../ubs8k/")
 
 from datasetManager import DatasetManager
 from generators import CoTrainingDataset

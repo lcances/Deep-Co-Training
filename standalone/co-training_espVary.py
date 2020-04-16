@@ -14,7 +14,7 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 
 # In[2]:
-sys.path.append("../src/")
+sys.path.append("../ubs8k/")
 
 from datasetManager import DatasetManager
 from generators import CoTrainingDataset
