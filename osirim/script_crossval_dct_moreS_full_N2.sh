@@ -7,7 +7,7 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 
-SBATCH_JOB_NAME=mS_PSC1_$2_$3
+SBATCH_JOB_NAME=mS_N2_$2_$3
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
@@ -36,12 +36,11 @@ if [ "\$MODEL" = "scallable2" ]; then
 fi
 
 # augmentation
-aug1="signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))"
+aug1="signal_augmentations.Noise(0.5, target_snr=20)"
 
 # global parameters
-subsampling="--subsampling 0.1 --subsampling_method balance"
 augmentation="--augment_S"
-parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_PSC1 --log info"
+parameters="\${model} \${parser_ratio} \${hyper_parameters} \${augmentation} --num_workers 4 --epochs 400 -T moreS_full_N2 --log info"
 
 # Sbatch configuration
 container=/logiciels/containerCollections/CUDA10/pytorch.sif
