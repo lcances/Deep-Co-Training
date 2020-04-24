@@ -29,7 +29,7 @@ if __name__ == '__main__':
     test_melspectro = dataset.extract_feature(test_raw_audio)
 
     def test_Noise_():
-        from src.signal_augmentations import Noise2
+        from ubs8k.signal_augmentations import Noise2
         n = Noise2(1.0)
 
         noisy_signal = n(test_raw_audio)
@@ -47,7 +47,7 @@ if __name__ == '__main__':
         plt.show()
 
     def test_Noise(target_snr: int = 10):
-        from src.signal_augmentations import Noise
+        from ubs8k.signal_augmentations import Noise
         n = Noise(1.0, target_snr=target_snr)
 
         noisy_signal = n(test_raw_audio)
@@ -65,7 +65,7 @@ if __name__ == '__main__':
         plt.show()
 
     def test_TimeStretch():
-        from src.signal_augmentations import TimeStretch
+        from ubs8k.signal_augmentations import TimeStretch
 
         aug = TimeStretch(1.0, rate=(0.5, 1.5))
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         plt.show()
 
     def test_PitchShiftRandom():
-        from src.signal_augmentations import PitchShiftRandom
+        from ubs8k.signal_augmentations import PitchShiftRandom
 
         aug = PitchShiftRandom(1.0, steps=(-2, 2))
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
         plt.show()
 
     def test_PitchShiftChoice():
-        from src.signal_augmentations import PitchShiftChoice
+        from ubs8k.signal_augmentations import PitchShiftChoice
 
         aug = PitchShiftChoice(1.0, choice=(-2, -1, 1, 2))
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         plt.show()
 
     def test_Occlusion():
-        from src.signal_augmentations import Occlusion
+        from ubs8k.signal_augmentations import Occlusion
 
         aug = Occlusion(1.0, max_size=1)
 
