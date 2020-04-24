@@ -1,5 +1,5 @@
 import numpy as np
-from .augmentations import SpecAugmentation
+from augmentations import SpecAugmentation
 
 from PIL import Image
 
@@ -190,6 +190,18 @@ class FractalFreqStretch(SpecAugmentation):
         return np.float32(final_S)
 
 
+class FractalStretch(SpecAugmentation):
+    def __init__(self, ratio,
+            freq_intra_ratio: float = 0.3, freq_rate: tuple = (0.8, 1.2),
+            freq_min_chunk_size: int = None, freq_max_chunk_size: int = None,
+            time_intra_ratio: float = 0.3, time_rate: tuple = (0.8, 1.2),
+            time_min_chunk_size: int = None, time_max_chunk_size: int = None):
+        self.fts_func = FractalTimeStretch(ratio, time_intra_ratio, time_rate, time_min_chunk_size, time_max_chunk_size)
+        self.ffs_func = FractalFreqStretch(ratio, freq_intra_ratio, freq_rate, freq_min_chunk_size, freq_max_chunk_size)
+
+    def apply_helper(self, data):
+        return self.fts_func(self.ffs_func(data))
+
 class FractalTimeDropout(SpecAugmentation):
     def __init__(self, ratio,
                  min_chunk_size: int = None, max_chunk_size: int = None,
@@ -301,6 +313,21 @@ class FractalFrecDropout(SpecAugmentation):
         reconstructed_S = np.concatenate(reconstructed_S, axis=0)
 
         return np.float32(reconstructed_S)
+
+
+class FractalDropout(SpecAugmentation):
+    def __init__(self, ratio,
+            freq_min_chunk_size: int = None, freq_max_chunk_size: int = None,
+            freq_min_chunk: int = 1, freq_max_chunk: int = 3, freq_void: bool = True,
+            time_min_chunk_size: int = None, time_max_chunk_size: int = None,
+            time_min_chunk: int = 1, time_max_chunk: int = 3, time_void: bool = True    ):
+
+        self.ratio = ratio
+        self.ftd_func = FractalTimeDropout(1.0, time_min_chunk_size, time_max_chunk_size, time_min_chunk, time_max_chunk, time_void)
+        self.ffd_func = FractalFrecDropout(1.0, freq_min_chunk_size, freq_max_chunk_size, freq_min_chunk, freq_max_chunk, freq_void)
+
+    def apply_helper(self, data):
+        return self.ftd_func(self.ffd_func(data))
 
 
 class RandomTimeDropout(SpecAugmentation):
