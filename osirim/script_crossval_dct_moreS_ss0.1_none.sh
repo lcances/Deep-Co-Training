@@ -7,7 +7,7 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 
-SBATCH_JOB_NAME=mS_PSC1_$2_$3
+SBATCH_JOB_NAME=mS_none_$2_$3
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
@@ -35,13 +35,9 @@ if [ "\$MODEL" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
 
-# augmentation
-aug1="signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))"
-
 # global parameters
 subsampling="--subsampling 0.1 --subsampling_method balance"
-augmentation="--augment_S"
-parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_PSC1 --log info"
+parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} --epochs 400 -T moreS_ss0.1_none --log info"
 
 # Sbatch configuration
 container=/logiciels/containerCollections/CUDA10/pytorch.sif
@@ -64,7 +60,7 @@ job_number=1
 for i in \${!folds[*]}
 do
   job_name="--job_name none_\${PR}pr_run\${job_number}"
-  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${parameters} \${folds[\$i]} \${job_name} -a="\${aug1}"
+  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${parameters} \${folds[\$i]} \${job_name}
   job_number=\$(( \$job_number + 1 ))
 done
 

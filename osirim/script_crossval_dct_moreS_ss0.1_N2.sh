@@ -1,47 +1,52 @@
 #!/bin/bash
 
-#SBATCH --job-name=moreS_N2
-#SBATCH --output=moreS_N2_%j.out
-#SBATCH --error=moreS_N2_%j.err
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=5
-#SBATCH --partition=GPUNodes
-##SBATCH --nodelist=gpu-nc06
-#SBATCH --gres=gpu:1
-#SBATCH --gres-flags=enforce-binding
-
-container=/logiciels/containerCollections/CUDA10/pytorch.sif
-python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
-script=../standalone/co-training.py
-
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 3 ]; then
   echo "wrong number of parameter"
   echo "received $# arguments"
-  echo "usage: [parser_ratio] [model]"
+  echo "usage: gpu-nc0x parser_ratio model"
   exit 1
 fi
 
-parser_ratio="--parser_ratio $1"
-model="--model $2"
+SBATCH_JOB_NAME=mS_N2_$2_$3
 
-if [ "$2" = "cnn" ]; then
+cat << EOT > .sbatch_tmp.sh
+#!/bin/bash
+#SBATCH --job-name=$SBATCH_JOB_NAME
+#SBATCH --output=${SBATCH_JOB_NAME}_%j.out
+#SBATCH --error=${SBATCH_JOB_NAME}_%j.err
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=5
+#SBATCH --partition=GPUNodes
+#SBATCH --nodelist=$1
+#SBATCH --gres=gpu:1
+#SBATCH --gres-flags=enforce-binding
+
+PR=$2
+MODEL=$3
+
+parser_ratio="--parser_ratio \${PR}"
+model="--model \${MODEL}"
+
+if [ "\$MODEL" = "cnn" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 5 --lambda_diff_max 0.25 --warm_up 160 --epsilon 0.1"
 fi
 
-if [ "$2" = "scallable2" ]; then
+if [ "\$MODEL" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
 
 # augmentation
 aug1="signal_augmentations.Noise(0.5, target_snr=20)"
-aug2="signal_augmentations.PitchShiftChoice(0.5, choice=(-1.5, -1, 1, 1.5))"
-aug3="signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))"
 
 # global parameters
 subsampling="--subsampling 0.1 --subsampling_method balance"
 augmentation="--augment_S"
-parameters="${model} ${parser_ratio} ${hyper_parameters} ${subsampling} ${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_N2 --log info"
+parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_N2 --log info"
 
+# Sbatch configuration
+container=/logiciels/containerCollections/CUDA10/pytorch.sif
+python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
+script=../standalone/co-training.py
 folds=(
 	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
 	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
@@ -56,9 +61,14 @@ folds=(
 )
 
 job_number=1
-for i in ${!folds[*]}
+for i in \${!folds[*]}
 do
-  job_name="--job_name none_$1pr_run${job_number}"
-  srun -n1 -N1 singularity exec ${container} ${python} ${script} ${parameters} ${folds[$i]} ${job_name} -a="${aug1}"
-  job_number=$(( $job_number + 1 ))
+  job_name="--job_name none_\${PR}pr_run\${job_number}"
+  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${parameters} \${folds[\$i]} \${job_name} -a="\${aug1}"
+  job_number=\$(( \$job_number + 1 ))
 done
+
+EOT
+
+echo "sbatch store in .sbatch_tmp.sh"
+sbatch .sbatch_tmp.sh

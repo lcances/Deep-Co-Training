@@ -1,5 +1,5 @@
 import numpy as np
-from augmentations import SpecAugmentation
+from .augmentations import SpecAugmentation
 
 from PIL import Image
 

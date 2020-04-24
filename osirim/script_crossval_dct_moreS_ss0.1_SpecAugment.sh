@@ -7,7 +7,8 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 
-SBATCH_JOB_NAME=mS_PSC1_$2_$3
+ID="SpAu"
+SBATCH_JOB_NAME=mS_${ID}_$2_$3
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
@@ -36,12 +37,13 @@ if [ "\$MODEL" = "scallable2" ]; then
 fi
 
 # augmentation
-aug1="signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))"
+aug_ftd="spec_augmentations.FractalTimeDropout(1.0, min_chunk_size=8, max_chunk_size=11, min_chunk=1, max_chunk=2)"
+aug_ffd="spec_augmentations.FractalFrecDropout(1.0, min_chunk_size=6, max_chunk_size=8, min_chunk=1, max_chunk=2)"
 
 # global parameters
 subsampling="--subsampling 0.1 --subsampling_method balance"
 augmentation="--augment_S"
-parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_PSC1 --log info"
+parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_${ID} --log info"
 
 # Sbatch configuration
 container=/logiciels/containerCollections/CUDA10/pytorch.sif
@@ -64,7 +66,7 @@ job_number=1
 for i in \${!folds[*]}
 do
   job_name="--job_name none_\${PR}pr_run\${job_number}"
-  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${parameters} \${folds[\$i]} \${job_name} -a="\${aug1}"
+  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${parameters} \${folds[\$i]} \${job_name} -a="\${aug_ftd}" -a="\${aug_ffd}"
   job_number=\$(( \$job_number + 1 ))
 done
 
