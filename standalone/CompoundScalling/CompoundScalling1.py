@@ -8,7 +8,7 @@ import time
 import random
 import sys
 import argparse
-sys.path.append("../../src/")
+sys.path.append("../../ubs8k/")
 
 import torch
 import torch.nn as nn

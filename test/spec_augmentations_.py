@@ -1,6 +1,6 @@
 import sys
 
-sys.path.append("../src")
+sys.path.append("../ubs8k")
 
 from datasetManager import DatasetManager
 import matplotlib.pyplot as plt

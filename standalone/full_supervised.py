@@ -15,12 +15,12 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 
 import sys
-sys.path.append("../src/")
+sys.path.append("../ubs8k/")
 
-from datasetManager import DatasetManager
-from generators import Dataset
-from utils import get_datetime, get_model_from_name
-from metrics import CategoricalAccuracy
+from ubs8k.datasetManager import DatasetManager
+from ubs8k.generators import Dataset
+from ubs8k.utils import get_datetime, get_model_from_name
+from ubs8k.metrics import CategoricalAccuracy
 
 import argparse
 
