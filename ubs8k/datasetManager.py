@@ -162,24 +162,20 @@ class DatasetManager:
         output = dict()
 
         # open hdf file
-        hdf = h5py.File(hdf_path, "r")
+        with h5py.File(hdf_path, "r") as hdf:
+            for fold in self.tqdm_func(folds):
+                hdf_fold = hdf["fold%d" % fold]
 
-        for fold in self.tqdm_func(folds):
-            hdf_fold = hdf["fold%d" % fold]
+                filenames = np.asarray(hdf_fold["filenames"])
+                audios = np.asarray(hdf_fold[key])
 
-            filenames = np.asarray(hdf_fold["filenames"])
-            raw_audios = np.asarray(hdf_fold[key])
+                # Apply subsampling if needed
+                selection_idx = list(range(len(filenames)))
+                if self.subsampling != 1.0:
+                    selection_idx = self._subsample(filenames, fold)
 
-            # Apply subsampling if needed
-            selection_idx = list(range(len(filenames)))
-            if self.subsampling != 1.0:
-                selection_idx = self._subsample(filenames, fold)
-
-            fold_dict = dict(zip(filenames[selection_idx], raw_audios[selection_idx]))
-            output = dict(**output, **fold_dict)
-
-        # close hdf file
-        hdf.close()
+                fold_dict = dict(zip(filenames[selection_idx], audios[selection_idx]))
+                output = dict(**output, **fold_dict)
 
         logging.info("nb file loaded: %d" % len(output))
         return output
@@ -210,10 +206,62 @@ class DatasetManager:
         return feat
 
 
+class StaticManager(DatasetManager):
+    def __init__(self, metadata_root, audio_root,
+                 static_augment_file: str, augment_list: list = (),
+                 sr: int = 22050, train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10,),
+                 subsampling: float = 1.0, subsampling_method: str = "random", verbose=1):
+        super().__init__(metadata_root, audio_root, sr, (), train_fold, val_fold, subsampling, subsampling_method,
+                         verbose)
+
+        self.static_augmentation_file = static_augment_file
+        self.augment_list = augment_list
+        self.hdf_path = static_augment_file
+
+        self.static_augmentation = {
+            "train": {},
+            "val": {},
+        }
+
+        # Pre-load all augmentation in augmentation list
+        for augment in self.augment_list:
+            self.add_augmentation(augment)
+
+    def add_augmentation(self, augmentation_name):
+        self.static_augmentation["train"][augmentation_name] = self._hdf_to_dict(self.hdf_path, self.train_fold, augmentation_name)
+
+    # Need to reimplement hdf to dict since augmentation can have several dataset dimension (one for each variant)
+    # TODO REALY NECESSARY ?
+    def _hdf_to_dict(self, hdf_path, folds: list, key: str = "data") -> dict:
+        output = dict()
+
+        # open hdf file
+        with h5py.File(hdf_path, "r") as hdf:
+            for fold in self.tqdm_func(folds):
+                hdf_fold = hdf["fold%d" % fold]
+
+                filenames = np.asarray(hdf_fold["filenames"])
+                audios = np.asarray(hdf_fold[key])
+
+                # Apply subsampling if needed
+                selection_idx = list(range(len(filenames)))
+                if self.subsampling != 1.0:
+                    selection_idx = self._subsample(filenames, fold)
+
+                fold_dict = dict(zip(filenames[selection_idx], audios[:, selection_idx])) # <-- only difference is [:,
+                output = dict(**output, **fold_dict)
+
+        logging.info("nb file loaded: %d" % len(output))
+        return output
+
 
 if __name__ == '__main__':
-    audio_root = "../dataset/audio"
-    metadata_root = "../dataset/metadata"
+    # audio_root = "../dataset/audio"
+    # metadata_root = "../dataset/metadata"
+    audio_root = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio")
+    metadata_root = os.path.join("E:/", "Corpus", "UrbanSound8K", "metadata")
+    static_augment_file = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio", "urbansound8k_22050_augmentations.hdf5")
 
-    dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
+    # dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
+    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, augment_list=["psc2"])
 
