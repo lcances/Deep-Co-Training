@@ -1,7 +1,9 @@
 # Unique augmentation to execute
 unique_augments=dict(
     psc1    = "signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))",
+    PSC1    = "signal_augmentations.PitchShiftChoice(1.0, choice=(-3, -2, 2, 3))",
     psc2    = "signal_augmentations.PitchShiftChoice(0.5, choice=(-1.5, -1, 1, 1.5))",
+    PSC2    = "signal_augmentations.PitchShiftChoice(1.0, choice=(-1.5, -1, 1, 1.5))",
     l1      = "signal_augmentations.Level(0.5, rate=(0.9, 1.1))",
     l2      = "signal_augmentations.Level(0.5, rate=(0.8, 1.2))",
     n1      = "signal_augmentations.Noise(0.5, target_snr=15)",
