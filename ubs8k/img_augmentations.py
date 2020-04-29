@@ -4,7 +4,7 @@ import skimage.transform as transform
 from PIL import Image
 from skimage import exposure
 
-from augmentations import ImgAugmentation
+from .augmentations import ImgAugmentation
 
 
 def random_interpolation():

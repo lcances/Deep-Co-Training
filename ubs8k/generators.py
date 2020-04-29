@@ -7,10 +7,10 @@ os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
 import pandas as pd
 
-from datasetManager import DatasetManager
+from .datasetManager import DatasetManager
 from torch.utils import data
-from signal_augmentations import SignalAugmentation
-from spec_augmentations import SpecAugmentation
+from .signal_augmentations import SignalAugmentation
+from .spec_augmentations import SpecAugmentation
 
 import logging
 
