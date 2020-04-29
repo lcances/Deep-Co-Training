@@ -248,7 +248,10 @@ class StaticManager(DatasetManager):
                 if self.subsampling != 1.0:
                     selection_idx = self._subsample(filenames, fold)
 
-                fold_dict = dict(zip(filenames[selection_idx], audios[:, selection_idx])) # <-- only difference is [:,
+                fold_dict = {}
+                for idx, filename in enumerate(filenames[selection_idx]):
+                    output[filename] = audios[:, idx]
+
                 output = dict(**output, **fold_dict)
 
         logging.info("nb file loaded: %d" % len(output))
@@ -263,5 +266,10 @@ if __name__ == '__main__':
     static_augment_file = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio", "urbansound8k_22050_augmentations.hdf5")
 
     # dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
-    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, augment_list=["psc2"])
+    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, augment_list=["psc2"], train_fold=[1], val_fold=[])
+    k = list(dataset.static_augmentation["train"]["psc2"].keys())
+    print(k[0])
+    print(dataset.static_augmentation["train"]["psc2"][k[0]].shape)
+
+
 
