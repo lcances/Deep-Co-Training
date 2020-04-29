@@ -14,12 +14,16 @@ conda install pandas
 conda install numpy
 conda install h5py
 conda install pillow
-conda install scikit-image
 pip install advertorch
 pip install tensorboard
 pip install librosa
 pip install tqdm
+pip install scikit-image
+
+# if not automatically install
+pip install torchvision # dependency for advertorch
 ```
+
 
 # Prepare the dataset
 The system make use of HDF file to greatly reduce loading time.
@@ -117,4 +121,27 @@ python co-training.py \
     --num_workers 8 \                                     # use 8 process for training
     --log info \                                          # display log of level INFO and above
     -T co-training_example                                # tensorboard directory output
+```
+
+
+## For my personnal use
+For my personnal usage, workaround on CALMIP (limited user space and hardlink not working between different divice)
+ - 5Go is not enough to install everything at once.
+ - It need some `conda clean --all` after installing big module (pytorch)
+ - Best to have miniconda install in tmpdir directory
+ - If not, have the venv directory inside the project and create a symlink
+ `cd /miniconda/envs; ln -s /path/to/venv/ <name>`
+ - Conda doesn't like symlink. use `CONDA_ALWAY_COPY=true` before calling conda
+ - Pip cache is store under `~/.cache`
+ 
+```Bash
+CONDA_ALWAYS_COPY=true conda create -p /path/to/venv/ python=3 pip
+cd ~/miniconda3/envs
+ln -s /path/to/venv/ ubs8k
+conda activate ubs8k
+
+CONDA_ALWAYS_COPY=true conda install pytorch
+conda clean --all
+CONDA_ALWAYS_COPY=true conda install pandas numpy
+...
 ```

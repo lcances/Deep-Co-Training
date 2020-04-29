@@ -20,6 +20,8 @@ unique_augments=dict(
 
 
 # execution
-print(sys.argv)
-for key, aug in unique_augments.items():
-    subprocess.call(["python", "full_supervised_aug.py", *sys.argv[1:], "-a", "\"%s\"" % aug])
+if __name__ == '__main__':
+
+    print(sys.argv)
+    for key, aug in unique_augments.items():
+        subprocess.call(["python", "full_supervised_aug.py", *sys.argv[1:], "-a", "\"%s\"" % aug])
