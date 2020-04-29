@@ -1,7 +1,7 @@
 import librosa
 import numpy as np
 
-from augmentations import SignalAugmentation
+from .augmentations import SignalAugmentation
 
 
 class TimeStretch(SignalAugmentation):

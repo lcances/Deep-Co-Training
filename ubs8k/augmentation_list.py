@@ -1,7 +1,3 @@
-import subprocess
-import sys
-
-
 # Unique augmentation to execute
 unique_augments=dict(
     psc1    = "signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))",
@@ -18,10 +14,4 @@ unique_augments=dict(
     rfd005  = "spec_augmentations.RandomFreqDropout(0.5, dropout=0.05)",
 )
 
-
-# execution
-if __name__ == '__main__':
-
-    print(sys.argv)
-    for key, aug in unique_augments.items():
-        subprocess.call(["python", "full_supervised_aug.py", *sys.argv[1:], "-a", "\"%s\"" % aug])
+reverse_unique_augment = dict(zip(unique_augments.values(), unique_augments.keys()))
