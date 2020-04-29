@@ -7,16 +7,18 @@ dataset:
 
 # Required package
 ```bash
-conda create -n ubS8k pip
+conda create -n ubS8k python=3 pip
 conda activate Ubs8k
 conda install pytorch
 conda install pandas
 conda install numpy
+conda install h5py
+conda install pillow
+conda install scikit-image
 pip install advertorch
 pip install tensorboard
 pip install librosa
 pip install tqdm
-pip install h5py
 ```
 
 # Prepare the dataset
