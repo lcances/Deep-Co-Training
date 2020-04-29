@@ -241,6 +241,9 @@ class StaticManager(DatasetManager):
                 hdf_fold = hdf["fold%d" % fold]
 
                 filenames = np.asarray(hdf_fold["filenames"])
+
+                if key not in hdf_fold:
+                    raise KeyError("augmentation %s doesn't exist. There is: %s" % (key, hdf_fold.keys()))
                 audios = np.asarray(hdf_fold[key])
 
                 # Apply subsampling if needed
@@ -264,12 +267,13 @@ if __name__ == '__main__':
     audio_root = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio")
     metadata_root = os.path.join("E:/", "Corpus", "UrbanSound8K", "metadata")
     static_augment_file = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio", "urbansound8k_22050_augmentations.hdf5")
+    augment_list = ["I_PSC1"]
 
     # dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
-    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, augment_list=["psc2"], train_fold=[1], val_fold=[])
-    k = list(dataset.static_augmentation["train"]["psc2"].keys())
+    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, augment_list=["I_PSC1"], train_fold=[1], val_fold=[])
+    k = list(dataset.static_augmentation["train"]["I_PSC1"].keys())
     print(k[0])
-    print(dataset.static_augmentation["train"]["psc2"][k[0]].shape)
+    print(dataset.static_augmentation["train"]["I_PSC1"][k[0]].shape)
 
 
 
