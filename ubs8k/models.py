@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import librosa
 
+from ubs8k.datasetManager import DatasetManager
 from ubs8k.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
 
 
@@ -75,7 +76,7 @@ class ScalableCnn(nn.Module):
     see: https://arxiv.org/pdf/1905.11946.pdf
     """
 
-    def __init__(self, dataset,
+    def __init__(self, dataset: DatasetManager,
                  compound_scales: tuple = (1, 1, 1),
                  initial_conv_inputs=[1, 32, 64, 64],
                  initial_conv_outputs=[32, 64, 64, 64],
@@ -100,8 +101,10 @@ class ScalableCnn(nn.Module):
         # resolution ----
         # WARNING - RESOLUTION WILL CHANGE THE FEATURES EXTRACTION OF THE SAMPLE
         new_n_mels = int(round_func(initial_resolution[0] * gamma))
-        new_hop_length = int(round_func(initial_resolution[1] * gamma))
-        self.scaled_resolution = (new_n_mels, new_hop_length)
+        new_n_time_bins = int(round_func(initial_resolution[1] * gamma))
+        new_hop_length = int(round_func( (self.dataset.sr * DatasetManager.LENGTH) / new_n_time_bins))
+
+        self.scaled_resolution = (new_n_mels, new_n_time_bins)
         print("new scaled resolution: ", self.scaled_resolution)
 
         if gamma > 1.0:
@@ -202,7 +205,7 @@ class ScalableCnn(nn.Module):
         return dim1 * dim2 * conv_outputs[-1]
 
     def generate_feature_extractor(self, n_mels, hop_length):
-        def extract_feature(raw_data):
+        def extract_feature(raw_data, filename = None, cached = False):
             feat = librosa.feature.melspectrogram(
                 raw_data, self.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.sr // 2)
             feat = librosa.power_to_db(feat, ref=np.max)
