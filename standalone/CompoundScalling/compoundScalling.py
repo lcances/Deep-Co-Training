@@ -12,16 +12,12 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
-import tqdm
 import time
-import random
 
 import torch
 import torch.nn as nn
 import torch.utils.data as data
-import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
-from advertorch.attacks import GradientSignAttack
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -54,13 +50,6 @@ reset_seed(1324)
 
 audio_root = "../../dataset/audio"
 metadata_root = "../../dataset/metadata"
-
-manager = DatasetManager(metadata_root, audio_root, verbose=1)
-
-
-#  # Prep scalling factors
-
-# In[6]:
 
 
 
