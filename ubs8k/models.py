@@ -207,7 +207,7 @@ class ScalableCnn(nn.Module):
     def generate_feature_extractor(self, n_mels, hop_length):
         def extract_feature(raw_data, filename = None, cached = False):
             feat = librosa.feature.melspectrogram(
-                raw_data, self.dataset.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.sr // 2)
+                raw_data, self.dataset.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.dataset.sr // 2)
             feat = librosa.power_to_db(feat, ref=np.max)
             return feat
 
