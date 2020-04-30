@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import librosa
 
-from ubs8k.datasetManager import DatasetManager
+from ubs8k.datasetManager import DatasetManager, conditional_cache
 from ubs8k.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
 
 
@@ -205,6 +205,7 @@ class ScalableCnn(nn.Module):
         return dim1 * dim2 * conv_outputs[-1]
 
     def generate_feature_extractor(self, n_mels, hop_length):
+        @conditional_cache
         def extract_feature(raw_data, filename = None, cached = False):
             feat = librosa.feature.melspectrogram(
                 raw_data, self.dataset.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.dataset.sr // 2)
