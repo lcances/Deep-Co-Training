@@ -127,6 +127,9 @@ class CopoundScaling:
             
             for c in self.callbacks:
                 c.step()
+
+        self.tensorboard.flush()
+        self.tensorboard.close()
  
     def train(self, epoch):
         start_time = time.time()
