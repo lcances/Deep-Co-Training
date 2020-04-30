@@ -352,3 +352,27 @@ def scallable2(**kwargs):
     )
 
     return ScalableCnn(**parameters)
+
+
+def scallable1_new(**kwargs):
+    """The new scallable 1 model feature resolution scaling.
+    It is also used as a starter for the new scallable 2 model
+    """
+    dataset = kwargs["dataset"]
+    compound_scales = kwargs.get("compound_scales", (1.36, 1.0, 1.21))
+
+    parameters = dict(
+        dataset=dataset,
+        compound_scales = compound_scales,
+        initial_conv_inputs=[1, 32, 64, 64],
+        initial_conv_outputs=[32, 64, 64, 64],
+        initial_linear_inputs=[1344, ],
+        initial_linear_outputs=[10, ],
+        initial_resolution=[64, 173],
+        round_up=True,
+    )
+
+    return ScalableCnn(**parameters)
+
+
+def scallable2_new(**kwargs)
