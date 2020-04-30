@@ -42,6 +42,7 @@ parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, requ
 parser.add_argument("-a", "--alpha", default=1, type=float)
 parser.add_argument("-b", "--beta", default=1, type=float)
 parser.add_argument("-g", "--gamma", default=1, type=float)
+parser.add_argument("-r", "--run_number", default=1, type=int)
 args = parser.parse_args()
 # # set seeds
 
@@ -81,13 +82,10 @@ class CopoundScaling:
         self.callbacks = []
         self.tensorboard_dir = tensorboard_dir
         self.tensorboard = None
-        self.run = 0
 
     def set_model(self, new_model):
         self.model = new_model
         self._init_dataset(self.model.dataset) # TODO <-- raname dataset <> manager
-        
-        self.run += 1 # count number of run done with the trainer. Usefull when doing cross validation
         
     def _init_dataset(self, manager):
         self.manager = manager
@@ -112,7 +110,7 @@ class CopoundScaling:
         date_time = get_datetime()
         (a, b, g) = self.model.compound_scales
         abg = "%.4f_%.4f_%.4f" % (a, b, g)
-        return SummaryWriter("tensorboard/%s/%s/%s_run%s_%s" % (self.tensorboard_dir, abg, date_time, self.run, title))
+        return SummaryWriter("tensorboard/%s/%s/%s_%s_%s" % (self.tensorboard_dir, abg, date_time, args.run_number, title))
         
     def learn(self):
         if self.model is None:

@@ -374,5 +374,3 @@ def scallable1_new(**kwargs):
 
     return ScalableCnn(**parameters)
 
-
-def scallable2_new(**kwargs)
