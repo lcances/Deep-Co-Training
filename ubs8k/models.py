@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import librosa
 
-from layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
+from ubs8k.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
 
 
 class cnn(nn.Module):
@@ -82,9 +82,14 @@ class ScalableCnn(nn.Module):
                  initial_linear_inputs=[1344, ],
                  initial_linear_outputs=[10, ],
                  initial_resolution=[64, 173],
+                 round_up: bool = False,
                  **kwargs
                  ):
         super(ScalableCnn, self).__init__()
+        self.compound_scales = compound_scales
+        self.dataset = dataset
+        round_func = np.floor if not round_up else np.ceil
+
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
 
         initial_nb_conv = len(initial_conv_inputs)
@@ -94,8 +99,8 @@ class ScalableCnn(nn.Module):
 
         # resolution ----
         # WARNING - RESOLUTION WILL CHANGE THE FEATURES EXTRACTION OF THE SAMPLE
-        new_n_mels = int(np.floor(initial_resolution[0] * gamma))
-        new_hop_length = int(np.floor(initial_resolution[1] * gamma))
+        new_n_mels = int(round_func(initial_resolution[0] * gamma))
+        new_hop_length = int(round_func(initial_resolution[1] * gamma))
         self.scaled_resolution = (new_n_mels, new_hop_length)
         print("new scaled resolution: ", self.scaled_resolution)
 
@@ -103,8 +108,8 @@ class ScalableCnn(nn.Module):
             dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
 
         # depth ----
-        scaled_nb_conv = np.floor(initial_nb_conv * alpha)
-        scaled_nb_linear = np.floor(initial_nb_dense * alpha)
+        scaled_nb_conv = round_func(initial_nb_conv * alpha)
+        scaled_nb_linear = round_func(initial_nb_dense * alpha)
 
         if scaled_nb_conv != initial_nb_conv:  # Another conv layer must be created
             print("More conv layer must be created")
@@ -112,7 +117,7 @@ class ScalableCnn(nn.Module):
             avg_gap = gaps.mean()
 
             while len(initial_conv_inputs) < scaled_nb_conv:
-                initial_conv_outputs.append(int(np.floor(initial_conv_outputs[-1] + avg_gap)))
+                initial_conv_outputs.append(int(round_func(initial_conv_outputs[-1] + avg_gap)))
                 initial_conv_inputs.append(initial_conv_outputs[-2])
 
             print("new conv layers:")
@@ -130,10 +135,10 @@ class ScalableCnn(nn.Module):
             print("ouputs: ", initial_linear_outputs)
 
         # width ----
-        scaled_conv_inputs = [int(np.floor(i * beta)) for i in initial_conv_inputs]
-        scaled_conv_outputs = [int(np.floor(i * beta)) for i in initial_conv_outputs]
-        scaled_dense_inputs = [int(np.floor(i * beta)) for i in initial_linear_inputs]
-        scaled_dense_outputs = [int(np.floor(i * beta)) for i in initial_linear_outputs]
+        scaled_conv_inputs = [int(round_func(i * beta)) for i in initial_conv_inputs]
+        scaled_conv_outputs = [int(round_func(i * beta)) for i in initial_conv_outputs]
+        scaled_dense_inputs = [int(round_func(i * beta)) for i in initial_linear_inputs]
+        scaled_dense_outputs = [int(round_func(i * beta)) for i in initial_linear_outputs]
 
         # Check how many conv with pooling layer can be used
         nb_max_pooling = np.min([np.log2(self.scaled_resolution[0]), int(np.log2(self.scaled_resolution[1]))])
