@@ -33,7 +33,6 @@ class Dataset(data.Dataset):
             logging.info("Cache system deactivate due to usage of online augmentation")
             self.cached = False
 
-
         # dataset access (combine weak and synthetic)
         if self.train:
             self.x = self.manager.audio["train"]
@@ -137,8 +136,8 @@ class Dataset(data.Dataset):
 class CoTrainingDataset(data.Dataset):
     """Must be used with the CoTrainingSampler"""
     def __init__(self, manager: (DatasetManager, StaticManager), ratio: float = 0.1, train: bool = True, val: bool = False,
-            unlabel_target: bool = False, static_augmentation_ratios: dict = {},
-            augments: tuple = (), S_augment: bool = True, U_augment: bool = True,
+            unlabel_target: bool = False, static_augmentation: dict = {},
+            augments: list = [], S_augment: bool = True, U_augment: bool = True,
             cached:bool = False):
         """
         Args:
@@ -154,10 +153,12 @@ class CoTrainingDataset(data.Dataset):
         self.train = train
         self.val = val
         self.unlabel_target = unlabel_target
-        self.augments = augments
+
+        self.augments = augments + list(static_augmentation.keys())
+        self.static_augmentation = static_augmentation
         self.S_augment = S_augment
         self.U_augment = U_augment
-        self.static_augmentation_ratios = static_augmentation_ratios
+
         self.cached = cached
 
         if self.train:
@@ -312,6 +313,7 @@ class CoTrainingDataset(data.Dataset):
 
     def _apply_dynamic_augmentation_helper(self, augment_func, data, augType):
         if isinstance(augment_func, augType):
+            print("applying dynamic augmentation: ", augment_func.__class__.__name__)
             return augment_func(data)
 
         return data
@@ -319,8 +321,8 @@ class CoTrainingDataset(data.Dataset):
     def _apply_static_augmentation_helper(self, augment_str, data, filename):
         apply = np.random.random()
 
-        if apply <= self.static_augmentation_ratios.get(augment_str, 0.5):
-            print("applying static augmentation")
+        if apply <= self.static_augmentation.get(augment_str, 0.5):
+            print("applying static augmentation: ", augment_str)
             number_of_flavor = self.manager.static_augmentation["train"][augment_str][filename].shape[0]
             flavor_to_use = np.random.randint(0, number_of_flavor)
 
@@ -329,9 +331,6 @@ class CoTrainingDataset(data.Dataset):
 
             return self.manager.static_augmentation["train"][augment_str][filename][flavor_to_use]
         return data
-
-    def set_static_augment_ratio(self, ratios: dict):
-        self.static_augmentation_ratios = ratios
 
     def _pad_and_crop(self, raw_audio):
         LENGTH = DatasetManager.LENGTH
@@ -357,7 +356,7 @@ if __name__ == '__main__':
     static_augment_file = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio", "urbansound8k_22050_augmentations.hdf5")
     augment_list = ["I_PSC1"]
     manager = StaticManager(metadata_root, audio_root, subsampling=1.0, subsampling_method="balance",
-                            static_augment_file=static_augment_file, augment_list=augment_list,
+                            static_augment_file=static_augment_file, static_augment_list=augment_list,
                             verbose=1, train_fold=[1], val_fold=[10])
 
     # prepare the sampler with the specified number of supervised file

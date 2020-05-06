@@ -16,10 +16,7 @@ import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
-import sys
-sys.path.append("../ubs8k/")
-
-from ubs8k.datasetManager import DatasetManager
+from ubs8k.datasetManager import StaticManager # <-- static manager allow usage of static augmentation store in a specific hdf file
 from ubs8k.generators import CoTrainingDataset
 from ubs8k.samplers import CoTrainingSampler
 from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
@@ -39,6 +36,7 @@ parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=float)
+parser.add_argument("--parser_ratio", default=None, type=float, help="ratio to apply for sampling the S and U data")
 parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
 parser.add_argument("--subsampling_method", default="balance", type=str, help="method to perform subsampling [random | balance]")
 parser.add_argument('--batchsize', '-b', default=100, type=int)
@@ -55,11 +53,18 @@ parser.add_argument("-T", '--tensorboard_dir', default='tensorboard/', type=str)
 parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
 parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
+parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
+parser.add_argument("--audio_root", default="../dataset/audio")
+parser.add_argument("--metadata_root", default="../dataset/metadata")
+parser.add_argument("--augmentation_file", default="../dataset/audio/")
+parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script. Must be a str")
+parser.add_argument("-sa", "--static_augments", default="{}", type=str, help="a valid dictionnary where key are the augmentation to use and values their ratio")
+parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
+parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
+parser.add_argument("--num_workers", default=0, type=int, help="Choose number of worker to train the model")
 parser.add_argument("--log", default="warning", help="Log level")
-parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script")
 args = parser.parse_args()
-
 
 # Logging system
 set_logs(args.log)
@@ -68,22 +73,30 @@ set_logs(args.log)
 reset_seed(args.seed)
 
 # ---- Prepare augmentation ----
-augments = list(map(eval, args.augments))
+# list of dynamic augmentation
+dynamic_augments = [] if args.augments is None else list(map(eval, args.augments))
+
+# list of static augmentation
+static_augments = eval(args.static_augments)
+
 
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-manager = DatasetManager(metadata_root, audio_root,
-                         subsampling=args.subsampling, subsampling_method=args.subsampling_method,
-                         train_fold=args.train_folds, val_fold=args.val_folds,
-                         verbose=1
-                         )
+augmentation_file = os.path.join(audio_root, "urbansound8k_22050_augmentation.hdf5")
+
+manager = StaticManager(
+    metadata_root, audio_root,
+    static_augment_file=augmentation_file, static_augment_list=list(static_augments.keys()),
+    subsampling=args.subsampling, subsampling_method=args.subsampling_method,
+    train_fold=args.train_folds, val_fold=args.val_folds,
+    verbose=1
+)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=augments, S_augment=True, U_augment=False, cached=True)
+train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=dynamic_augments, static_augmentation=static_augments, S_augment=args.augment_S, U_augment=args.augment_U, cached=True)
 val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
-sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
-
+sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=args.parser_ratio, method="duplicate") # ratio is automatically set here.
 
 # ======== Prepare the model ========
 model_func = get_model_from_name(args.model)
@@ -94,7 +107,7 @@ m1 = m1.cuda()
 m2 = m2.cuda()
 
 # ======== Loaders & adversarial generators ========
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=args.num_workers)
 val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 # adversarial generation
