@@ -208,14 +208,14 @@ class DatasetManager:
 
 class StaticManager(DatasetManager):
     def __init__(self, metadata_root, audio_root,
-                 static_augment_file: str, augment_list: list = (),
+                 static_augment_file: str, static_augment_list: list = (),
                  sr: int = 22050, train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10,),
                  subsampling: float = 1.0, subsampling_method: str = "random", verbose=1):
         super().__init__(metadata_root, audio_root, sr, (), train_fold, val_fold, subsampling, subsampling_method,
                          verbose)
 
         self.static_augmentation_file = static_augment_file
-        self.augment_list = augment_list
+        self.augment_list = static_augment_list
         self.hdf_path = static_augment_file
 
         self.static_augmentation = {
@@ -270,7 +270,7 @@ if __name__ == '__main__':
     augment_list = ["I_PSC1"]
 
     # dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
-    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, augment_list=["I_PSC1"], train_fold=[1], val_fold=[])
+    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, static_augment_list=["I_PSC1"], train_fold=[1], val_fold=[])
     k = list(dataset.static_augmentation["train"]["I_PSC1"].keys())
     print(k[0])
     print(dataset.static_augmentation["train"]["I_PSC1"][k[0]].shape)
