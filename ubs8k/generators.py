@@ -160,6 +160,9 @@ class CoTrainingDataset(data.Dataset):
         self.U_augment = U_augment
 
         self.cached = cached
+        if len(augments) != 0 and cached:
+            logging.info("Cache system deactivate due to usage of online augmentation")
+            self.cached = False
 
         if self.train:
             self.X = self.manager.audio["train"]
@@ -265,12 +268,22 @@ class CoTrainingDataset(data.Dataset):
 
         features = []
         for i, filename in enumerate(filenames):
+            augment_str = None
+            flavor = None
+            
             if augment:
-                print("Signal augmentation")
                 raw_audios[i] = self._apply_augmentation(raw_audios[i], SignalAugmentation, filename)
+                
+                # TODO make it more clean
+                # _apply_augmentation can return a tuple WHEN USING STATIC AUGMENTATION
+                # tuple --> (rauw_audios[i], augment_str, flavor)                
+                if isinstance(raw_audios[i], tuple):
+                    augment_str = raw_audios[i][1]
+                    flavor = raw_audios[i][2]
+                    raw_audios[i] = raw_audios[i][0]
 
             raw_audios[i] = self._pad_and_crop(raw_audios[i])
-            feat = self.manager.extract_feature(raw_audios[i], filename=filenames[i], cached=self.cached)
+            feat = self.manager.extract_feature(raw_audios[i], filename=filename, cached=self.cached, augment_str=augment_str, flavor=flavor)
 
             if augment:
                 feat = self._apply_augmentation(feat, SpecAugmentation)
@@ -299,10 +312,8 @@ class CoTrainingDataset(data.Dataset):
         """
         np.random.shuffle(self.augments)
         for augment in self.augments:
-            print("augment: ", augment)
             # static augmentation are trigger on the signal phase and are represented by string
             if isinstance(augment, str) and augType == SignalAugmentation:
-                print("Applying static augmentation")
                 return self._apply_static_augmentation_helper(augment, data, filename)
 
             else:
@@ -313,7 +324,6 @@ class CoTrainingDataset(data.Dataset):
 
     def _apply_dynamic_augmentation_helper(self, augment_func, data, augType):
         if isinstance(augment_func, augType):
-            print("applying dynamic augmentation: ", augment_func.__class__.__name__)
             return augment_func(data)
 
         return data
@@ -322,14 +332,10 @@ class CoTrainingDataset(data.Dataset):
         apply = np.random.random()
 
         if apply <= self.static_augmentation.get(augment_str, 0.5):
-            print("applying static augmentation: ", augment_str)
             number_of_flavor = self.manager.static_augmentation["train"][augment_str][filename].shape[0]
             flavor_to_use = np.random.randint(0, number_of_flavor)
 
-            print("augment_str: ", augment_str)
-            print("flavor: %s / %s" % (flavor_to_use, number_of_flavor))
-
-            return self.manager.static_augmentation["train"][augment_str][filename][flavor_to_use]
+            return self.manager.static_augmentation["train"][augment_str][filename][flavor_to_use], augment_str, flavor_to_use
         return data
 
     def _pad_and_crop(self, raw_audio):
