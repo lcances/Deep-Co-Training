@@ -83,7 +83,7 @@ static_augments = eval(args.static_augments)
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-augmentation_file = os.path.join(audio_root, "urbansound8k_22050_augmentation.hdf5")
+augmentation_file = os.path.join(audio_root, "urbansound8k_22050_augmentations.hdf5")
 
 manager = StaticManager(
     metadata_root, audio_root,
@@ -108,7 +108,7 @@ m2 = m2.cuda()
 
 # ======== Loaders & adversarial generators ========
 train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=args.num_workers)
-val_loader = data.DataLoader(val_dataset, batch_size=128)
+val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=args.num_workers)
 
 # adversarial generation
 input_max_value = 0

@@ -99,7 +99,7 @@ class CopoundScaling:
         date_time = get_datetime()
         (a, b, g) = self.model.compound_scales
         abg = "%.4f_%.4f_%.4f" % (a, b, g)
-        return SummaryWriter("tensorboard/%s/%s/%s_%s_%s" % (self.tensorboard_dir, abg, date_time, args.run_number, title))
+        return SummaryWriter("tensorboard/%s/%s/%s_run%s_%s" % (self.tensorboard_dir, abg, date_time, args.run_number, title))
         
     def learn(self):
         if self.model is None:

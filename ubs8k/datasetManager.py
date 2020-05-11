@@ -13,6 +13,7 @@ import tqdm
 import h5py
 import pandas as pd
 import logging
+from multiprocessing import Process, Manager
 
 def conditional_cache(func):
     def decorator(*args, **kwargs):
@@ -38,6 +39,75 @@ def conditional_cache(func):
 
     return decorator
 
+def multiprocess_feature_cache(func):
+    """
+    Decorator for the feature extraction function. Perform extraction is not already safe in memory then save it in
+    memory. when call again, return feature store in memory
+    THIS ONE IS PROCESS / THREAD SAFE
+    """
+    def decorator(*args, **kwargs):
+        if "filename" in kwargs.keys() and "cached" in kwargs.keys():
+            filename = kwargs["filename"]
+            cached = kwargs["cached"]
+
+            if filename is not None and cached:
+                if filename not in decorator.cache.keys():
+                    decorator.cache[filename] = func(*args, **kwargs)
+                    return decorator.cache[filename]
+
+                else:
+                    if decorator.cache[filename] is None:
+                        decorator.cache[filename] = func(*args, **kwargs)
+                        return decorator.cache[filename]
+                    else:
+                        return decorator.cache[filename]
+
+        return func(*args, **kwargs)
+
+    decorator.manager = Manager()
+    decorator.cache = decorator.manager.dict()
+
+    return decorator
+
+def multiprocess_feature_cache_v2(func):
+    """
+    Decorator for the featurex extraction function.
+    Perform the extraction of the feature if not already done and store for later usage.
+    Can handle multiple flavor of static augmentation
+    """
+    def decorator_v2(*args, **kwargs):
+        if "filename" in kwargs.keys() and "cached" in kwargs.keys():
+            filename = kwargs["filename"]
+            cached = kwargs["cached"]
+        
+        if cached:
+            if "augment_str" in kwargs.keys() and "flavor" in kwargs.keys():
+                augment_name = kwargs["augment_str"]
+                flavor = kwargs["flavor"]
+
+                unique_id = "%s.%s.%s" % (filename, augment_name, flavor)
+            else:
+                unique_id = filename
+                
+            #print("%s in cache ? : " % unique_id, unique_id in decorator_v2.cache)
+            if unique_id not in decorator_v2.cache.keys():
+                decorator_v2.cache[unique_id] = func(*args, **kwargs)
+                return decorator_v2.cache[unique_id]
+
+            else:
+                if decorator_v2.cache[unique_id] is None:
+                    decorator_v2.cache[unique_id] = func(*args, **kwargs)
+                    return decorator_v2.cache[unique_id]
+                else:
+                    return decorator_v2.cache[unique_id]
+        
+        return func(*args, **kwargs)
+    
+    decorator_v2.manager = Manager()
+    decorator_v2.cache = decorator_v2.manager.dict()
+
+    return decorator_v2
+            
 
 class DatasetManager:
     class_correspondance = {"Air_conditioner": 0, "car_horn": 1, "Children_laying": 2,
@@ -191,12 +261,16 @@ class DatasetManager:
         raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
         return raw_data, sr
 
-    @conditional_cache
-    def extract_feature(self, raw_data, filename = None, cached = False):
+    #@conditional_cache
+    #@multiprocess_feature_cache
+    @multiprocess_feature_cache_v2
+    def extract_feature(self, raw_data, filename = None, cached = False, augment_str = None, flavor=None):
         """
         extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
         :param raw_data: to audio to transform
         :param filename: the key used by the cache system
+        :param augment_str: (only for the cache) The signal augmentation that is used of the raw signal
+        :param flavor: (only for the cache) The flavor (variant choice) that is used for this raw signal
         :param cached: use or not the cache system
         :return: the feature extracted from the raw audio
         """
@@ -228,11 +302,11 @@ class StaticManager(DatasetManager):
             self.add_augmentation(augment)
 
     def add_augmentation(self, augmentation_name):
-        self.static_augmentation["train"][augmentation_name] = self._hdf_to_dict(self.hdf_path, self.train_fold, augmentation_name)
+        self.static_augmentation["train"][augmentation_name] = self._hdfaug_to_dict(self.hdf_path, self.train_fold, augmentation_name)
 
     # Need to reimplement hdf to dict since augmentation can have several dataset dimension (one for each variant)
     # TODO REALY NECESSARY ?
-    def _hdf_to_dict(self, hdf_path, folds: list, key: str = "data") -> dict:
+    def _hdfaug_to_dict(self, hdf_path, folds: list, key: str = "data") -> dict:
         output = dict()
 
         # open hdf file
@@ -252,9 +326,14 @@ class StaticManager(DatasetManager):
                     selection_idx = self._subsample(filenames, fold)
 
                 fold_dict = {}
+                print(audios.shape)
                 for idx, filename in enumerate(filenames[selection_idx]):
-                    output[filename] = audios[:, idx]
+                    if len(audios.shape) == 2:
+                        output[filename] = audios[idx]
+                    else:
+                        output[filename] = audios[:, idx]
 
+                print(len(output), len(list(output.values())[0]))
                 output = dict(**output, **fold_dict)
 
         logging.info("nb file loaded: %d" % len(output))
