@@ -3,6 +3,7 @@ import h5py
 import librosa
 import os, sys
 import numpy as np
+import random
 import tqdm
 import time
 import argparse
@@ -18,6 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--sampling_rate", default=22050, type=int)
     parser.add_argument("-l", "--length", default=4, type=int)
     parser.add_argument("-A","--augments", action="append", help="Augmentation. use as if python script")
+    parser.add_argument("--seed", default=-1, type=int, help="Seed use for the random generation. if set to -1 seed is == time.time()")
     parser.add_argument("-w", "--num_workers", default=4, type=int, help="how many process to perform the augmentations")
     args = parser.parse_args()
 
@@ -26,7 +28,14 @@ if __name__ == '__main__':
     audio_root = args.audio_root
 
     hdf_raw= h5py.File(os.path.join(audio_root, "%s_%s.hdf5" % ("urbansound8k", SR)), "r")
-
+    
+    # ---- Prepare seed ----
+    seed = time.time() if args.seed == -1 else args.seed
+    
+    np.random.seed(seed)
+    random.seed(seed)
+    
+    
     # ---- Prepare augmentation ----
     if args.augments is None:
         augment_func_list = []
@@ -110,7 +119,7 @@ if __name__ == '__main__':
             pool = Pool(args.num_workers)
 
             jobs = [pool.apply_async(augment_func, (raw, )) for raw in raw_audios]
-            results = [job.get() for job in jobs]
+            results = [job.get() for job in tqdm.tqdm(jobs)]
 
             results = np.asarray(results)
 
