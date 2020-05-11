@@ -75,7 +75,6 @@ class ScalableCnn(nn.Module):
     Compound Scaling based CNN
     see: https://arxiv.org/pdf/1905.11946.pdf
     """
-
     def __init__(self, dataset: DatasetManager,
                  compound_scales: tuple = (1, 1, 1),
                  initial_conv_inputs=[1, 32, 64, 64],
@@ -123,19 +122,12 @@ class ScalableCnn(nn.Module):
                 initial_conv_outputs.append(int(round_func(initial_conv_outputs[-1] + avg_gap)))
                 initial_conv_inputs.append(initial_conv_outputs[-2])
 
-            print("new conv layers:")
-            print("inputs: ", initial_conv_inputs)
-            print("ouputs: ", initial_conv_outputs)
-
         if scaled_nb_linear != initial_nb_dense:  # Another dense layer must be created
             print("More dense layer must be created")
             dense_list = np.linspace(initial_linear_inputs[0], initial_linear_outputs[-1], scaled_nb_linear + 1)
             initial_linear_inputs = dense_list[:-1]
             initial_linear_outputs = dense_list[1:]
 
-            print("new dense layers:")
-            print("inputs: ", initial_linear_inputs)
-            print("ouputs: ", initial_linear_outputs)
 
         # width ----
         scaled_conv_inputs = [int(round_func(i * beta)) for i in initial_conv_inputs]
@@ -143,6 +135,14 @@ class ScalableCnn(nn.Module):
         scaled_dense_inputs = [int(round_func(i * beta)) for i in initial_linear_inputs]
         scaled_dense_outputs = [int(round_func(i * beta)) for i in initial_linear_outputs]
 
+        print("new conv layers:")
+        print("inputs: ", scaled_conv_inputs)
+        print("ouputs: ", scaled_conv_outputs)
+            
+        print("new dense layers:")
+        print("inputs: ", scaled_dense_inputs)
+        print("ouputs: ", scaled_dense_outputs)
+        
         # Check how many conv with pooling layer can be used
         nb_max_pooling = np.min([np.log2(self.scaled_resolution[0]), int(np.log2(self.scaled_resolution[1]))])
         nb_model_pooling = len(scaled_conv_inputs)
@@ -378,6 +378,27 @@ def scallable1_new(**kwargs):
         initial_linear_inputs=[1344, ],
         initial_linear_outputs=[10, ],
         initial_resolution=[64, 173],
+        round_up=True,
+    )
+
+    return ScalableCnn(**parameters)
+
+def scallable2_new(**kwargs):
+    """The new scallable 1 model feature resolution scaling.
+    It is also used as a starter for the new scallable 2 model
+    """
+    dataset = kwargs["dataset"]
+    #compound_scales = kwargs.get("compound_scales", (1.36, 1.0, 1.21))
+    compound_scales = kwargs.get("compound_scales", (1.0, 1.0, 1.0))
+
+    parameters = dict(
+        dataset=dataset,
+        compound_scales = compound_scales,
+        initial_conv_inputs=[1, 32, 64, 64, 64, 80],
+        initial_conv_outputs=[32, 64, 64, 64, 80, 96],
+        initial_linear_inputs=[1344,  677],
+        initial_linear_outputs=[677,  10],
+        initial_resolution=[78, 210],
         round_up=True,
     )
 
