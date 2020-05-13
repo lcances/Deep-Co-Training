@@ -24,7 +24,7 @@ hdf = h5py.File(hdf_path, 'w')
 
 def load_file(folder_path, f):
     path = os.path.join(folder_path, f)
-    raw, sr = librosa.load(path, sr=SR, res_type="kaiser_fast")
+    raw, sr = librosa.load(path, sr=SR, res_type="kaiser_fast", dtype=np.float32)
 
     # padding
     if len(raw) < SR * LENGTH:
