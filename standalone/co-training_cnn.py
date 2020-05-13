@@ -1,44 +1,63 @@
-import os
-os.environ["MKL_NUM_THREADS"] = "2"
-os.environ["NUMEXPR_NU M_THREADS"] = "2"
-os.environ["OMP_NUM_THREADS"] = "2"
+#!/usr/bin/env python
+# coding: utf-8
+
+# # Import
+
+# In[1]:
+
+
 import numpy as np
+import os
 import time
 import math
+import pickle
 import argparse
 import random
+from random import shuffle
+from tqdm import tqdm_notebook as tqdm
 
 import torch
+import torchvision
+import torchvision.transforms as transforms
 import torch.nn as nn
+import torch.nn.functional as F
+import torchvision.models as models
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
+from torch.nn.utils import weight_norm
 
-from ubs8k.datasetManager import DatasetManager
-from ubs8k.generators import CoTrainingDataset
-from ubs8k.samplers import CoTrainingSampler
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
-from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
-from ubs8k.metrics import CategoricalAccuracy, Ratio
-from ubs8k.ramps import Warmup, sigmoid_rampup
+# In[2]:
 
-import ubs8k.img_augmentations as img_augmentations
-import ubs8k.spec_augmentations as spec_augmentations
-import ubs8k.signal_augmentations as signal_augmentations
 
-# ---- Arguments ----
+import sys
+sys.path.append("../src/")
+
+from datasetManager import DatasetManager
+from generators import Generator, CoTrainingGenerator
+from samplers import CoTrainingSampler
+import signal_augmentations as sa
+
+import models
+from losses import loss_cot, loss_diff, loss_diff, p_loss_diff, p_loss_sup
+from metrics import CategoricalAccuracy, Ratio
+from ramps import Warmup, sigmoid_rampup
+
+
+# # Utils
+
+# ## Arguments
+
+# In[22]:
+
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
-parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
 parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9", required=True, type=int, help="fold to use for training")
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=float)
-parser.add_argument("--parser_ratio", default=None, type=float, help="ratio to apply for sampling the S and U data")
-parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
-parser.add_argument("--subsampling_method", default="balance", type=str, help="method to perform subsampling [random | balance]")
 parser.add_argument('--batchsize', '-b', default=100, type=int)
 parser.add_argument('--lambda_cot_max', default=10, type=int)
 parser.add_argument('--lambda_diff_max', default=0.5, type=float)
@@ -49,57 +68,93 @@ parser.add_argument('--momentum', default=0.0, type=float)
 parser.add_argument('--decay', default=1e-3, type=float)
 parser.add_argument('--epsilon', default=0.02, type=float)
 parser.add_argument('--num_class', default=10, type=int)
+parser.add_argument('--cifar10_dir', default='./data', type=str)
+parser.add_argument('--svhn_dir', default='./data', type=str)
 parser.add_argument("-T", '--tensorboard_dir', default='tensorboard/', type=str)
 parser.add_argument('--checkpoint_dir', default='checkpoint', type=str)
 parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
-parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script")
-parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
-parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
-parser.add_argument("--num_workers", default=0, type=int, help="Choose number of worker to train the model")
-parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
 
-# Logging system
-set_logs(args.log)
+# ## Reproducibility
 
-# Reproducibility
+# In[4]:
+
+
+def reset_seed(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
 reset_seed(args.seed)
 
-# ---- Prepare augmentation ----
-if args.augments is None:
-    augments = []
-else:
-    augments = list(map(eval, args.augments))
 
-# ======== Prepare the data ========
+# In[5]:
+
+
+import datetime
+
+def get_datetime():
+    now = datetime.datetime.now()
+    return str(now)[:10] + "_" + str(now)[11:-7]
+
+
+# # Dataset
+
+# In[23]:
+
+
+# load the data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-manager = DatasetManager(metadata_root, audio_root,
-                         subsampling=args.subsampling, subsampling_method=args.subsampling_method,
-                         train_fold=args.train_folds, val_fold=args.val_folds,
-                         verbose=1
-                         )
+dataset = DatasetManager(metadata_root, audio_root,
+                         train_fold=args.train_folds,
+                         val_fold=args.val_folds,
+                         verbose=1)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=augments, S_augment=args.augment_S, U_augment=args.augment_U, cached=True)
-val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
-sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=args.parser_ratio, method="duplicate") # ratio is automatically set here.
+train_dataset = CoTrainingGenerator(dataset, args.ratio)
+sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
-# ======== Prepare the model ========
+# # Prep training
+
+# ## Models
+
+# In[24]:
+
+def get_model_from_name(model_name):
+    import inspect
+
+    for name, obj in inspect.getmembers(models):
+        if inspect.isclass(obj):
+            if obj.__name__ == model_name:
+                return obj
+
+
 model_func = get_model_from_name(args.model)
-m1 = model_func(dataset=manager)
-m2 = model_func(dataset=manager)
+
+m1, m2 = model_func(), model_func()
 
 m1 = m1.cuda()
 m2 = m2.cuda()
 
-# ======== Loaders & adversarial generators ========
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=args.num_workers)
-val_loader = data.DataLoader(val_dataset, batch_size=128)
+
+# ## Loaders & adversarial generators
+
+# In[25]:
+
+x, y = train_dataset.validation
+x = torch.from_numpy(x)
+y = torch.from_numpy(y)
+val_dataset = torch.utils.data.TensorDataset(x, y)
+
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=8)
+val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=4)
 
 # adversarial generation
 input_max_value = 0
@@ -115,7 +170,11 @@ adv_generator_2 = GradientSignAttack(
 )
 
 
-# ======== optimizers & callbacks =========
+# ## optimizers & callbacks
+
+# In[26]:
+
+
 params = list(m1.parameters()) + list(m2.parameters())
 optimizer = optim.SGD(params, lr=args.base_lr, momentum=args.momentum, weight_decay=args.decay)
 
@@ -125,7 +184,11 @@ lr_scheduler = LambdaLR(optimizer, lr_lambda)
 callbacks = [lr_scheduler]
 
 
-# ========= Metrics and hyperparameters ========
+# ## Metrics and hyperparameters
+
+# In[27]:
+
+
 # define the metrics
 ratioS = [Ratio(), Ratio()]
 ratioU = [Ratio(), Ratio()]
@@ -147,22 +210,23 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl_%swd" % (
+title = "%s_%s_%slr_%se_%slcm_%sldm_%swl" % (
     get_datetime(),
     args.job_name,
-    model_func.__name__,
-    args.subsampling,
     args.base_lr,
     args.epsilon,
     args.lambda_cot_max,
     args.lambda_diff_max,
     args.warm_up,
-    args.decay
 )
-tensorboard = SummaryWriter("tensorboard/%s/%s" % (args.tensorboard_dir, title))
+tensorboard = SummaryWriter("%s/%s" % (args.tensorboard_dir, title))
 
 
-# ======== Training ========
+# # Training
+
+# In[28]:
+
+
 def train(epoch):
     m1.train()
     m2.train()
@@ -172,7 +236,7 @@ def train(epoch):
     ls = 0.0
     lc = 0.0
     ld = 0.0
-
+    
     reset_all_metrics()
 
     start_time = time.time()
@@ -291,28 +355,31 @@ def train(epoch):
     tensorboard.add_scalar('train/Lsup', Loss_sup.item(), epoch )
     tensorboard.add_scalar('train/Lcot', Loss_cot.item(), epoch )
     tensorboard.add_scalar('train/Ldiff', Loss_diff.item(), epoch )
-    tensorboard.add_scalar("train/acc_SU1", acc_SU1, epoch )
-    tensorboard.add_scalar("train/acc_SU2", acc_SU2, epoch )
+    tensorboard.add_scalar("train/acc_1", acc_SU1, epoch )
+    tensorboard.add_scalar("train/acc_2", acc_SU2, epoch )
 
-    tensorboard.add_scalar("detail_loss/Lsup_S1", Loss_sup_S1.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Lsup_S2", Loss_sup_S2.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Ldiff_S", pld_S.item(), epoch)
-    tensorboard.add_scalar("detail_loss/Ldiff_U", pld_U.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Lsus S1", Loss_sup_S1.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Lsus S2", Loss_sup_S2.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Ldiff S", pld_S.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Ldiff U", pld_U.item(), epoch)
 
-    tensorboard.add_scalar("detail_acc/acc_S1", acc_S1, epoch)
-    tensorboard.add_scalar("detail_acc/acc_S2", acc_S2, epoch)
-    tensorboard.add_scalar("detail_acc/acc_U1", acc_U1, epoch)
-    tensorboard.add_scalar("detail_acc/acc_U2", acc_U2, epoch)
+    tensorboard.add_scalar("detail_acc/acc S1", acc_S1, epoch)
+    tensorboard.add_scalar("detail_acc/acc S2", acc_S2, epoch)
+    tensorboard.add_scalar("detail_acc/acc U1", acc_U1, epoch)
+    tensorboard.add_scalar("detail_acc/acc U2", acc_U2, epoch)
 
-    tensorboard.add_scalar("detail_ratio/ratio_S1", ratio_S1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_S2", ratio_S2, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_U1", ratio_U1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_U2", ratio_U2, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_SU1", ratio_SU1, epoch)
-    tensorboard.add_scalar("detail_ratio/ratio_SU2", ratio_SU2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio S1", ratio_S1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio S2", ratio_S2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio U1", ratio_U1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio U2", ratio_U2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio SU1", ratio_SU1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio SU2", ratio_SU2, epoch)
 
     # Return the total loss to check for NaN
     return total_loss.item()
+
+
+# In[29]:
 
 
 def test(epoch):
@@ -325,31 +392,27 @@ def test(epoch):
     correct2 = 0
     total1 = 0
     total2 = 0
-
+    
     with torch.no_grad():
-        for batch_idx, (X, y) in enumerate(val_loader):
-            X = X.squeeze()
-            y = y.squeeze()
+        for batch_idx, (inputs, targets) in enumerate(val_loader):
+            inputs = inputs.cuda()
+            targets = targets.cuda()
 
-            # separate Supervised (S) and Unsupervised (U) parts
-            X = X.cuda()
-            y = y.cuda()
-
-            outputs1 = m1(X)
+            outputs1 = m1(inputs)
             predicted1 = outputs1.max(1)
-            total1 += y.size(0)
-            correct1 += predicted1[1].eq(y).sum().item()
+            total1 += targets.size(0)
+            correct1 += predicted1[1].eq(targets).sum().item()
 
-            outputs2 = m2(X)
+            outputs2 = m2(inputs)
             predicted2 = outputs2.max(1)
-            total2 += y.size(0)
-            correct2 += predicted2[1].eq(y).sum().item()
+            total2 += targets.size(0)
+            correct2 += predicted2[1].eq(targets).sum().item()
 
     print('\nnet1 test acc: %.3f%% (%d/%d) | net2 test acc: %.3f%% (%d/%d)'
         % (100.*correct1/total1, correct1, total1, 100.*correct2/total2, correct2, total2))
 
-    tensorboard.add_scalar("val/acc_1", correct1 / total1, epoch)
-    tensorboard.add_scalar("val/acc_2", correct2 / total2, epoch)
+    tensorboard.add_scalar("val/acc 1", correct1 / total1, epoch)
+    tensorboard.add_scalar("val/acc 2", correct2 / total2, epoch)
 
     tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
@@ -362,11 +425,18 @@ def test(epoch):
     lambda_diff.step()
 
 
+# In[ ]:
+
+
 for epoch in range(0, args.epochs):
     total_loss = train(epoch)
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
     test(epoch)
+
+# tensorboard.export_scalars_to_json('./' + args.tensorboard_dir + 'output.json')
+# tensorboard.close()
+
 
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
