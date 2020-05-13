@@ -15,11 +15,20 @@
 /standalone/.ipynb_checkpoints/
 /ubs8k/.ipynb_checkpoints/
 /notebooks/tensoboard_cotraining/
-/notebooks/tensoboard_cotraining/
 /notebooks/img for paper/
-/notebooks/tensoboard_cotraining/
+/osirim/CompoundScalling/tensorboard/
 *.out
 *.err
 osirim/tensorboard/
 test/.ipynb_checkpoints/
 **/.ipynb_checkpoints/
+!/notebooks/tensoboard_cotraining/
+UrbanSound8K-master/
+dataset
+notebooks/cotraining/
+osirim/.sbatch_tmp.sh
+osirim/tensorboard_back/
+standalone/tensorboard_cotraining_cnn_epsVary/
+/osirim/tensorboard_back/
+/osirim/tensorboard/
+
