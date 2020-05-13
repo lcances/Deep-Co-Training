@@ -303,6 +303,11 @@ class StaticManager(DatasetManager):
 
     def add_augmentation(self, augmentation_name):
         self.static_augmentation["train"][augmentation_name] = self._hdfaug_to_dict(self.hdf_path, self.train_fold, augmentation_name)
+        
+    def list_augmentation_availables(self):
+        with h5py.File(self.hdf_path, "r") as hdf:
+            print(hdf["fold1"].keys())
+        
 
     # Need to reimplement hdf to dict since augmentation can have several dataset dimension (one for each variant)
     # TODO REALY NECESSARY ?
