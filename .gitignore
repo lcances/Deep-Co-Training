@@ -26,6 +26,12 @@
 /dataset.lnk
 /.idea/
 /notebooks/img for paper/
-/notebooks/tensoboard_cotraining/
 /notebooks/.ipynb_checkpoints/
 /notebooks/tensorboard/
+osirim/aug_crossval_full/combination/
+osirim/aug_crossval_full/cross_validation/
+osirim/aug_crossval_full/epsilon/
+osirim/aug_crossval_full/lambda_cot_max/
+osirim/aug_crossval_full/lambda_diff_max/
+osirim/aug_crossval_full/learning_rate/
+osirim/aug_crossval_full/warmup/

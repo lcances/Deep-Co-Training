@@ -127,8 +127,7 @@ class DatasetManager:
 
     def __init__(self, metadata_root, audio_root, sr: int = 22050, augments: tuple = (),
                  train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10, ),
-                 subsampling: float = 1.0, subsampling_method: str = "random", verbose=1):
-
+                 subsampling: float = 1.0, subsampling_method: str = "balance", verbose=1):
         """
 
         :param metadata_root: base for metadata files
@@ -185,18 +184,31 @@ class DatasetManager:
         self.meta["train"] = data.loc[data.fold.isin(self.train_fold)]
         self.meta["val"] = data.loc[data.fold.isin(self.val_fold)]
 
-    def _subsample(self, filenames, fold) -> list:
-        """Select a fraction of the file following the picking method specified while creating the Manager
-        Since a fold of data is loaded at once, must specified on which fold we are working.
+    def _subsample(self, filenames, fold, seed: int = 1234) -> list:
+        """
+        Select a fraction of the files following using the specified picking method.
+        Since a fold of data is loaded a once, It is necessary to know on which fold we are working.
 
-        Return a list of indexes
+        :param filenames: The list of filenames inside the fold
+        :param fold: The fold to work with
+        :param seed: The seed for the random choice of the file. MANDATORY when using static augmentation.
+        The _subsample function is called two times for each folds, yielding different split
+        :return: A list of indexes
         """
 
         def random_pick() -> list:
             nb_file = len(filenames)
             idx = list(range(nb_file))
+
+            # backup the previous random state (to not mess with other function using random generation)
+            previous_state = np.random.get_state()
+
+            np.random.seed(seed)
             rnd_idx = np.random.choice(idx, size=int(nb_file * self.subsampling), replace=False)
 
+            np.random.set_state(previous_state)
+
+            print(rnd_idx[:5])
             return rnd_idx
 
         def balanced_pick() -> list:
@@ -218,7 +230,7 @@ class DatasetManager:
             meta["distribution"] /= sum(meta["distribution"])
 
             # sample the dataframe
-            sample = meta.sample(frac=self.subsampling, weights="distribution", replace=False)
+            sample = meta.sample(frac=self.subsampling, weights="distribution", replace=False, random_state=seed)
             return sample.idx.values
 
         if self.subsampling_method == "random":
@@ -237,6 +249,7 @@ class DatasetManager:
                 hdf_fold = hdf["fold%d" % fold]
 
                 filenames = np.asarray(hdf_fold["filenames"])
+                print("filenames folds: %s: " % fold, filenames[:5])
                 audios = np.asarray(hdf_fold[key])
 
                 # Apply subsampling if needed
@@ -261,8 +274,6 @@ class DatasetManager:
         raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
         return raw_data, sr
 
-    #@conditional_cache
-    #@multiprocess_feature_cache
     @multiprocess_feature_cache_v2
     def extract_feature(self, raw_data, filename = None, cached = False, augment_str = None, flavor=None):
         """
@@ -284,7 +295,7 @@ class StaticManager(DatasetManager):
     def __init__(self, metadata_root, audio_root,
                  static_augment_file: str, static_augment_list: list = (),
                  sr: int = 22050, train_fold: list = (1, 2, 3, 4, 5, 6, 7, 8, 9), val_fold: list = (10,),
-                 subsampling: float = 1.0, subsampling_method: str = "random", verbose=1):
+                 subsampling: float = 1.0, subsampling_method: str = "balance", verbose=1):
         super().__init__(metadata_root, audio_root, sr, (), train_fold, val_fold, subsampling, subsampling_method,
                          verbose)
 
@@ -307,10 +318,7 @@ class StaticManager(DatasetManager):
     def list_augmentation_availables(self):
         with h5py.File(self.hdf_path, "r") as hdf:
             print(hdf["fold1"].keys())
-        
 
-    # Need to reimplement hdf to dict since augmentation can have several dataset dimension (one for each variant)
-    # TODO REALY NECESSARY ?
     def _hdfaug_to_dict(self, hdf_path, folds: list, key: str = "data") -> dict:
         output = dict()
 
@@ -320,6 +328,7 @@ class StaticManager(DatasetManager):
                 hdf_fold = hdf["fold%d" % fold]
 
                 filenames = np.asarray(hdf_fold["filenames"])
+                print("filenames folds: %s: " % fold, filenames[:5])
 
                 if key not in hdf_fold:
                     raise KeyError("augmentation %s doesn't exist. There is: %s" % (key, hdf_fold.keys()))
@@ -331,15 +340,15 @@ class StaticManager(DatasetManager):
                     selection_idx = self._subsample(filenames, fold)
 
                 fold_dict = {}
-                print(audios.shape)
-                for idx, filename in enumerate(filenames[selection_idx]):
-                    if len(audios.shape) == 2:
-                        output[filename] = audios[idx]
-                    else:
-                        output[filename] = audios[:, idx]
+                for idx in selection_idx:
+                    filename = filenames[idx]
+                    audio = audios[:, idx]
+                    output[filename] = audio
 
-                print(len(output), len(list(output.values())[0]))
                 output = dict(**output, **fold_dict)
+
+        print(len(list(output.keys())))
+        print(list(output.values())[0].shape)
 
         logging.info("nb file loaded: %d" % len(output))
         return output
@@ -353,11 +362,6 @@ if __name__ == '__main__':
     static_augment_file = os.path.join("E:/", "Corpus", "UrbanSound8K", "audio", "urbansound8k_22050_augmentations.hdf5")
     augment_list = ["I_PSC1"]
 
-    # dataset = DatasetManager(metadata_root, audio_root, subsampling=0.05, subsampling_method="balance")
-    dataset = StaticManager(metadata_root, audio_root, static_augment_file=static_augment_file, static_augment_list=["I_PSC1"], train_fold=[1], val_fold=[])
-    k = list(dataset.static_augmentation["train"]["I_PSC1"].keys())
-    print(k[0])
-    print(dataset.static_augmentation["train"]["I_PSC1"][k[0]].shape)
 
 
 
