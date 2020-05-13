@@ -79,7 +79,6 @@ dynamic_augments = [] if args.augments is None else list(map(eval, args.augments
 # list of static augmentation
 static_augments = eval(args.static_augments)
 
-
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
