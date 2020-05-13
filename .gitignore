@@ -29,3 +29,5 @@ notebooks/cotraining/
 osirim/.sbatch_tmp.sh
 osirim/tensorboard_back/
 standalone/tensorboard_cotraining_cnn_epsVary/
+!/osirim/tensorboard_back/
+!/osirim/tensorboard/
