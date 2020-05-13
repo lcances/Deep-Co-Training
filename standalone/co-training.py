@@ -25,9 +25,9 @@ from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
 from ubs8k.metrics import CategoricalAccuracy, Ratio
 from ubs8k.ramps import Warmup, sigmoid_rampup
 
-import ubs8k.img_augmentations
-import ubs8k.spec_augmentations
-import ubs8k.signal_augmentations
+import ubs8k.img_augmentations as img_augmentations
+import ubs8k.spec_augmentations as spec_augmentations
+import ubs8k.signal_augmentations as signal_augmentations
 
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
