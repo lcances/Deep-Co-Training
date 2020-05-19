@@ -377,4 +377,6 @@ for epoch in range(0, args.epochs):
         break
     test(epoch)
 
+tensorboard.flush()
+tensorboard.close()
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
