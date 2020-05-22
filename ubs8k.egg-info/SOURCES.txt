@@ -1,6 +1,0 @@
-README.md
-setup.py
-ubs8k.egg-info/PKG-INFO
-ubs8k.egg-info/SOURCES.txt
-ubs8k.egg-info/dependency_links.txt
-ubs8k.egg-info/top_level.txt
