@@ -83,6 +83,12 @@ class Noise(SignalAugmentation):
         return data + noise
 
 
+class NoiseRandom(Noise):
+    def __init__(self, ratio, range: tuple=(15, 25)):
+        target_snr = np.random.randint(*range)
+        super().__init__(ratio, target_snr)
+
+
 class Occlusion(SignalAugmentation):
     def __init__(self, ratio, sampling_rate: int = 22050, max_size: float = 1):
         super().__init__(ratio)
