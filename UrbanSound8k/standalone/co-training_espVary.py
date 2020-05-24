@@ -13,17 +13,24 @@ from advertorch.attacks import GradientSignAttack
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 
-# In[2]:
-sys.path.append("../ubs8k/")
+
+import sys
+sys.path.append("..") # UrbanSound root
+sys.path.append("../..") # to access augmentation_utils
 
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.generators import CoTrainingDataset
 from ubs8k.samplers import CoTrainingSampler
 
-from ..losses import loss_cot, p_loss_diff, p_loss_sup
-from ..metrics import CategoricalAccuracy, Ratio
-from ..ramps import Warmup, sigmoid_rampup
-from ..utils import get_model_from_name, get_datetime
+
+from utils import get_datetime, get_model_from_name, reset_seed, set_logs
+from losses import loss_cot, p_loss_diff, p_loss_sup
+from metrics import CategoricalAccuracy, Ratio
+from ramps import Warmup, sigmoid_rampup
+
+import augmentation_utils.img_augmentations as img_augmentations
+import augmentation_utils.spec_augmentations as spec_augmentations
+import augmentation_utils.signal_augmentations as signal_augmentations
 
 
 # # Utils
