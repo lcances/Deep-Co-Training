@@ -18,11 +18,9 @@ sys.path.append("../ubs8k/")
 
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.generators import Dataset
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
-from ubs8k.metrics import CategoricalAccuracy
-import ubs8k.signal_augmentations
-import ubs8k.img_augmentations
-import ubs8k.spec_augmentations
+
+from ..utils import get_datetime, get_model_from_name, reset_seed, set_logs
+from ..metrics import CategoricalAccuracy
 
 # Arguments ========
 import argparse
