@@ -6,7 +6,6 @@ import numpy as np
 import time
 import math
 import argparse
-import random
 
 import torch
 import torch.nn as nn
@@ -19,11 +18,11 @@ from advertorch.attacks import GradientSignAttack
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.generators import CoTrainingDataset
 from ubs8k.samplers import CoTrainingSampler
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
-from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
-from ubs8k.metrics import CategoricalAccuracy, Ratio
-from ubs8k.ramps import Warmup, sigmoid_rampup
+from ..utils import get_datetime, get_model_from_name, reset_seed, set_logs
+from ..losses import loss_cot, p_loss_diff, p_loss_sup
+from ..metrics import CategoricalAccuracy, Ratio
+from ..ramps import Warmup, sigmoid_rampup
 
 import ubs8k.img_augmentations as img_augmentations
 import ubs8k.spec_augmentations as spec_augmentations

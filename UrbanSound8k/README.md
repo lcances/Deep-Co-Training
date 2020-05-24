@@ -1,4 +1,11 @@
 # Some standalone scripts
+
+:warning: Best is to create a symlink to the dataset directory
+```bash
+cd UrbanSound8k
+ln -s /path/to/dataset dataset
+```
+
 ### Full supervised with and without augmentation
 ##### Simple run, default parameters
 ```bash
