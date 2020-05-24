@@ -2,9 +2,9 @@
 Deep Co-Training experimentation
 
 datasets used:
- - UrbanSound8k: `http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_urbansound_acmmm14.pdf`
- - DESED: `https://project.inria.fr/desed/`
- - ESC50: `https://github.com/karolpiczak/ESC-50`
+ - [UrbanSound8k](http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_urbansound_acmmm14.pdf)
+ - [DESED](https://project.inria.fr/desed/)
+ - [ESC50](https://github.com/karolpiczak/ESC-50)
 
 
 # Required package
@@ -17,6 +17,7 @@ conda install numpy
 conda install h5py
 conda install pillow
 pip install advertorch
+pip install torchvision
 pip install tensorboard
 pip install librosa
 pip install tqdm

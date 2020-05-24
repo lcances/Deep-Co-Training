@@ -19,15 +19,11 @@ from advertorch.attacks import GradientSignAttack
 from ubs8k.datasetManager import StaticManager # <-- static manager allow usage of static augmentation store in a specific hdf file
 from ubs8k.generators import CoTrainingDataset
 from ubs8k.samplers import CoTrainingSampler
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
-from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
-from ubs8k.metrics import CategoricalAccuracy, Ratio
-from ubs8k.ramps import Warmup, sigmoid_rampup
-
-import ubs8k.img_augmentations
-import ubs8k.spec_augmentations
-import ubs8k.signal_augmentations
+from ..utils import get_datetime, get_model_from_name, reset_seed, set_logs
+from ..losses import loss_cot, p_loss_diff, p_loss_sup
+from ..metrics import CategoricalAccuracy, Ratio
+from ..ramps import Warmup, sigmoid_rampup
 
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
