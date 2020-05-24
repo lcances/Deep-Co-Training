@@ -35,3 +35,4 @@ osirim/aug_crossval_full/lambda_cot_max/
 osirim/aug_crossval_full/lambda_diff_max/
 osirim/aug_crossval_full/learning_rate/
 osirim/aug_crossval_full/warmup/
+UrbanSound8k/dataset
