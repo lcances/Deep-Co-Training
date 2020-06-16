@@ -10,6 +10,7 @@ unique_augments=dict(
     n2      = "signal_augmentations.Noise(0.5, target_snr=20)",
     N2      = "signal_augmentations.Noise(1.0, target_snr=20)",
     n3      = "signal_augmentations.Noise(0.5, target_snr=25)",
+    N       = "signal_augmentations.NoiseRandom(1.0, range=(15, 25))",
     rfd01   = "spec_augmentations.RandomFreqDropout(0.5, dropout=0.1)",
     rfd0075 = "spec_augmentations.RandomFreqDropout(0.5, dropout=0.075)",
     rfd02   = "spec_augmentations.RandomFreqDropout(0.5, dropout=0.2)",

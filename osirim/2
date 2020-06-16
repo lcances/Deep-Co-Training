@@ -1,0 +1,1 @@
+usage: bash script_crossval_dct_moreS_full_PSC1_0.75.sh -n NODE_NAME -N NTASK -p PARSER_RATIO -m MODEL -s SCRIPT (co-training_static_aug.py)

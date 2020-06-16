@@ -123,6 +123,12 @@ python co-training.py \
     -T co-training_example                                # tensorboard directory output
 ```
 
+# Reproductibility
+### Best model
+```bash
+conda activate ubs8k
+cd standalone
+python co-training.py --model scallable2 --base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02 --parser_ratio 0.40 --num_workers 20 --epochs 400 --tensorboard_dir moreS_PSC1_0.75_full --log info --augment_S -a="signal_augmentations.PitchShiftChoice(0.75, choice=(-3, -2, 2, 3))"
 
 ## For my personnal use
 For my personnal usage, workaround on CALMIP (limited user space and hardlink not working between different divice)

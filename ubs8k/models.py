@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import librosa
 
-from ubs8k.datasetManager import DatasetManager, conditional_cache
+from ubs8k.datasetManager import DatasetManager, conditional_cache, conditional_cache_v2
 from ubs8k.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
 
 
@@ -75,6 +75,7 @@ class ScalableCnn(nn.Module):
     Compound Scaling based CNN
     see: https://arxiv.org/pdf/1905.11946.pdf
     """
+
     def __init__(self, dataset: DatasetManager,
                  compound_scales: tuple = (1, 1, 1),
                  initial_conv_inputs=[1, 32, 64, 64],
@@ -88,7 +89,7 @@ class ScalableCnn(nn.Module):
         super(ScalableCnn, self).__init__()
         self.compound_scales = compound_scales
         self.dataset = dataset
-        round_func = np.floor if not round_up else np.ceil
+        self.round_func = np.floor if not round_up else np.ceil
 
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
 
@@ -99,64 +100,80 @@ class ScalableCnn(nn.Module):
 
         # resolution ----
         # WARNING - RESOLUTION WILL CHANGE THE FEATURES EXTRACTION OF THE SAMPLE
-        new_n_mels = int(round_func(initial_resolution[0] * gamma))
-        new_n_time_bins = int(round_func(initial_resolution[1] * gamma))
-        new_hop_length = int(round_func( (self.dataset.sr * DatasetManager.LENGTH) / new_n_time_bins))
+        new_n_mels = int(self.round_func(initial_resolution[0] * gamma))
+        new_n_time_bins = int(self.round_func(initial_resolution[1] * gamma))
+        new_hop_length = int(self.round_func( (self.dataset.sr * DatasetManager.LENGTH) / new_n_time_bins))
 
         self.scaled_resolution = (new_n_mels, new_n_time_bins)
         print("new scaled resolution: ", self.scaled_resolution)
 
-        if gamma > 1.0:
-            dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
+        self.dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
 
-        # depth ----
-        scaled_nb_conv = round_func(initial_nb_conv * alpha)
-        scaled_nb_linear = round_func(initial_nb_dense * alpha)
-
+        # ======== CONVOLUTION PARTS ========
+        # ---- depth ----
+        scaled_nb_conv = self.round_func(initial_nb_conv * alpha)
+        
+        new_conv_inputs, new_conv_outputs = initial_conv_inputs.copy(), initial_conv_outputs.copy()
         if scaled_nb_conv != initial_nb_conv:  # Another conv layer must be created
             print("More conv layer must be created")
             gaps = np.array(initial_conv_outputs) - np.array(initial_conv_inputs)  # average filter gap
             avg_gap = gaps.mean()
 
-            while len(initial_conv_inputs) < scaled_nb_conv:
-                initial_conv_outputs.append(int(round_func(initial_conv_outputs[-1] + avg_gap)))
-                initial_conv_inputs.append(initial_conv_outputs[-2])
+            while len(new_conv_inputs) < scaled_nb_conv:
+                new_conv_outputs.append(int(self.round_func(new_conv_outputs[-1] + avg_gap)))
+                new_conv_inputs.append(new_conv_outputs[-2])
+        
+        # ---- width ----
+        scaled_conv_inputs = [int(self.round_func(i * beta)) for i in new_conv_inputs]
+        scaled_conv_outputs = [int(self.round_func(i * beta)) for i in new_conv_outputs]
+        
+        print("new conv layers:")
+        print("inputs: ", scaled_conv_inputs)
+        print("ouputs: ", scaled_conv_outputs)
+        
+        # Check how many conv with pooling layer can be used
+        nb_max_pooling = int(np.floor(np.min([np.log2(self.scaled_resolution[0]), int(np.log2(self.scaled_resolution[1]))])))
+        nb_model_pooling = len(scaled_conv_inputs)
 
+        if nb_model_pooling > nb_max_pooling:
+            nb_model_pooling = nb_max_pooling
+            
+        # fixe initial conv layers
+        scaled_conv_inputs[0] = 1
+        
+        # ======== LINEAR PARTS ========
+        # adjust the first dense input with the last convolutional layers
+        initial_linear_inputs[0] = self.calc_initial_dense_input(
+            self.scaled_resolution,
+            nb_model_pooling,
+            scaled_conv_outputs
+        )
+        
+        # --- depth ---
+        scaled_nb_linear = self.round_func(initial_nb_dense * alpha)
+        
         if scaled_nb_linear != initial_nb_dense:  # Another dense layer must be created
             print("More dense layer must be created")
             dense_list = np.linspace(initial_linear_inputs[0], initial_linear_outputs[-1], scaled_nb_linear + 1)
             initial_linear_inputs = dense_list[:-1]
             initial_linear_outputs = dense_list[1:]
-
-
-        # width ----
-        scaled_conv_inputs = [int(round_func(i * beta)) for i in initial_conv_inputs]
-        scaled_conv_outputs = [int(round_func(i * beta)) for i in initial_conv_outputs]
-        scaled_dense_inputs = [int(round_func(i * beta)) for i in initial_linear_inputs]
-        scaled_dense_outputs = [int(round_func(i * beta)) for i in initial_linear_outputs]
-
-        print("new conv layers:")
-        print("inputs: ", scaled_conv_inputs)
-        print("ouputs: ", scaled_conv_outputs)
             
+        # --- width ---
+        scaled_dense_inputs = [int(self.round_func(i * beta)) for i in initial_linear_inputs]
+        scaled_dense_outputs = [int(self.round_func(i * beta)) for i in initial_linear_outputs]
+        
+        # fix first and final linear layer
+        scaled_dense_inputs[0] = self.calc_initial_dense_input(self.scaled_resolution,
+                                                                nb_model_pooling,
+                                                                scaled_conv_outputs)
+        scaled_dense_outputs[-1] = 10
+        
         print("new dense layers:")
         print("inputs: ", scaled_dense_inputs)
         print("ouputs: ", scaled_dense_outputs)
-        
-        # Check how many conv with pooling layer can be used
-        nb_max_pooling = np.min([np.log2(self.scaled_resolution[0]), int(np.log2(self.scaled_resolution[1]))])
-        nb_model_pooling = len(scaled_conv_inputs)
 
-        if nb_model_pooling > nb_max_pooling:
-            nb_model_pooling = nb_max_pooling
-
-        # fixe initial and final conv & linear input
-        scaled_conv_inputs[0] = 1
-        scaled_dense_inputs[0] = self.calc_initial_dense_input(self.scaled_resolution, nb_model_pooling,
-                                                               scaled_conv_outputs)
-        scaled_dense_outputs[-1] = 10
-
-        # ======== Create the convolution part ========
+        # ======== BUILD THE MODEL=========
+        # features part ----
         features = []
 
         # Create the layers
@@ -172,7 +189,7 @@ class ScalableCnn(nn.Module):
             *features,
         )
 
-        # ======== Craete the classifier part ========
+        # classifier part ----
         linears = []
         for inp, out in zip(scaled_dense_inputs[:-1], scaled_dense_outputs[:-1]):
             print(inp, out)
@@ -190,6 +207,7 @@ class ScalableCnn(nn.Module):
         x = x.view(-1, 1, *x.shape[1:])
 
         x = self.features(x)
+
         x = self.classifier(x)
 
         return x
@@ -199,20 +217,32 @@ class ScalableCnn(nn.Module):
         dim2 = resolution[1]
 
         for i in range(int(nb_model_pooling)):
-            dim1 = dim1 // 2
-            dim2 = dim2 // 2
+            dim1 = int(self.round_func(dim1 / 2))
+            dim2 = int(self.round_func(dim2 / 2))
 
         return dim1 * dim2 * conv_outputs[-1]
-
+    
     def generate_feature_extractor(self, n_mels, hop_length):
-        @conditional_cache
-        def extract_feature(raw_data, filename = None, cached = False):
+        @conditional_cache_v2
+        def extract_feature(raw_data, filename = None, cached = False, augment_str = None, flavor=None):
+            """
+            extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
+            :param raw_data: to audio to transform
+            :param filename: the key used by the cache system
+            :param augment_str: (only for the cache) The signal augmentation that is used of the raw signal
+            :param flavor: (only for the cache) The flavor (variant choice) that is used for this raw signal
+            :param cached: use or not the cache system
+            :return: the feature extracted from the raw audio
+            """
             feat = librosa.feature.melspectrogram(
                 raw_data, self.dataset.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.dataset.sr // 2)
             feat = librosa.power_to_db(feat, ref=np.max)
+            
             return feat
-
+        
+        print("new feature extraction function generation: hop_length = %s" % hop_length)
         return extract_feature
+    
 
 
 class ScalableCnn_advBN(nn.Module):
@@ -324,8 +354,10 @@ class ScalableCnn_advBN(nn.Module):
 
     def forward(self, x, adv: bool = False):
         x = x.view(-1, 1, *x.shape[1:])
+        print(">>> ", x.shape)
 
         x = self.features(x, adv)
+        print(">>> ", x.shape)
         x = self.classifier(x)
 
         return x
@@ -351,56 +383,18 @@ class ScalableCnn_advBN(nn.Module):
 
 
 def scallable2(**kwargs):
-    dataset = kwargs["dataset"]
+    manager = kwargs["dataset"]
+    compound_scales = kwargs.get("compound_scales", (1.158, 1.316, 1.000))
+    
     parameters = dict(
-        dataset=dataset,
-        initial_conv_inputs=[1, 44, 89, 89, 89, 111],
-        initial_conv_outputs=[44, 89, 89, 89, 111, 133],
-        initial_linear_inputs=[266, ],
-        initial_linear_outputs=[10, ]
-    )
-
-    return ScalableCnn(**parameters)
-
-
-def scallable1_new(**kwargs):
-    """The new scallable 1 model feature resolution scaling.
-    It is also used as a starter for the new scallable 2 model
-    """
-    dataset = kwargs["dataset"]
-    compound_scales = kwargs.get("compound_scales", (1.36, 1.0, 1.21))
-
-    parameters = dict(
-        dataset=dataset,
-        compound_scales = compound_scales,
-        initial_conv_inputs=[1, 32, 64, 64],
-        initial_conv_outputs=[32, 64, 64, 64],
-        initial_linear_inputs=[1344, ],
+        dataset=manager,
+        compound_scales = compound_scales,   
+        initial_conv_inputs=[1, 32, 64, 64, 64],
+        initial_conv_outputs=[32, 64, 64, 64, 79],
+        initial_linear_inputs=[948, ],
         initial_linear_outputs=[10, ],
-        initial_resolution=[64, 173],
-        round_up=True,
+        initial_resolution=[77, 209],
+        round_up=False,
     )
 
     return ScalableCnn(**parameters)
-
-def scallable2_new(**kwargs):
-    """The new scallable 1 model feature resolution scaling.
-    It is also used as a starter for the new scallable 2 model
-    """
-    dataset = kwargs["dataset"]
-    #compound_scales = kwargs.get("compound_scales", (1.36, 1.0, 1.21))
-    compound_scales = kwargs.get("compound_scales", (1.0, 1.0, 1.0))
-
-    parameters = dict(
-        dataset=dataset,
-        compound_scales = compound_scales,
-        initial_conv_inputs=[1, 32, 64, 64, 64, 80],
-        initial_conv_outputs=[32, 64, 64, 64, 80, 96],
-        initial_linear_inputs=[1344,  677],
-        initial_linear_outputs=[677,  10],
-        initial_resolution=[78, 210],
-        round_up=True,
-    )
-
-    return ScalableCnn(**parameters)
-

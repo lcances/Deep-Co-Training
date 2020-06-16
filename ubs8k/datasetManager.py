@@ -10,10 +10,12 @@ import numpy as np
 
 import librosa
 import tqdm
+import time
 import h5py
 import pandas as pd
 import logging
 from multiprocessing import Process, Manager
+
 
 def conditional_cache(func):
     def decorator(*args, **kwargs):
@@ -69,6 +71,64 @@ def multiprocess_feature_cache(func):
 
     return decorator
 
+
+def conditional_cache_v2(func):
+    def decorator(*args, **kwargs):
+        if "filename" in kwargs.keys() and "cached" in kwargs.keys():
+            filename = kwargs["filename"]
+            cached = kwargs["cached"]
+        
+        if cached:
+            if "augment_str" in kwargs.keys() and "flavor" in kwargs.keys():
+                augment_name = kwargs["augment_str"]
+                flavor = kwargs["flavor"]
+
+                unique_id = "%s.%s.%s" % (filename, augment_name, flavor)
+            else:
+                unique_id = filename
+                
+            #print("%s in cache ? : " % unique_id, unique_id in decorator_v2.cache)
+            if unique_id not in decorator.cache.keys():
+                decorator.cache[unique_id] = func(*args, **kwargs)
+
+            return decorator.cache[unique_id]
+        
+        return func(*args, **kwargs)
+
+    decorator.cache = dict()
+
+    return decorator
+
+
+def ray_cache_v2(func):
+    """ The original function must be decorate as ray.remote AND as ray_cache_v2"""
+    def decorator(*args, **kwargs):
+        if "filename" in kwargs.keys() and "cached" in kwargs.keys():
+            filename = kwargs["filename"]
+            cached = kwargs["cached"]
+        
+        if cached:
+            if "augment_str" in kwargs.keys() and "flavor" in kwargs.keys():
+                augment_name = kwargs["augment_str"]
+                flavor = kwargs["flavor"]
+
+                unique_id = "%s.%s.%s" % (filename, augment_name, flavor)
+            else:
+                unique_id = filename
+                
+            #print("%s in cache ? : " % unique_id, unique_id in decorator_v2.cache)
+            if unique_id not in decorator.cache.keys():
+                decorator.cache[unique_id] = func(*args, **kwargs)
+
+            return decorator.cache[unique_id]
+        
+        return func(*args, **kwargs)
+
+    decorator.cache = dict()
+
+    return decorator
+
+
 def multiprocess_feature_cache_v2(func):
     """
     Decorator for the featurex extraction function.
@@ -91,20 +151,17 @@ def multiprocess_feature_cache_v2(func):
                 
             #print("%s in cache ? : " % unique_id, unique_id in decorator_v2.cache)
             if unique_id not in decorator_v2.cache.keys():
+                decorator_v2.miss_counter += 1
                 decorator_v2.cache[unique_id] = func(*args, **kwargs)
-                return decorator_v2.cache[unique_id]
+                print("miss %s        " % decorator_v2.miss_counter, end="\r")
 
-            else:
-                if decorator_v2.cache[unique_id] is None:
-                    decorator_v2.cache[unique_id] = func(*args, **kwargs)
-                    return decorator_v2.cache[unique_id]
-                else:
-                    return decorator_v2.cache[unique_id]
+            return decorator_v2.cache[unique_id]
         
         return func(*args, **kwargs)
     
     decorator_v2.manager = Manager()
     decorator_v2.cache = decorator_v2.manager.dict()
+    decorator_v2.miss_counter = 0
 
     return decorator_v2
             
@@ -274,7 +331,8 @@ class DatasetManager:
         raw_data, sr = librosa.load(file_path, sr=self.sr, res_type="kaiser_fast")
         return raw_data, sr
 
-    @multiprocess_feature_cache_v2
+#     @multiprocess_feature_cache_v2
+    @conditional_cache_v2
     def extract_feature(self, raw_data, filename = None, cached = False, augment_str = None, flavor=None):
         """
         extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
@@ -288,6 +346,7 @@ class DatasetManager:
         feat = librosa.feature.melspectrogram(
             raw_data, self.sr, n_fft=2048, hop_length=512, n_mels=64, fmin=0, fmax=self.sr // 2)
         feat = librosa.power_to_db(feat, ref=np.max)
+        
         return feat
 
 

@@ -7,14 +7,14 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 
-AUG_IDENTIFIER=PSC2
+AUG_IDENTIFIER=PSC1_075
 SBATCH_JOB_NAME=mS_${AUG_IDENTIFIER}_$2_$3
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
 #SBATCH --job-name=$SBATCH_JOB_NAME
-#SBATCH --output=${SBATCH_JOB_NAME}.out
-#SBATCH --error=${SBATCH_JOB_NAME}.err
+#SBATCH --output=${SBATCH_JOB_NAME}_%j.out
+#SBATCH --error=${SBATCH_JOB_NAME}_%j.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=5
 #SBATCH --partition=GPUNodes
@@ -36,35 +36,35 @@ fi
 if [ "\$MODEL" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
-parameters="\${parameters} ${hyper_parameters}"
+parameters="${parameters} ${hyper_parameters}"
 
 # ---- parser ratio ----
-parameters="\${parameters} --parser_ratio \${PR}"
+parameters="${parameters} --parser_ratio \${PR}"
 
 # ---- subsampling ----
-parameters="\${parameters} --subsampling 0.1 --subsampling_method balance"
+parameters="${parameters} --subsampling 0.1 --subsampling_method balance"
 
 # ---- num_workers ----
-parameters="\${parameters} --num_workers 4"
+parameters="${parameters} --num_workers 4"
 
 # ---- number of epochs ----
-parameters="\${parameters} --epochs 400"
+parameters="${parameters} --epochs 400"
 
 # ---- tensorboard ----
-parameters="\${parameters} --tensorboard_dir moreS_ss0.1_${AUG_IDENTIFIER}"
+parameters="${parameters} --tensorboard_dir moreS_ss0.1_${AUG_IDENTIFIER}"
 
 # ---- log system ----
-parameters="\${parameters} --log info"
+parameters="${parameters} --log info"
 
 # ---- global augmentation paramters ----
-parameters="\${parameters} --augment_S" # augmentation is applied on supervised files only
+parameters="${parameters} --augment_S" # augmentation is applied on supervised files only
 
 # ---- static augmentation ---- (must be a valid python dictionnary and in the last parameters)
-# parameters=\${parameters} --static_augments=\"{'PSC2': 0.75}\"
+parameters="${parameters} --static_augments {'PSC1': 0.75}"
 
 # ---- dynamic augmentation ---- (must always be last)
-# aug1='signal_augmentations.Noise(0.75, target_snr=20)'
-# parameters="${parameters} -a=\"${aug1}\""
+#aug1='signal_augmentations.Noise(0.75, target_snr=20)'
+#parameters="${parameters} -a=\"${aug1}\""
 
 
 # Sbatch configuration
@@ -89,7 +89,7 @@ job_number=1
 for i in \${!folds[*]}
 do
   job_name="--job_name none_\${PR}pr_run\${job_number}"
-  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters} --static_augments="{'PSC2': 0.50}"
+  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters}
   job_number=\$(( \$job_number + 1 ))
 done
 

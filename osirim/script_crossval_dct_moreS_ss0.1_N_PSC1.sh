@@ -7,7 +7,7 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 
-AUG_IDENTIFIER=PSC2
+AUG_IDENTIFIER=N_PSC1
 SBATCH_JOB_NAME=mS_${AUG_IDENTIFIER}_$2_$3
 
 cat << EOT > .sbatch_tmp.sh
@@ -36,7 +36,7 @@ fi
 if [ "\$MODEL" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
-parameters="\${parameters} ${hyper_parameters}"
+parameters="\${parameters} \${hyper_parameters}"
 
 # ---- parser ratio ----
 parameters="\${parameters} --parser_ratio \${PR}"
@@ -60,7 +60,7 @@ parameters="\${parameters} --log info"
 parameters="\${parameters} --augment_S" # augmentation is applied on supervised files only
 
 # ---- static augmentation ---- (must be a valid python dictionnary and in the last parameters)
-# parameters=\${parameters} --static_augments=\"{'PSC2': 0.75}\"
+# parameters=\${parameters} --static_augments=\"{'N2': 0.75}\"
 
 # ---- dynamic augmentation ---- (must always be last)
 # aug1='signal_augmentations.Noise(0.75, target_snr=20)'
@@ -89,7 +89,7 @@ job_number=1
 for i in \${!folds[*]}
 do
   job_name="--job_name none_\${PR}pr_run\${job_number}"
-  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters} --static_augments="{'PSC2': 0.50}"
+  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters} --static_augments="{'N': 0.50, 'PSC1': 0.50}"
   job_number=\$(( \$job_number + 1 ))
 done
 
