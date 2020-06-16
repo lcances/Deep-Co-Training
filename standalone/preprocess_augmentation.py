@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--sampling_rate", default=22050, type=int)
     parser.add_argument("-l", "--length", default=4, type=int)
     parser.add_argument("-A","--augments", action="append", help="Augmentation. use as if python script")
-    parser.add_argument("--seed", default=-1, type=int, help="Seed use for the random generation. if set to -1 seed is == time.time()")
+    parser.add_argument("--seed", default=-1.0, type=float, help="Seed use for the random generation. if set to -1 seed is == time.time()")
     parser.add_argument("-w", "--num_workers", default=4, type=int, help="how many process to perform the augmentations")
     args = parser.parse_args()
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     hdf_raw= h5py.File(os.path.join(audio_root, "%s_%s.hdf5" % ("urbansound8k", SR)), "r")
     
     # ---- Prepare seed ----
-    seed = time.time() if args.seed == -1 else args.seed
+    seed = int(time.time()) if args.seed == -1 else args.seed
     
     np.random.seed(seed)
     random.seed(seed)

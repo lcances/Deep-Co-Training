@@ -1,5 +1,6 @@
 import collections
 import os
+import time
 
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NUM_THREADS"] = "2"
@@ -13,6 +14,23 @@ from ubs8k.signal_augmentations import SignalAugmentation
 from ubs8k.spec_augmentations import SpecAugmentation
 
 import logging
+
+def mean_timeit(func):
+    def decorator(*args, **kwargs):
+        start = time.time()
+        value = func(*args, **kwargs)
+        end = time.time()
+        
+        decorator.step += 1
+        decorator.cumul += (end - start)
+        print("Took: mean %f   " % (decorator.cumul / decorator.step))
+        
+        return value
+    
+    decorator.step = 0
+    decorator.cumul = 0
+    
+    return decorator
 
 
 class Dataset(data.Dataset):

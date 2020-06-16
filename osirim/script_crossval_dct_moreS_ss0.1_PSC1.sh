@@ -7,13 +7,14 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 
-SBATCH_JOB_NAME=mS_PSC1_$2_$3
+AUG_IDENTIFIER=PSC1
+SBATCH_JOB_NAME=mS_${AUG_IDENTIFIER}_$2_$3
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
 #SBATCH --job-name=$SBATCH_JOB_NAME
-#SBATCH --output=${SBATCH_JOB_NAME}_%j.out
-#SBATCH --error=${SBATCH_JOB_NAME}_%j.err
+#SBATCH --output=${SBATCH_JOB_NAME}.out
+#SBATCH --error=${SBATCH_JOB_NAME}.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=5
 #SBATCH --partition=GPUNodes
@@ -24,9 +25,10 @@ cat << EOT > .sbatch_tmp.sh
 PR=$2
 MODEL=$3
 
-parser_ratio="--parser_ratio \${PR}"
-model="--model \${MODEL}"
+# ---- Model ----
+parameters="--model \${MODEL}"
 
+# ---- Hyperparaters ----
 if [ "\$MODEL" = "cnn" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 5 --lambda_diff_max 0.25 --warm_up 160 --epsilon 0.1"
 fi
@@ -34,19 +36,42 @@ fi
 if [ "\$MODEL" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
+parameters="\${parameters} ${hyper_parameters}"
 
-# augmentation
-aug1="signal_augmentations.PitchShiftChoice(0.5, choice=(-3, -2, 2, 3))"
+# ---- parser ratio ----
+parameters="\${parameters} --parser_ratio \${PR}"
 
-# global parameters
-subsampling="--subsampling 0.1 --subsampling_method balance"
-augmentation="--augment_S"
-parameters="\${model} \${parser_ratio} \${hyper_parameters} \${subsampling} \${augmentation} --num_workers 4 --epochs 400 -T moreS_ss0.1_PSC1 --log info"
+# ---- subsampling ----
+parameters="\${parameters} --subsampling 0.1 --subsampling_method balance"
+
+# ---- num_workers ----
+parameters="\${parameters} --num_workers 4"
+
+# ---- number of epochs ----
+parameters="\${parameters} --epochs 400"
+
+# ---- tensorboard ----
+parameters="\${parameters} --tensorboard_dir moreS_ss0.1_${AUG_IDENTIFIER}"
+
+# ---- log system ----
+parameters="\${parameters} --log info"
+
+# ---- global augmentation paramters ----
+parameters="\${parameters} --augment_S" # augmentation is applied on supervised files only
+
+# ---- static augmentation ---- (must be a valid python dictionnary and in the last parameters)
+# parameters=\${parameters} --static_augments=\"{'PSC2': 0.75}\"
+
+# ---- dynamic augmentation ---- (must always be last)
+# aug1='signal_augmentations.Noise(0.75, target_snr=20)'
+# parameters="${parameters} -a=\"${aug1}\""
+
 
 # Sbatch configuration
 container=/logiciels/containerCollections/CUDA10/pytorch.sif
 python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
-script=../standalone/co-training.py
+script=../standalone/co-training_static_aug.py
+
 folds=(
 	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
 	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
@@ -64,7 +89,7 @@ job_number=1
 for i in \${!folds[*]}
 do
   job_name="--job_name none_\${PR}pr_run\${job_number}"
-  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${parameters} \${folds[\$i]} \${job_name} -a="\${aug1}"
+  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters} --static_augments="{'PSC1': 0.50}"
   job_number=\$(( \$job_number + 1 ))
 done
 

@@ -1,29 +1,65 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-  echo "wrong number of parameter"
-  echo "received $# arguments"
-  echo "usage: gpu-nc0x parser_ratio model"
-  exit 1
-fi
+function show_help {
+    echo "usage:  $BASH_SOURCE -n <node_name> -N <ntask> -p <parser_ratio> -m <model_name>"
+    echo "    -n NODE_NAME "
+    echo "    -N NTASK "
+    echo "    -p PARSER_RATIO "
+    echo "    -m MODEL "
+    echo "    -s SCRIPT (co-training_static_aug.py) "
+    echo "    -i CUSTOM_PREFIX_ID "
+}
 
-AUG_IDENTIFIER=PSC2
-SBATCH_JOB_NAME=mS_${AUG_IDENTIFIER}_$2_$3
+# default parameters
+SCRIPT=../standalone/co-training_static_aug.py
+ID=""
+
+while getopts ":n:N:p:m:s:i:" arg; do
+  case $arg in
+    n) NODELIST=$OPTARG;;
+    N) NTASK=$OPTARG;;
+    p) PARSER_RATIO=$OPTARG;;
+    m) MODEL=$OPTARG;;
+    s) SCRIPT=$OPTARG;;
+    i) ID=${OPTARG}_;;
+    *) 
+        echo "invalide option" 1>&2
+        show_help
+        exit 1
+        ;;
+  esac
+done
+
+if [ $OPTIND -ne 9 ] && [ $OPTIND -ne 11 ] && [ $OPTIND -ne 13 ]
+then
+    echo "missing arguments. $OPTIND"
+    show_help
+    exit 1
+fi    
+
+echo $NODELIST
+echo $NTASK
+echo $PARSER_RATIO
+echo $MODEL
+echo $SCRIPT
+
+AUG_IDENTIFIER=PSC2_050_full
+SBATCH_JOB_NAME=mS_${ID}${AUG_IDENTIFIER}_${PARSER_RATIO}_${MODEL}
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
 #SBATCH --job-name=$SBATCH_JOB_NAME
 #SBATCH --output=${SBATCH_JOB_NAME}.out
 #SBATCH --error=${SBATCH_JOB_NAME}.err
-#SBATCH --ntasks=1
+#SBATCH --ntasks=$NTASK
 #SBATCH --cpus-per-task=5
 #SBATCH --partition=GPUNodes
-#SBATCH --nodelist=$1
+#SBATCH --nodelist=$NODELIST
 #SBATCH --gres=gpu:1
 #SBATCH --gres-flags=enforce-binding
 
-PR=$2
-MODEL=$3
+PR=$PARSER_RATIO
+MODEL=$MODEL
 
 # ---- Model ----
 parameters="--model \${MODEL}"
@@ -36,22 +72,22 @@ fi
 if [ "\$MODEL" = "scallable2" ]; then
   hyper_parameters="--base_lr 0.01 --lambda_cot_max 2 --lambda_diff_max 0.5 --warm_up 120 --epsilon 0.02"
 fi
-parameters="\${parameters} ${hyper_parameters}"
+parameters="\${parameters} \${hyper_parameters}"
 
 # ---- parser ratio ----
 parameters="\${parameters} --parser_ratio \${PR}"
 
 # ---- subsampling ----
-parameters="\${parameters} --subsampling 0.1 --subsampling_method balance"
+# parameters="\${parameters} --subsampling 0.1 --subsampling_method balance"
 
 # ---- num_workers ----
-parameters="\${parameters} --num_workers 4"
+# parameters="\${parameters} --num_workers 4"
 
 # ---- number of epochs ----
 parameters="\${parameters} --epochs 400"
 
 # ---- tensorboard ----
-parameters="\${parameters} --tensorboard_dir moreS_ss0.1_${AUG_IDENTIFIER}"
+parameters="\${parameters} --tensorboard_dir moreS_${AUG_IDENTIFIER}"
 
 # ---- log system ----
 parameters="\${parameters} --log info"
@@ -70,7 +106,7 @@ parameters="\${parameters} --augment_S" # augmentation is applied on supervised 
 # Sbatch configuration
 container=/logiciels/containerCollections/CUDA10/pytorch.sif
 python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
-script=../standalone/co-training_static_aug.py
+script=${SCRIPT}
 
 folds=(
 	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
@@ -85,13 +121,23 @@ folds=(
 	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
 )
 
-job_number=1
+job_number=0
 for i in \${!folds[*]}
 do
-  job_name="--job_name none_\${PR}pr_run\${job_number}"
-  srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters} --static_augments="{'PSC2': 0.50}"
-  job_number=\$(( \$job_number + 1 ))
+    job_name="--job_name none_\${PR}pr_run\${job_number}"
+    srun -n1 -N1 singularity exec \${container} \${python} \${script} \${folds[\$i]} \${job_name} \${parameters} --static_augments="{'PSC2': 0.50}" &
+    
+    # automatically wait
+    job_number=\$(( \$job_number + 1 ))
+    if [ \$((\$job_number % $NTASK)) -eq 0 ]
+    then
+        job_number=0
+        wait
+    fi
+
 done
+
+wait # needed for the last non NTASK multiple training
 
 EOT
 
