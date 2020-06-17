@@ -50,6 +50,9 @@ python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
 |Deep Co-Training               | 55.4 ± 4.6     |
 |**Augmented Deep Co-Training** | **59.7 ± 5.1** |
 
+### Dynamic augmentation
+Compute dynamically the augmentation when needed. The augmentation are compute on CPU and it is fairly long to do so,
+hence the high number of workers. (*--num_workers 16*)
 ```bash
 conda activate ubs8k
 
@@ -68,7 +71,7 @@ FOLDS=(
 
 for fold_idx in ${!folds[*]}
 do
-    job_name="final_run${fold_idx}
+    job_name="final_run${fold_idx}"
     python UrbanSound8k/standalone/co-training.py \
         ${folds[$fold_idx]} \
         --job_name ${job_name} \
@@ -79,8 +82,61 @@ do
         --warm_up 160 \
         --epsilon 0.1 \
         --epochs 400 \
+        --num_workers 16 \  # Another varient exist for computer with low CPU count
         --augment_S \
         -a="signal_augmentations.PitchShiftChoice(0.75, choice=(-3, -2, 2, 3))"
+done
+```
+
+### Static augmentation
+If you don't possess a computer with a lot of cpu core, then you might be interested by using pre-computed augmentations.
+
+**Pre-compute augmentation**
+```bash
+for i in 1 2 3 4 5 6 # we want to create 6 flavors of the same augmentation 
+do
+    python UrbanSound8k/standalone/preprocess_augmentation.py \
+        --audio_root dataset/audio \
+        --sampling_rate 22050 \
+        --length 4 \
+        --num_workers 4 \
+        -A="signal_augmentations.PitchShiftChoice(1.0, choice=(-3, -2, 2, 3))"
+done
+```
+
+**Reproduce results using pre-computed augmentation**
+```bash
+conda activate ubs8k
+
+FOLDS=(
+	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
+	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
+	"-t 1 2 4 5 6 7 8 9 10 -v 3" \
+	"-t 1 2 3 5 6 7 8 9 10 -v 4" \
+	"-t 1 2 3 4 6 7 8 9 10 -v 5" \
+	"-t 1 2 3 4 5 7 8 9 10 -v 6" \
+	"-t 1 2 3 4 5 6 8 9 10 -v 7" \
+	"-t 1 2 3 4 5 6 7 9 10 -v 8" \
+	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
+	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
+)
+
+for fold_idx in ${!folds[*]}
+do
+    job_name="final_run${fold_idx}"
+    python UrbanSound8k/standalone/co-training_static_aug.py \
+        ${folds[$fold_idx]} \
+        --job_name ${job_name} \
+        --model cnn \
+        --base_lr 0.01 \
+        --lambda_cot_max 5 \
+        --lambda_diff_max 0.25 \
+        --warm_up 160 \
+        --epsilon 0.1 \
+        --epochs 400 \
+        --num_workers 16 \  # Another varient exist for computer with low CPU count
+        --augment_S \
+        --static_augments="{(PSC1': 0.75}"
 done
 ```
 
