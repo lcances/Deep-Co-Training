@@ -17,7 +17,7 @@ from advertorch.attacks import GradientSignAttack
 
 from UrbanSound8k.datasetManager import DatasetManager
 from UrbanSound8k.generators import CoTrainingDataset
-from UrbanSound8k.samplers import CoTrainingSampler
+from ubs8k.samplers import CoTrainingSampler
 from UrbanSound8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
 from UrbanSound8k.losses import loss_cot, p_loss_diff, p_loss_sup
