@@ -84,6 +84,7 @@ do
 done
 ```
 
+<!-- 
 # Some standalone scripts
 ### Full supervised with and without augmentation
 ##### Simple run, default parameters
@@ -199,3 +200,4 @@ conda clean --all
 CONDA_ALWAYS_COPY=true conda install pandas numpy
 ...
 ```
+-->
