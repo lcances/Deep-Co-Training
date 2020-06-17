@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
@@ -7,7 +6,6 @@ import numpy as np
 import time
 import math
 import argparse
-import random
 
 import torch
 import torch.nn as nn
@@ -17,18 +15,14 @@ import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
-from ubs8k.datasetManager import StaticManager # <-- static manager allow usage of static augmentation store in a specific hdf file
-from ubs8k.generators import CoTrainingDataset
-from ubs8k.samplers import CoTrainingSampler
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
+from UrbanSound8k.datasetManager import StaticManager # <-- static manager allow usage of static augmentation store in a specific hdf file
+from UrbanSound8k.generators import CoTrainingDataset
+from UrbanSound8k.samplers import CoTrainingSampler
+from UrbanSound8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
-from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
-from ubs8k.metrics import CategoricalAccuracy, Ratio
-from ubs8k.ramps import Warmup, sigmoid_rampup
-
-import ubs8k.img_augmentations
-import ubs8k.spec_augmentations
-import ubs8k.signal_augmentations
+from UrbanSound8k.losses import loss_cot, p_loss_diff, p_loss_sup
+from UrbanSound8k.metrics import CategoricalAccuracy, Ratio
+from UrbanSound8k.ramps import Warmup, sigmoid_rampup
 
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
@@ -156,7 +150,7 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl_%swd_NO_ADV" % (
+title = "%s_%s_%s_%sss_%slr_%se_%slcm_%sldm_%swl_%swd" % (
     get_datetime(),
     args.job_name,
     model_func.__name__,
@@ -212,6 +206,28 @@ def train(epoch):
         _, pred_U1 = torch.max(logits_U1, 1)
         _, pred_U2 = torch.max(logits_U2, 1)
 
+        # ======== Generate adversarial examples ========
+        # fix batchnorm ----
+        m1.eval()
+        m2.eval()
+
+        #generate adversarial examples ----
+        adv_data_S1 = adv_generator_1.perturb(X_S[0], y_S[0])
+        adv_data_U1 = adv_generator_1.perturb(X_U, pred_U1)
+
+        adv_data_S2 = adv_generator_2.perturb(X_S[1], y_S[1])
+        adv_data_U2 = adv_generator_2.perturb(X_U, pred_U2)
+
+        m1.train()
+        m2.train()
+
+        # predict adversarial examples ----
+        adv_logits_S1 = m1(adv_data_S2)
+        adv_logits_S2 = m2(adv_data_S1)
+
+        adv_logits_U1 = m1(adv_data_U2)
+        adv_logits_U2 = m2(adv_data_U1)
+
         # ======== calculate the differents loss ========
         # zero the parameter gradients ----
         optimizer.zero_grad()
@@ -221,8 +237,9 @@ def train(epoch):
         # losses ----
         Loss_sup_S1, Loss_sup_S2, Loss_sup = p_loss_sup(logits_S1, logits_S2, y_S[0], y_S[1])
         Loss_cot = loss_cot(logits_U1, logits_U2)
+        pld_S, pld_U, Loss_diff = p_loss_diff(logits_S1, logits_S2, adv_logits_S1, adv_logits_S2, logits_U1, logits_U2, adv_logits_U1, adv_logits_U2)
 
-        total_loss = Loss_sup + lambda_cot() * Loss_cot
+        total_loss = Loss_sup + lambda_cot() * Loss_cot + lambda_diff() * Loss_diff
         total_loss.backward()
         optimizer.step()
 
@@ -240,15 +257,35 @@ def train(epoch):
         acc_SU1 = accSU[0](pred_SU1, y_SU1)
         acc_SU2 = accSU[1](pred_SU2, y_SU2)
 
+        # ratios  ----
+        _, adv_pred_S1 = torch.max(adv_logits_S1, 1)
+        _, adv_pred_S2 = torch.max(adv_logits_S2, 1)
+        _, adv_pred_U1 = torch.max(adv_logits_U1, 1)
+        _, adv_pred_U2 = torch.max(adv_logits_U2, 1)
+
+        adv_pred_SU1 = torch.cat((adv_pred_S1, adv_pred_U1), 0)
+        adv_pred_SU2 = torch.cat((adv_pred_S2, adv_pred_U2), 0)
+        adv_y_SU1 = torch.cat((y_S[0], pred_U1), 0)
+        adv_y_SU2 = torch.cat((y_S[1], pred_U2), 0)
+
+        ratio_S1 = ratioS[0](adv_pred_S1, y_S[0])
+        ratio_S2 = ratioS[1](adv_pred_S2, y_S[1])
+        ratio_U1 = ratioU[0](adv_pred_U1, pred_U1)
+        ratio_U2 = ratioU[1](adv_pred_U2, pred_U2)
+        ratio_SU1 = ratioSU[0](adv_pred_SU1, adv_y_SU1)
+        ratio_SU2 = ratioSU[1](adv_pred_SU2, adv_y_SU2)
+        # ========
+
         running_loss += total_loss.item()
         ls += Loss_sup.item()
         lc += Loss_cot.item()
+        ld += Loss_diff.item()
 
         # print statistics
-        print("Epoch %s: %.2f%% : train acc: %.3f %.3f - Loss: %.3f %.3f %.3f - time: %.2f" % (
+        print("Epoch %s: %.2f%% : train acc: %.3f %.3f - Loss: %.3f %.3f %.3f %.3f - time: %.2f" % (
             epoch, (batch / len(sampler)) * 100,
             acc_SU1, acc_SU2,
-            running_loss/(batch+1), ls/(batch+1), lc/(batch+1),
+            running_loss/(batch+1), ls/(batch+1), lc/(batch+1), ld/(batch+1),
             time.time() - start_time,
         ), end="\r")
 
@@ -256,16 +293,26 @@ def train(epoch):
     tensorboard.add_scalar('train/total_loss', total_loss.item(), epoch)
     tensorboard.add_scalar('train/Lsup', Loss_sup.item(), epoch )
     tensorboard.add_scalar('train/Lcot', Loss_cot.item(), epoch )
+    tensorboard.add_scalar('train/Ldiff', Loss_diff.item(), epoch )
     tensorboard.add_scalar("train/acc_SU1", acc_SU1, epoch )
     tensorboard.add_scalar("train/acc_SU2", acc_SU2, epoch )
 
     tensorboard.add_scalar("detail_loss/Lsup_S1", Loss_sup_S1.item(), epoch)
     tensorboard.add_scalar("detail_loss/Lsup_S2", Loss_sup_S2.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Ldiff_S", pld_S.item(), epoch)
+    tensorboard.add_scalar("detail_loss/Ldiff_U", pld_U.item(), epoch)
 
     tensorboard.add_scalar("detail_acc/acc_S1", acc_S1, epoch)
     tensorboard.add_scalar("detail_acc/acc_S2", acc_S2, epoch)
     tensorboard.add_scalar("detail_acc/acc_U1", acc_U1, epoch)
     tensorboard.add_scalar("detail_acc/acc_U2", acc_U2, epoch)
+
+    tensorboard.add_scalar("detail_ratio/ratio_S1", ratio_S1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_S2", ratio_S2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_U1", ratio_U1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_U2", ratio_U2, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_SU1", ratio_SU1, epoch)
+    tensorboard.add_scalar("detail_ratio/ratio_SU2", ratio_SU2, epoch)
 
     # Return the total loss to check for NaN
     return total_loss.item()
@@ -315,6 +362,8 @@ def test(epoch):
     for c in callbacks:
         c.step()
     lambda_cot.step()
+    lambda_diff.step()
+
 
 for epoch in range(0, args.epochs):
     total_loss = train(epoch)

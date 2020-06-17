@@ -4,34 +4,26 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
-import tqdm
 import time
-import random
 import gc
 
 import librosa
-import pprint
-from torchsummaryX import summary
 
 import torch
 import torch.nn as nn
 import torch.utils.data as data
-import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
-from advertorch.attacks import GradientSignAttack
 from torch.utils.tensorboard import SummaryWriter
 
 import sys
 sys.path.append("../src/")
 
-from ubs8k.datasetManager import DatasetManager
-from ubs8k.generators import Dataset
-import ubs8k.signal_augmentations as signal_augmentations
-from ubs8k.models import scallable2_new
-from ubs8k.utils import get_datetime, reset_seed
-from ubs8k.metrics import CategoricalAccuracy
+from UrbanSound8k.datasetManager import DatasetManager
+from UrbanSound8k.generators import Dataset
+from UrbanSound8k.utils import get_datetime, reset_seed
+from UrbanSound8k.metrics import CategoricalAccuracy
 
-from ubs8k.datasetManager import conditional_cache
+from UrbanSound8k.datasetManager import conditional_cache
 
 import argparse
 parser = argparse.ArgumentParser(description='CopoundScalling')
@@ -44,12 +36,7 @@ parser.add_argument("-t", "--title", default="default", type=str, help="Tensorbo
 args = parser.parse_args()
 
 reset_seed(1324)
-        
-        
 
-
-
-from multiprocessing import Process, Manager
 
 def conditional_cache(func):
     def decorator(*args, **kwargs):

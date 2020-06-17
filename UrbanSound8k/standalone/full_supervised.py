@@ -4,8 +4,9 @@ os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import numpy as np
+import tqdm
+import random
 import time
-import logging
 
 import torch
 import torch.nn as nn
@@ -16,75 +17,75 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 sys.path.append("../ubs8k/")
 
-from ubs8k.datasetManager import DatasetManager
-from ubs8k.generators import Dataset
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
-from ubs8k.metrics import CategoricalAccuracy
-import ubs8k.signal_augmentations
-import ubs8k.img_augmentations
-import ubs8k.spec_augmentations
+from UrbanSound8k.datasetManager import DatasetManager
+from UrbanSound8k.generators import Dataset
+from UrbanSound8k.utils import get_datetime, get_model_from_name
+from UrbanSound8k.metrics import CategoricalAccuracy
 
-# Arguments ========
 import argparse
+
 parser = argparse.ArgumentParser()
-parser.add_argument("-t", "--train_folds", nargs="+", required=True, type=int, help="fold to use for training")
-parser.add_argument("-v", "--val_folds", nargs="+", required=True, type=int, help="fold to use for validation")
-parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
-parser.add_argument("--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
-parser.add_argument("--seed", default=1234, type=int, help="Seed for random generation. Use for reproductability")
-parser.add_argument("--model", default="cnn", type=str, help="Model to load, see list of model in models.py")
+parser.add_argument("-t", "--train", nargs="+", required=True, type=int, help="fold to use for training")
+parser.add_argument("-v", "--val", nargs="+", required=True, type=int, help="fold to use for validation")
+parser.add_argument("-s", "--subsampling", default=1.0, type=float, help="subsampling ratio")
+parser.add_argument("-sm", "--subsampling_method", default="balance", type=str, help="subsampling method [random|balance]")
+parser.add_argument('--seed', default=1234, type=int)
+parser.add_argument("--base_lr", default=0.05, type=float, help="initiation learning rate to train model")
+parser.add_argument("--decay", default=0.001, type=float, help="L2 regularization")
 parser.add_argument("-T", "--log_dir", default="Test", required=True, help="Tensorboard working directory")
-parser.add_argument("-j", "--job_name", default="default")
-parser.add_argument("--log", default="warning", help="Log level")
-parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script" )
-parser.add_argument("--num_workers", default=4, type=int, help="Choose numver of worker to train the model")
+parser.add_argument("--model", default="cnn", type=str, help="model to load")
 args = parser.parse_args()
 
-# Logging system
-set_logs(args.log)
 
-# Reproducibility
+# ## Reproducibility
+def reset_seed(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.benchmark = False
 reset_seed(args.seed)
 
-# ======== Prep data ========
+
+# Prep data
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-manager = DatasetManager(
-    metadata_root, audio_root,
-    train_fold=args.train_folds,
-    val_fold=args.val_folds,
+print(args.train)
+dataset = DatasetManager(
+    metadata_root=metadata_root,
+    audio_root=audio_root,
+    train_fold=args.train,
+    val_fold=args.val,
     subsampling=args.subsampling,
     subsampling_method=args.subsampling_method,
     verbose=1
 )
 
-# ---- Prepare augmentation ----
-augments = list(map(eval, args.augments))
 
-#  ---- loaders ----
-train_dataset = Dataset(manager, train=True, val=False, augments=augments, cached=False)
-val_dataset = Dataset(manager, train=False, val=True, cached=True)
-
-# ======== model, loss and optimizer ========
 model_func = get_model_from_name(args.model)
-m1 = model_func(dataset=manager)
+m1 = model_func()
 m1.cuda()
-logging.info("Model loaded: %s" % model_func.__name__)
 
+# loss and optimizer
 criterion_bce = nn.CrossEntropyLoss(reduction="mean")
 
 optimizer = torch.optim.SGD(
     m1.parameters(),
-    weight_decay=1e-3,
-    lr=0.05
+    weight_decay=args.decay,
+    lr=args.base_lr
 )
 
+# train and val loaders
+train_dataset = Dataset(dataset, train=True, val=False, augments=[], cached=True)
+val_dataset = Dataset(dataset, train=False, val=True, cached=True)
+
 # training parameters
-nb_epoch = 200
-batch_size = 64
+nb_epoch = 100
+batch_size = 32
 nb_batch = len(train_dataset) // batch_size
 
-training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=args.num_workers)
+training_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 # scheduler
@@ -94,11 +95,7 @@ callbacks = [lr_scheduler]
 # callbacks = []
 
 # tensorboard
-
-title = "%s_%s_%s_Cosd-lr_sgd-0.05lr-wd0.001_%de" % (
-    args.job_name, get_datetime(), model_func.__name__,
-    nb_epoch
-)
+title = "%s_%s_Cosd-lr_sgd-%slr-%swd_%de" % (get_datetime(), model_func.__name__, args.base_lr, args.decay, nb_epoch)
 tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title), comment=model_func.__name__)
 
 
@@ -109,7 +106,7 @@ tensorboard = SummaryWriter(log_dir="tensorboard/%s/%s" % (args.log_dir, title),
 # ======================================================================================================================
 acc_func = CategoricalAccuracy()
 
-for epoch in range(nb_epoch):
+for epoch in tqdm.tqdm_notebook(range(nb_epoch)):
     start_time = time.time()
     print("")
 
@@ -189,4 +186,3 @@ for epoch in range(nb_epoch):
 
     for callback in callbacks:
         callback.step()
-

@@ -1,6 +1,5 @@
 
 import h5py
-import librosa
 import os, sys
 import numpy as np
 import random
@@ -8,9 +7,7 @@ import tqdm
 import time
 import argparse
 from multiprocessing import Pool
-from ubs8k.augmentation_list import reverse_unique_augment
-
-import ubs8k.signal_augmentations as signal_augmentations
+from UrbanSound8k.augmentation_list import reverse_unique_augment
 
 if __name__ == '__main__':
 
