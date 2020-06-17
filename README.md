@@ -1,14 +1,11 @@
 # UrbanSound8K
-UrbanSound8K experimentation
 
-dataset:
+Application of Deep Co-Training for audio tagging on the UrbanSound8K dataset.
 
-`http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_urbansound_acmmm14.pdf`
-
-# Required package
+# Requirements
 ```bash
-conda create -n ubS8k python=3 pip
-conda activate Ubs8k
+conda create -n ubs8k python=3 pip
+conda activate ubs8k
 conda install pytorch
 conda install pandas
 conda install numpy
@@ -22,18 +19,69 @@ pip install scikit-image
 
 # if not automatically install
 pip install torchvision # dependency for advertorch
+
+pip install git+https://github.com/leocances/pytorch_metrics.git # <-- personnal pytorch metrics functions
+pip install git+https://github.com/leocances/augmentation_utils.git # <-- personnal audio & image augmentation 
+pip install git+https://github.com/leocances/UrbanSound8K.git # UBS8K dataset manager
 ```
 
 
+
 # Prepare the dataset
-The system make use of HDF file to greatly reduce loading time.
-- **-l** set the cropping & padding size of each file
-- **-sr** set the sampling rate used to load the audio
-- **-a** path to the audio (hdf file will be save here)
+
+- Download the dataset: `http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_urbansound_acmmm14.pdf`
+
+- Convert to HDF File:
+    
+    The system make use of HDF file to greatly reduce loading time.
+    - **-l** set the cropping & padding size of each file
+    - **-sr** set the sampling rate used to load the audio
+    - **-a** path to the audio (hdf file will be save here)
 ```bash
-conda activate ubS8k
-cd standalone
+conda activate ubs8k
+cd UrbanSound8k/standalone
 python mv_to_hdf.py -sr 22050 -l 4 -a <path/to/audio/directory>
+```
+
+# Best results and reproducibility
+|System                         | Accuracy ± std |
+|---------------------------    |----------------|
+|Supervised                     | 47.3 ± 4.1     |
+|Deep Co-Training               | 55.4 ± 4.6     |
+|**Augmented Deep Co-Training** | **59.7 ± 5.1** |
+
+```bash
+conda activate ubs8k
+
+FOLDS=(
+	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
+	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
+	"-t 1 2 4 5 6 7 8 9 10 -v 3" \
+	"-t 1 2 3 5 6 7 8 9 10 -v 4" \
+	"-t 1 2 3 4 6 7 8 9 10 -v 5" \
+	"-t 1 2 3 4 5 7 8 9 10 -v 6" \
+	"-t 1 2 3 4 5 6 8 9 10 -v 7" \
+	"-t 1 2 3 4 5 6 7 9 10 -v 8" \
+	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
+	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
+)
+
+for fold_idx in ${!folds[*]}
+do
+    job_name="final_run${fold_idx}
+    python UrbanSound8k/standalone/co-training.py \
+        ${folds[$fold_idx]} \
+        --job_name ${job_name} \
+        --model cnn \
+        --base_lr 0.01 \
+        --lambda_cot_max 5 \
+        --lambda_diff_max 0.25 \
+        --warm_up 160 \
+        --epsilon 0.1 \
+        --epochs 400 \
+        --augment_S \
+        -a="signal_augmentations.PitchShiftChoice(0.75, choice=(-3, -2, 2, 3))"
+done
 ```
 
 # Some standalone scripts

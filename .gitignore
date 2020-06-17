@@ -1,14 +1,14 @@
 
-/notebooks/tensoboard_cotraining/
-/notebooks/tensorboard/
-/osirim/tensorboard/
-/osirim/tensorboard_back/
+/UrbanSound8k/notebooks/tensoboard_cotraining/
+/UrbanSound8k/notebooks/tensorboard/
+/UrbanSound8k/osirim/tensorboard/
+/UrbanSound8k/osirim/tensorboard_back/
 /results/
-/standalone/tensorboard_full_supervised/
-/standalone/tmp/
-/standalone/tensorboard_10_supervised/
-/standalone/test/
-/standalone/tensorboard_cotraining_cnn_epsVary/
+/UrbanSound8k/standalone/tensorboard_full_supervised/
+/UrbanSound8k/standalone/tmp/
+/UrbanSound8k/standalone/tensorboard_10_supervised/
+/UrbanSound8k/standalone/test/
+/UrbanSound8k/standalone/tensorboard_cotraining_cnn_epsVary/
 /tensorboard/
 /tensorboard/osirim_tensorboard/
 /tensorboard/osirim_0.5r_cnn_crossval_dct/
@@ -25,15 +25,15 @@
 /dataset
 /dataset.lnk
 /.idea/
-/notebooks/img for paper/
-/notebooks/.ipynb_checkpoints/
-/notebooks/tensorboard/
-osirim/aug_crossval_full/combination/
-osirim/aug_crossval_full/cross_validation/
-osirim/aug_crossval_full/epsilon/
-osirim/aug_crossval_full/lambda_cot_max/
-osirim/aug_crossval_full/lambda_diff_max/
-osirim/aug_crossval_full/learning_rate/
-osirim/aug_crossval_full/warmup/
+/UrbanSound8k/notebooks/img for paper/
+/UrbanSound8k/notebooks/.ipynb_checkpoints/
+/UrbanSound8k/notebooks/tensorboard/
+UrbanSound8k/osirim/aug_crossval_full/combination/
+UrbanSound8k/osirim/aug_crossval_full/cross_validation/
+UrbanSound8k/osirim/aug_crossval_full/epsilon/
+UrbanSound8k/osirim/aug_crossval_full/lambda_cot_max/
+UrbanSound8k/osirim/aug_crossval_full/lambda_diff_max/
+UrbanSound8k/osirim/aug_crossval_full/learning_rate/
+UrbanSound8k/osirim/aug_crossval_full/warmup/
 **/.ipynb_checkpoints/
 **/__pycache__/

@@ -1,11 +1,10 @@
 import numpy as np
 
-import torch
 import torch.nn as nn
 import librosa
 
-from ubs8k.datasetManager import DatasetManager, conditional_cache, conditional_cache_v2
-from ubs8k.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
+from UrbanSound8k.datasetManager import DatasetManager, conditional_cache_v2
+from UrbanSound8k.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, Sequential_adv
 
 
 class cnn(nn.Module):

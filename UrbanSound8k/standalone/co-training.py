@@ -6,7 +6,6 @@ import numpy as np
 import time
 import math
 import argparse
-import random
 
 import torch
 import torch.nn as nn
@@ -16,18 +15,14 @@ import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
-from ubs8k.datasetManager import StaticManager # <-- static manager allow usage of static augmentation store in a specific hdf file
-from ubs8k.generators import CoTrainingDataset
-from ubs8k.samplers import CoTrainingSampler
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
+from UrbanSound8k.datasetManager import DatasetManager
+from UrbanSound8k.generators import CoTrainingDataset
+from UrbanSound8k.samplers import CoTrainingSampler
+from UrbanSound8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
-from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
-from ubs8k.metrics import CategoricalAccuracy, Ratio
-from ubs8k.ramps import Warmup, sigmoid_rampup
-
-import ubs8k.img_augmentations
-import ubs8k.spec_augmentations
-import ubs8k.signal_augmentations
+from UrbanSound8k.losses import loss_cot, p_loss_diff, p_loss_sup
+from UrbanSound8k.metrics import CategoricalAccuracy, Ratio
+from UrbanSound8k.ramps import Warmup, sigmoid_rampup
 
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
@@ -55,11 +50,7 @@ parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
-parser.add_argument("--audio_root", default="../dataset/audio")
-parser.add_argument("--metadata_root", default="../dataset/metadata")
-parser.add_argument("--augmentation_file", default="../dataset/audio/")
-parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script. Must be a str")
-parser.add_argument("-sa", "--static_augments", default="{}", type=str, help="a valid dictionnary where key are the augmentation to use and values their ratio")
+parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script")
 parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
 parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
 parser.add_argument("--num_workers", default=0, type=int, help="Choose number of worker to train the model")
@@ -73,29 +64,25 @@ set_logs(args.log)
 reset_seed(args.seed)
 
 # ---- Prepare augmentation ----
-# list of dynamic augmentation
-dynamic_augments = [] if args.augments is None else list(map(eval, args.augments))
-
-# list of static augmentation
-static_augments = eval(args.static_augments)
+if args.augments is None:
+    augments = []
+else:
+    augments = list(map(eval, args.augments))
 
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-augmentation_file = os.path.join(audio_root, "urbansound8k_22050_augmentations.hdf5")
-
-manager = StaticManager(
-    metadata_root, audio_root,
-    static_augment_file=augmentation_file, static_augment_list=list(static_augments.keys()),
-    subsampling=args.subsampling, subsampling_method=args.subsampling_method,
-    train_fold=args.train_folds, val_fold=args.val_folds,
-    verbose=1
-)
+manager = DatasetManager(metadata_root, audio_root,
+                         subsampling=args.subsampling, subsampling_method=args.subsampling_method,
+                         train_fold=args.train_folds, val_fold=args.val_folds,
+                         verbose=1
+                         )
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=dynamic_augments, static_augmentation=static_augments, S_augment=args.augment_S, U_augment=args.augment_U, cached=True)
+train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=augments, S_augment=args.augment_S, U_augment=args.augment_U, cached=True)
 val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
 sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=args.parser_ratio, method="duplicate") # ratio is automatically set here.
+
 
 # ======== Prepare the model ========
 model_func = get_model_from_name(args.model)
@@ -107,7 +94,7 @@ m2 = m2.cuda()
 
 # ======== Loaders & adversarial generators ========
 train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=args.num_workers)
-val_loader = data.DataLoader(val_dataset, batch_size=128, num_workers=args.num_workers)
+val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 # adversarial generation
 input_max_value = 0

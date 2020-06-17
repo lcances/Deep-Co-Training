@@ -12,10 +12,10 @@ def get_datetime():
 
 
 def get_model_from_name(model_name):
-    import ubs8k.models
+    import UrbanSound8k.models
     import inspect
 
-    for name, obj in inspect.getmembers(ubs8k.models):
+    for name, obj in inspect.getmembers(UrbanSound8k.models):
         if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__name__ == model_name:
                 logging.info("Model loaded: %s" % model_name)

@@ -6,28 +6,24 @@ import numpy as np
 import time
 import math
 import argparse
-import random
 
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 import torch.utils.data as data
 from torch.utils.tensorboard import SummaryWriter
-from advertorch.attacks import GradientSignAttack
 
-from ubs8k.datasetManager import DatasetManager
-from ubs8k.generators import CoTrainingDataset
-from ubs8k.samplers import CoTrainingSampler
-from ubs8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
+import sys
+sys.path.append("../ubs8k/")
 
-from ubs8k.losses import loss_cot, p_loss_diff, p_loss_sup
-from ubs8k.metrics import CategoricalAccuracy, Ratio
-from ubs8k.ramps import Warmup, sigmoid_rampup
+from UrbanSound8k.datasetManager import DatasetManager
+from UrbanSound8k.generators import CoTrainingDataset
+from UrbanSound8k.samplers import CoTrainingSampler
+from UrbanSound8k.utils import get_datetime, get_model_from_name, reset_seed, set_logs
 
-import ubs8k.img_augmentations as img_augmentations
-import ubs8k.spec_augmentations as spec_augmentations
-import ubs8k.signal_augmentations as signal_augmentations
+from UrbanSound8k.losses import loss_cot, p_loss_diff, p_loss_sup
+from UrbanSound8k.metrics import CategoricalAccuracy, Ratio
+from UrbanSound8k.ramps import Warmup, sigmoid_rampup
 
 # ---- Arguments ----
 parser = argparse.ArgumentParser(description='Deep Co-Training for Semi-Supervised Image Recognition')
@@ -36,7 +32,6 @@ parser.add_argument("-t", "--train_folds", nargs="+", default="1 2 3 4 5 6 7 8 9
 parser.add_argument("-v", "--val_folds", nargs="+", default="10", type=int, required=True, help="fold to use for validation")
 parser.add_argument("--nb_view", default=2, type=int, help="Number of supervised view")
 parser.add_argument("--ratio", default=0.1, type=float)
-parser.add_argument("--parser_ratio", default=None, type=float, help="ratio to apply for sampling the S and U data")
 parser.add_argument("--subsampling", default=1.0, type=float, help="subsampling ratio")
 parser.add_argument("--subsampling_method", default="balance", type=str, help="method to perform subsampling [random | balance]")
 parser.add_argument('--batchsize', '-b', default=100, type=int)
@@ -55,10 +50,6 @@ parser.add_argument('--base_lr', default=0.05, type=float)
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 parser.add_argument('--dataset', default='cifar10', type=str, help='choose svhn or cifar10, svhn is not implemented yey')
 parser.add_argument("--job_name", default="default", type=str)
-parser.add_argument("-a","--augments", action="append", help="Augmentation. use as if python script")
-parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
-parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
-parser.add_argument("--num_workers", default=0, type=int, help="Choose number of worker to train the model")
 parser.add_argument("--log", default="warning", help="Log level")
 args = parser.parse_args()
 
@@ -68,25 +59,20 @@ set_logs(args.log)
 # Reproducibility
 reset_seed(args.seed)
 
-# ---- Prepare augmentation ----
-if args.augments is None:
-    augments = []
-else:
-    augments = list(map(eval, args.augments))
-
 # ======== Prepare the data ========
 audio_root = "../dataset/audio"
 metadata_root = "../dataset/metadata"
-manager = DatasetManager(metadata_root, audio_root,
-                         subsampling=args.subsampling, subsampling_method=args.subsampling_method,
-                         train_fold=args.train_folds, val_fold=args.val_folds,
-                         verbose=1
-                         )
+manager = DatasetManager(
+    metadata_root, audio_root,
+    subsampling=args.subsampling, subsampling_method=args.subsampling_method,
+    train_fold=args.train_folds, val_fold=args.val_folds,
+    verbose=1
+)
 
 # prepare the sampler with the specified number of supervised file
-train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, augments=augments, S_augment=args.augment_S, U_augment=args.augment_U, cached=True)
+train_dataset = CoTrainingDataset(manager, args.ratio, train=True, val=False, cached=True)
 val_dataset = CoTrainingDataset(manager, 1.0, train=False, val=True, cached=True)
-sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=args.parser_ratio, method="duplicate") # ratio is automatically set here.
+sampler = CoTrainingSampler(train_dataset, args.batchsize, nb_class=10, nb_view=args.nb_view, ratio=None, method="duplicate") # ratio is manually set here
 
 
 # ======== Prepare the model ========
@@ -98,21 +84,15 @@ m1 = m1.cuda()
 m2 = m2.cuda()
 
 # ======== Loaders & adversarial generators ========
-train_loader = data.DataLoader(train_dataset, batch_sampler=sampler, num_workers=args.num_workers)
+train_loader = data.DataLoader(train_dataset, batch_sampler=sampler)
 val_loader = data.DataLoader(val_dataset, batch_size=128)
 
 # adversarial generation
-input_max_value = 0
-input_min_value = -80
-adv_generator_1 = GradientSignAttack(
-    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
-)
+# Replace by augmentations
+# Choose the best augmentation (see notebooks on osirim)
 
-adv_generator_2 = GradientSignAttack(
-    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=input_min_value, clip_max=input_max_value, targeted=False
-)
+adv_generator_1 = spec_augmentations.VerticalFlip(1.0)
+adv_generator_2 = spec_augmentations.VerticalFlip(1.0)
 
 
 # ======== optimizers & callbacks =========
@@ -209,11 +189,16 @@ def train(epoch):
         m2.eval()
 
         #generate adversarial examples ----
-        adv_data_S1 = adv_generator_1.perturb(X_S[0], y_S[0])
-        adv_data_U1 = adv_generator_1.perturb(X_U, pred_U1)
+        adv_data_S1 = adv_generator_1(X_S[0])
+        adv_data_U1 = adv_generator_1(X_U)
 
-        adv_data_S2 = adv_generator_2.perturb(X_S[1], y_S[1])
-        adv_data_U2 = adv_generator_2.perturb(X_U, pred_U2)
+        adv_data_S2 = adv_generator_2(X_S[1])
+        adv_data_U2 = adv_generator_2(X_U)
+
+        adv_data_S1 = adv_data_S1.cuda()
+        adv_data_U1 = adv_data_U1.cuda()
+        adv_data_S2 = adv_data_S2.cuda()
+        adv_data_U2 = adv_data_U2.cuda()
 
         m1.train()
         m2.train()
