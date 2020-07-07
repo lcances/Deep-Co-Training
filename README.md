@@ -4,7 +4,7 @@ Application of Deep Co-Training for audio tagging on the UrbanSound8K dataset.
 
 # Requirements
 ```bash
-conda create -n ubs8k python=3 pip
+conda create -n dct python=3 pip
 conda activate ubs8k
 conda install pytorch
 conda install pandas
@@ -20,7 +20,7 @@ pip install scikit-image
 # if not automatically install
 pip install torchvision # dependency for advertorch
 
-pip install git+https://github.com/leocances/pytorch_metrics.git # <-- personnal pytorch metrics functions
+pip install git+https://github.com/leocances/pytorch_metrics.git@v2 # <-- personnal pytorch metrics functions
 pip install git+https://github.com/leocances/augmentation_utils.git # <-- personnal audio & image augmentation 
 pip install git+https://github.com/leocances/UrbanSound8K.git # UBS8K dataset manager
 ```
