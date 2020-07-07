@@ -11,18 +11,18 @@ conda install pandas
 conda install numpy
 conda install h5py
 conda install pillow
+conda install tqdm
+conda install -c conda-forge librosa
 pip install advertorch
 pip install tensorboard
-pip install librosa
-pip install tqdm
 pip install scikit-image
 
 # if not automatically install
 pip install torchvision # dependency for advertorch
 
-pip install git+https://github.com/leocances/pytorch_metrics.git@v2 # <-- personnal pytorch metrics functions
-pip install git+https://github.com/leocances/augmentation_utils.git # <-- personnal audio & image augmentation 
-pip install git+https://github.com/leocances/UrbanSound8K.git # UBS8K dataset manager
+pip install --upgrade git+https://github.com/leocances/pytorch_metrics.git@v2 # <-- personnal pytorch metrics functions
+pip install --upgrade git+https://github.com/leocances/augmentation_utils.git # <-- personnal audio & image augmentation 
+pip install --upgrade git+https://github.com/leocances/UrbanSound8K.git # UBS8K dataset manager
 ```
 
 
