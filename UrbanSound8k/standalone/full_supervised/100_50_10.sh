@@ -24,8 +24,8 @@ while getopts ":m:r:" arg; do
 done
 
 # ___________________________________________________________________________________ #
-#     
 # ___________________________________________________________________________________ #
+
 folds=(
 	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
 	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
@@ -39,10 +39,12 @@ folds=(
 	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
 )
 
-tensorboard_path_root="--tensorboard_path ../../../tensorboard/ubs8k/full_supervised/"
+tensorboard_path_root="--tensorboard_path ../../../tensorboard/ubs8k/full_supervised"
+checkpoint_path_root="--checkpoint_path ../../../model_save/ubs8k/full_supervised"
 
 # ___________________________________________________________________________________ #
-tensorboard_path="${tensorboard_path_root}${MODE}_${RATIO}S"
+tensorboard_path="${tensorboard_path_root}/${MODEL}/${RATIO}S"
+checkpoint_path=${checkpoint_path_root}/${MODEL}/${RATIO}
 supervised_ratio="--supervised_ratio ${RATIO}"
 model="--model ${MODEL}"
 
@@ -52,5 +54,6 @@ do
     run_number=$(( $run_number + 1 ))
     tensorboard_sufix="--tensorboard_sufix run${run_number}"
     
-    python full_supervised.py ${folds[$i]} ${model} ${tensorboard_path} ${supervised_ratio} ${tensorboard_sufix}
+    echo python full_supervised.py ${folds[$i]} ${model} ${tensorboard_path} ${checkpoint_path} ${supervised_ratio} ${tensorboard_sufix}
+    python full_supervised.py ${folds[$i]} ${model} ${tensorboard_path} ${checkpoint_path} ${supervised_ratio} ${tensorboard_sufix}
 done
