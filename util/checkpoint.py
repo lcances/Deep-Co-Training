@@ -1,4 +1,5 @@
 import torch
+import os
 
 
 class CheckPoint:
@@ -14,6 +15,11 @@ class CheckPoint:
         self.last_state = dict()
         self.best_metric = 0 if mode == "max" else 100000
         self.epoch_counter = 0
+        
+        self.create_directory()
+        
+    def create_directory(self):
+        os.makedirs(os.path.dirname(self.name), exist_ok=True)
 
     def step(self, new_value):
         self.epoch_counter += 1
