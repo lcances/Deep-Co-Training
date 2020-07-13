@@ -31,27 +31,34 @@ from util.utils import reset_seed, get_datetime, get_model_from_name
 from util.checkpoint import CheckPoint
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
 
+from UrbanSound8k.models import ScalableCnn
 
 # # Arguments
 
-# In[4]:
-
-
 import argparse
 parser = argparse.ArgumentParser()
+# dataset related parameters
 parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
 parser.add_argument("--supervised_ratio", default=1.0, type=float)
-parser.add_argument("-t", "--train_folds", nargs="+", required=True, type=int)
-parser.add_argument("-v", "--val_folds", nargs="+", required=True, type=int)
+parser.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
+parser.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
 
-parser.add_argument("--model", default="cnn0", type=str)
+# learning parameters
+# parser.add_argument("--model", default="cnn0", type=str)
 parser.add_argument("--batch_size", default=32, type=int)
 parser.add_argument("--nb_epoch", default=100, type=int)
 parser.add_argument("--learning_rate", default=0.003, type=int)
 
-parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/full_supervised", type=str)
+# compound scaling parameters
+parser.add_argument("-a", "--alpha", default=1.0, type=float)
+parser.add_argument("-b", "--beta", default=1.0, type=float)
+parser.add_argument("-g", "--gamma", default=1.0, type=float)
+parser.add_argument("-p", "--phi", default=1.0, type=float)
+
+# extra utility parameters
+parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/compound_scaling", type=str)
 parser.add_argument("--resume", action="store_true", default=False)
-parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/full_supervised", type=str)
+parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/compound_scaling", type=str)
 parser.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
@@ -59,15 +66,10 @@ args = parser.parse_args()
 
 # # initialisation
 
-# In[5]:
-
-
 reset_seed(1234)
 
 
 # # Prepare the dataset
-
-# In[6]:
 
 
 audio_root = os.path.join(args.dataset_root, "audio")
@@ -95,16 +97,33 @@ val_dataset = Dataset(manager, folds=args.val_folds, cached=True)
 
 torch.cuda.empty_cache()
 
-model_func = get_model_from_name(args.model)
-model = model_func(manager=manager)
+common_parameters = dict(
+     dataset=manager,
+     initial_conv_inputs=[1, 24, 48, 48],
+     initial_conv_outputs=[24, 48, 48, 48],
+     initial_linear_inputs=[720, ],
+     initial_linear_outputs=[10, ],
+     initial_resolution=[64, 173],
+     round_up = False,
+)
+
+a, b, g, p = args.alpha, args.beta, args.gamma, args.phi
+a = a**p
+b = b**p
+g = g**p
+
+compound_scale = (a, b, g)
+model_func = ScalableCnn
+model = ScalableCnn(compound_scales=compound_scale, **common_parameters)
 
 
 # In[9]:
 
 
 from torchsummaryX import summary
-input_tensor = torch.zeros((1, 64, 173), dtype=torch.float)
-
+new_res = model.scaled_resolution
+input_tensor = torch.zeros((1, new_res[0], new_res[1]), dtype=torch.float)
+    
 s = summary(model, input_tensor)
 
 
@@ -116,7 +135,7 @@ s = summary(model, input_tensor)
 # create model
 torch.cuda.empty_cache()
 
-model = model_func(manager=manager)
+model = ScalableCnn(compound_scales=compound_scale, **common_parameters)
 model.cuda()
 
 
@@ -138,7 +157,9 @@ val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size
 # tensorboard
 tensorboard_title = "%s_%s_%.1fS_%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, args.tensorboard_sufix)
 checkpoint_title = "%s_%.1fS" % (model_func.__name__, args.supervised_ratio)
-tensorboard = SummaryWriter(log_dir="%s/%s" % (args.tensorboard_path, tensorboard_title), comment=model_func.__name__)
+directory="%.3fa_%.3fb_%.3fg/%.3fp" % (args.alpha, args.beta, args.gamma, args.phi)
+
+tensorboard = SummaryWriter(log_dir="%s/%s/%s" % (args.tensorboard_path, directory, tensorboard_title), comment=model_func.__name__)
 
 # losses
 loss_ce = nn.CrossEntropyLoss(reduction="mean")
@@ -151,7 +172,7 @@ lr_lambda = lambda epoch: (1.0 + numpy.cos((epoch-1)*numpy.pi/args.nb_epoch))
 lr_scheduler = LambdaLR(optimizer, lr_lambda)
 
 # Checkpoint
-checkpoint = CheckPoint(model, optimizer, mode="max", name="%s/%s.torch" % (args.checkpoint_path, checkpoint_title))
+checkpoint = CheckPoint(model, optimizer, mode="max", name="%s/%s/%s.torch" % (args.checkpoint_path, directory, checkpoint_title))
 
 # Metrics
 fscore_fn = FScore()
@@ -308,8 +329,6 @@ print(header)
 
 start_epoch = checkpoint.epoch_counter
 end_epoch = args.nb_epoch
-print(start_epoch)
-print(end_epoch)
 
 for e in range(start_epoch, args.nb_epoch):
     train(e)

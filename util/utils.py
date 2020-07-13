@@ -86,10 +86,11 @@ def get_datetime():
 
 def get_model_from_name(model_name):
     import UrbanSound8k.models as ubs8k_models
+    import UrbanSound8k.models_test as ubs8k_models_test
     import inspect
 
     all_members = []
-    for module in [ubs8k_models]:
+    for module in [ubs8k_models, ubs8k_models_test]:
         all_members += inspect.getmembers(module)
     
     for name, obj in all_members:
