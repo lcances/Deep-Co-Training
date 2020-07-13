@@ -102,8 +102,9 @@ class ScalableCnn(nn.Module):
     see: https://arxiv.org/pdf/1905.11946.pdf
     """
 
-    def __init__(self, dataset: DatasetManager,
+    def __init__(self, manager: DatasetManager,
                  compound_scales: tuple = (1, 1, 1),
+                 phi: float = 1.0,
                  initial_conv_inputs=[1, 32, 64, 64],
                  initial_conv_outputs=[32, 64, 64, 64],
                  initial_linear_inputs=[1344, ],
@@ -114,10 +115,11 @@ class ScalableCnn(nn.Module):
                  ):
         super(ScalableCnn, self).__init__()
         self.compound_scales = compound_scales
-        self.dataset = dataset
+        self.manager = manager
         self.round_func = np.floor if not round_up else np.ceil
 
         alpha, beta, gamma = compound_scales[0], compound_scales[1], compound_scales[2]
+        alpha, beta, gamma = alpha**phi, beta**phi, gamma**phi
 
         initial_nb_conv = len(initial_conv_inputs)
         initial_nb_dense = len(initial_linear_inputs)
@@ -128,12 +130,12 @@ class ScalableCnn(nn.Module):
         # WARNING - RESOLUTION WILL CHANGE THE FEATURES EXTRACTION OF THE SAMPLE
         new_n_mels = int(self.round_func(initial_resolution[0] * gamma))
         new_n_time_bins = int(self.round_func(initial_resolution[1] * gamma))
-        new_hop_length = int(self.round_func( (self.dataset.sr * DatasetManager.LENGTH) / new_n_time_bins))
+        new_hop_length = int(self.round_func( (self.manager.sr * DatasetManager.LENGTH) / new_n_time_bins))
 
         self.scaled_resolution = (new_n_mels, new_n_time_bins)
         print("new scaled resolution: ", self.scaled_resolution)
 
-        self.dataset.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
+        self.manager.extract_feature = self.generate_feature_extractor(new_n_mels, new_hop_length)
 
         # ======== CONVOLUTION PARTS ========
         # ---- depth ----
@@ -250,20 +252,39 @@ class ScalableCnn(nn.Module):
     
     def generate_feature_extractor(self, n_mels, hop_length):
         @conditional_cache_v2
-        def extract_feature(raw_data, filename = None, cached = False, augment_str = None, flavor=None):
+        def extract_feature(raw_data, **kwargs):
             """
             extract the feature for the model. Cache behaviour is implemented with the two parameters filename and cached
             :param raw_data: to audio to transform
-            :param filename: the key used by the cache system
-            :param augment_str: (only for the cache) The signal augmentation that is used of the raw signal
-            :param flavor: (only for the cache) The flavor (variant choice) that is used for this raw signal
-            :param cached: use or not the cache system
+            :key key: Unique key link to the raw_data, used internally by the cache system
+            :key cached: use or not the cache system
             :return: the feature extracted from the raw audio
             """
             feat = librosa.feature.melspectrogram(
-                raw_data, self.dataset.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.dataset.sr // 2)
+                raw_data, self.manager.sr, n_fft=2048, hop_length=hop_length, n_mels=n_mels, fmin=0, fmax=self.manager.sr // 2)
             feat = librosa.power_to_db(feat, ref=np.max)
             
             return feat
         
         print("new feature extraction function generation: hop_length = %s" % hop_length)
+        return extract_feature
+
+
+def scallable1(manager):
+    alpha, beta, gamma = 1.357143, 1.214286, 1.000000
+    phi = 2.2
+
+    parameters = dict(
+        manager=manager,
+        compound_scales=(alpha, beta, gamma),
+        phi=phi,
+        
+        initial_conv_inputs=[1, 24, 48, 48],
+        initial_conv_outputs=[24, 48, 48, 48],
+        initial_linear_inputs=[720, ],
+        initial_linear_outputs=[10, ],
+        initial_resolution=[64, 173],
+        round_up = False,
+    )
+
+    return ScalableCnn(**parameters)
