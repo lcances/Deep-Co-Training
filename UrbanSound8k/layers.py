@@ -1,6 +1,28 @@
 import torch
 import torch.nn as nn
 
+
+
+class DenseConvBlock(nn.Module):
+    def __init__(self, in_size, out_size):
+        super().__init__()
+        self.block = nn.Sequential(
+            nn.BatchNorm2d(in_size),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_size, out_size, (1, 1), stride=1, padding=0),
+
+            nn.BatchNorm2d(out_size),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_size, out_size, (3, 3), stride=1, padding=1)
+
+        )
+
+    def forward(self, x):
+        out = self.block(x)
+        out = torch.cat((x, out), dim=1)
+        return out
+
+
 class ConvPoolReLU(nn.Sequential):
     def __init__(self, in_size, out_size, kernel_size, stride, padding,
                  pool_kernel_size, pool_stride, dropout: float = 0.0):
@@ -10,6 +32,17 @@ class ConvPoolReLU(nn.Sequential):
             nn.BatchNorm2d(out_size),
             nn.Dropout2d(dropout),
             nn.ReLU6(inplace=True),
+        )
+        
+class ConvBNPoolReLU6(nn.Sequential):
+    def __init__(self, in_size, out_size, kernel, stride, padding,
+                pool_kernel, pool_stride, dropout: float = 0.0):
+        super(ConvBNPoolReLU6, self).__init__(
+            nn.Conv2d(in_size, out_size, kernel_size=kernel, stride=stride, padding=padding),
+            nn.BatchNorm2d(out_size),
+            nn.MaxPool2d(kernel_size=pool_kernel, stride=pool_stride),
+            nn.Dropout2d(dropout),
+            nn.ReLU6(inplace=True)
         )
 
 
@@ -42,18 +75,6 @@ class ConvPoolReLU(nn.Sequential):
             nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
             nn.BatchNorm2d(out_size),
             nn.ReLU6(inplace=True),
-        )
-
-        
-class ConvBNReLUPool(nn.Sequential):
-    def __init__(self, in_size, out_size, kernel_size, stride, padding,
-                pool_kernel_size, pool_stride, dropout: float = 0.0):
-        super(ConvBNReLUPool, self).__init__(
-            nn.Conv2d(in_size, out_size, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.BatchNorm2d(out_size),
-            nn.Dropout2d(dropout),
-            nn.ReLU6(inplace=True),
-            nn.MaxPool2d(kernel_size=pool_kernel_size, stride=pool_stride),
         )
 
 
