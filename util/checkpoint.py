@@ -47,6 +47,9 @@ class CheckPoint:
             torch.save(self.best_state, self.name)
             
     def load_best(self):
+        if not os.path.isfile(self.name + ".last"):
+            return
+
         data = torch.load(self.name)
         
         for k, v in data.items():
@@ -57,6 +60,9 @@ class CheckPoint:
         self.epoch_counter = self.best_state["epoch"]
             
     def load_last(self):
+        if not os.path.isfile(self.name + ".last"):
+            return
+
         data = torch.load(self.name + ".last")
         
         for k, v in data.items():
