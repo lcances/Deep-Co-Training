@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data as data
+import torch.nn.functional as F
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
@@ -16,8 +17,7 @@ from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 
 import sys
-
-sys.path.append("../..")
+sys.path.append("../../..")
 
 from util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
@@ -26,9 +26,12 @@ from util.checkpoint import CheckPoint
 from UrbanSound8k.ramps import Warmup, sigmoid_rampup
 from UrbanSound8k.losses import loss_cot, loss_diff, loss_sup
 
-# Arguments
-import argparse
+import augmentation_utils.spec_augmentations as spec_aug
+from UrbanSound8k.augmentation_list import augmentations
 
+
+# # Arguments
+import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
 parser.add_argument("--supervised_ratio", default=0.1, type=float)
@@ -37,7 +40,7 @@ parser.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6,
 parser.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
 
 parser.add_argument("--model", default="cnn03", type=str)
-parser.add_argument("--batch_size", default=32, type=int)
+parser.add_argument("--batch_size", default=100, type=int)
 parser.add_argument("--nb_epoch", default=100, type=int)
 parser.add_argument("--learning_rate", default=0.003, type=int)
 
@@ -47,22 +50,20 @@ parser.add_argument("--warmup_length", default=80, type=int)
 parser.add_argument("--epsilon", default=0.02, type=float)
 
 parser.add_argument("--augment", action="append", help="augmentation. use as if python script")
-parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
-parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
 
-parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/deep-co-training", type=str)
+parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/deep-co-training_aug4adv", type=str)
 parser.add_argument("--resume", action="store_true", default=False)
-parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/deep-co-training", type=str)
+parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/deep-co-training_aug4adv", type=str)
 parser.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
 
-# %% md
 
-## Prepare the dataset
+augmentation_list = list(augmentations.keys())
+selected_augmentation = args.augment 
 
-# %%
 
+# ## Prepare the dataset
 audio_root = os.path.join(args.dataset_root, "audio")
 metadata_root = os.path.join(args.dataset_root, "metadata")
 all_folds = args.train_folds + args.val_folds
@@ -70,21 +71,16 @@ all_folds = args.train_folds + args.val_folds
 manager = DatasetManager(
     metadata_root, audio_root,
     folds=all_folds,
-    verbose=2
+    verbose=1
 )
 
-# %%
 
 # prepare the sampler with the specified number of supervised file
 train_dataset = Dataset(manager, folds=args.train_folds, cached=True)
 val_dataset = Dataset(manager, folds=args.val_folds, cached=True)
 
-# %% md
 
-## Models
-
-# %%
-
+# ## Models
 torch.cuda.empty_cache()
 model_func = get_model_from_name(args.model)
 
@@ -93,26 +89,8 @@ m1, m2 = model_func(manager=manager), model_func(manager=manager)
 m1 = m1.cuda()
 m2 = m2.cuda()
 
-# %% md
 
-## Adversarial generator
-
-# %%
-
-# adversarial generation
-adv_generator_1 = GradientSignAttack(
-    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-80, clip_max=0, targeted=True
-)
-
-adv_generator_2 = GradientSignAttack(
-    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-80, clip_max=0, targeted=True
-)
-
-# %% md
-
-## Loaders
+# ## Loaders
 s_idx, u_idx = train_dataset.split_s_u(args.supervised_ratio)
 
 # Calc the size of the Supervised and Unsupervised batch
@@ -122,7 +100,6 @@ nb_u_file = len(u_idx)
 ratio = nb_s_file / nb_u_file
 s_batch_size = int(np.floor(args.batch_size * ratio))
 u_batch_size = int(np.ceil(args.batch_size * (1 - ratio)))
-
 
 # create the sampler, the loader and "zip" them
 sampler_s1 = data.SubsetRandomSampler(s_idx)
@@ -136,10 +113,36 @@ train_loader_u = data.DataLoader(train_dataset, batch_size=u_batch_size, sampler
 train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
 val_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
-# training parameters
+
+# ## Adversarial generator
+if len(selected_augmentation) == 1:
+    augment_1 = selected_augmentation[0]
+    augment_2 = selected_augmentation[1]
+elif len(selected_augmentation) >= 2:
+    augment_1, augment_2 = selected_augmentation[:2]
+else:
+    raise ValueError("At least one augmentation must be provide. Use --augment <augment name> in the execution parameters")
+
+train_dataset_aug1 = Dataset(manager, folds=args.train_folds, augments=(augmentations[augment_1], ), cached=True)
+train_dataset_aug2 = Dataset(manager, folds=args.train_folds, augments=(augmentations[augment_2], ), cached=True)
+
+
+train_loader_s1_aug1 = data.DataLoader(train_dataset_aug1, batch_size=s_batch_size, sampler=sampler_s1, num_workers=4)
+train_loader_u_aug1 = data.DataLoader(train_dataset_aug1, batch_size=u_batch_size, sampler=sampler_u, num_workers=4)
+train_loader_aug1 = ZipCycle([train_loader_s1_aug1, train_loader_u_aug1])
+
+train_loader_s2_aug2 = data.DataLoader(train_dataset_aug2, batch_size=s_batch_size, sampler=sampler_s2, num_workers=4)
+train_loader_u_aug2 = data.DataLoader(train_dataset_aug2, batch_size=u_batch_size, sampler=sampler_u, num_workers=4)
+train_loader_aug2 = ZipCycle([train_loader_s2_aug2, train_loader_u_aug2])
+
+
+final_train_loader = ZipCycle([train_loader, train_loader_aug1, train_loader_aug2])
+
+
+# ## training parameters
 # tensorboard
-tensorboard_title = "%s_%s_%.1f" % (get_datetime(), model_func.__name__, args.supervised_ratio)
-checkpoint_title = "%s_%.1f" % (model_func.__name__, args.supervised_ratio)
+tensorboard_title = "%s_%s_%.1f_%s-%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, augment_1, augment_2)
+checkpoint_title = "%s_%.1f_%s-%s" % (model_func.__name__, args.supervised_ratio, augment_1, augment_2)
 tensorboard = SummaryWriter(log_dir="%s/%s" % (args.tensorboard_path, tensorboard_title), comment=model_func.__name__)
 
 # Losses
@@ -154,13 +157,12 @@ lambda_cot = Warmup(args.lambda_cot_max, args.warmup_length, sigmoid_rampup)
 lambda_diff = Warmup(args.lambda_diff_max, args.warmup_length, sigmoid_rampup)
 
 # callback
-lr_lambda = lambda epoch: (1.0 + np.cos((epoch - 1) * np.pi / args.nb_epoch))
+lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1) * np.pi / args.nb_epoch))
 lr_scheduler = LambdaLR(optimizer, lr_lambda)
 callbacks = [lr_scheduler, lambda_cot, lambda_diff]
 
 # checkpoints
 checkpoint_m1 = CheckPoint(m1, optimizer, mode="max", name="%s/%s_m1.torch" % (args.checkpoint_path, checkpoint_title))
-checkpoint_m2 = CheckPoint(m2, optimizer, mode="max", name="%s/%s_m2.torch" % (args.checkpoint_path, checkpoint_title))
 
 # metrics
 metrics_fn = dict(
@@ -170,13 +172,12 @@ metrics_fn = dict(
     acc_u=[CategoricalAccuracy(), CategoricalAccuracy()],
     f1_s=[FScore(), FScore()],
     f1_u=[FScore(), FScore()],
-
+    
     avg_total=ContinueAverage(),
     avg_sup=ContinueAverage(),
     avg_cot=ContinueAverage(),
     avg_diff=ContinueAverage(),
 )
-
 
 def reset_metrics():
     for item in metrics_fn.values():
@@ -185,41 +186,19 @@ def reset_metrics():
                 f.reset()
         else:
             item.reset()
+
 reset_metrics()
 
-## Can resume previous training
+
+# ## Can resume previous training
 if args.resume:
     checkpoint_m1.load_last()
 
-
-## Metrics and hyperparameters
+# ## Metrics and hyperparameters
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
-
-
-# %% md
-
-# Training functions
-
-# %%
-
-UNDERLINE_SEQ = "\033[1;4m"
-
-RESET_SEQ = "\033[0m"
-
-header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} | {:<6.6} | {:<6.6} | {:<6.6} - {:<9.9} {:<9.9} | {:<9.9}- {:<6.6}"
-value_form = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
-
-header = header_form.format(
-    "", "Epoch", "%", "Losses:", "Lsup", "Lcot", "Ldiff", "total", "metrics: ", "acc_s1", "acc_u1", "Time"
-)
-
-train_form = value_form
-val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
-
-print(header)
-
+    
 def maximum():
     def func(key, value):
         if key not in func.max:
@@ -233,6 +212,47 @@ def maximum():
     return func
 maximum_fn = maximum()
 
+
+# # Training functions
+UNDERLINE_SEQ = "\033[1;4m"
+RESET_SEQ = "\033[0m"
+
+header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} | {:<6.6} | {:<6.6} | {:<6.6} - {:<9.9} {:<9.9} | {:<9.9}- {:<6.6}"
+value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
+
+header = header_form.format(
+    "", "Epoch", "%", "Losses:", "Lsup", "Lcot", "Ldiff", "total", "metrics: ", "acc_s1", "acc_u1","Time"
+)
+
+train_form = value_form
+val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
+
+def format_data(data: tuple):
+    def format_triple(data):
+        S1, S2, U = data
+        x_s1, y_s1 = S1
+        x_s2, y_s2 = S2
+        x_u, y_u = U
+
+        x_s1, x_s2, x_u = x_s1.cuda().float(), x_s2.cuda().float(), x_u.cuda().float()
+        y_s1, y_s2, y_u = y_s1.cuda().long(), y_s2.cuda().long(), y_u.cuda().long()
+        return x_s1, x_s2, x_u, y_s1, y_s2, y_u
+    
+    def format_double(data: tuple):
+        S, U = data
+        x_s, _ = S
+        x_u, _ = U
+        x_s, x_u = x_s.cuda().float(), x_u.cuda().float()
+        
+        return x_s, x_u
+    
+    if len(data) == 3:
+        return format_triple(data)
+    elif len(data) == 2:
+        return format_double(data)
+    else:
+        raise ValueError("data must a Iterable of size 2 or 3")
+
 def train(epoch):
     start_time = time.time()
     print("")
@@ -241,14 +261,12 @@ def train(epoch):
     m1.train()
     m2.train()
 
-    for batch, (S1, S2, U) in enumerate(train_loader):
-        x_s1, y_s1 = S1
-        x_s2, y_s2 = S2
-        x_u, y_u = U
-
-        x_s1, x_s2, x_u = x_s1.cuda(), x_s2.cuda(), x_u.cuda()
-        y_s1, y_s2, y_u = y_s1.cuda(), y_s2.cuda(), y_u.cuda()
-
+    for batch, (normal, aug1, aug2) in enumerate(final_train_loader):
+        x_s1, x_s2, x_u, y_s1, y_s2, y_u = format_data(normal)
+        x_s1_aug1, x_u_aug1 = format_data(aug1)
+        x_s2_aug2, x_u_aug2 = format_data(aug2)
+        
+        # Predict normal data
         logits_s1 = m1(x_s1)
         logits_s2 = m2(x_s2)
         logits_u1 = m1(x_u)
@@ -257,28 +275,13 @@ def train(epoch):
         # pseudo labels of U
         pred_u1 = torch.argmax(logits_u1, 1)
         pred_u2 = torch.argmax(logits_u2, 1)
-
-        # ======== Generate adversarial examples ========
-        # fix batchnorm ----
-        m1.eval()
-        m2.eval()
-
-        # generate adversarial examples ----
-        adv_data_s1 = adv_generator_1.perturb(x_s1, y_s1)
-        adv_data_u1 = adv_generator_1.perturb(x_u, pred_u1)
-
-        adv_data_s2 = adv_generator_2.perturb(x_s2, y_s2)
-        adv_data_u2 = adv_generator_2.perturb(x_u, pred_u2)
-
-        m1.train()
-        m2.train()
-
-        # predict adversarial examples ----
-        adv_logits_s1 = m1(adv_data_s2)
-        adv_logits_s2 = m2(adv_data_s1)
-
-        adv_logits_u1 = m1(adv_data_u2)
-        adv_logits_u2 = m2(adv_data_u1)
+        
+        # Predict augmented (adversarial data)
+        adv_logits_s1 = m1(x_s2_aug2)
+        adv_logits_u1 = m1(x_u_aug2)
+        
+        adv_logits_s2 = m2(x_s1_aug1)
+        adv_logits_u2 = m2(x_u_aug1)
 
         # ======== calculate the differents loss ========
         # zero the parameter gradients ----
@@ -318,9 +321,9 @@ def train(epoch):
             adv_pred_u2 = torch.argmax(adv_logits_u2, 1)
 
             ratio_s1 = metrics_fn["ratio_s"][0](adv_pred_s1, y_s1)
-            ratio_s2 = metrics_fn["ratio_s"][0](adv_pred_s2, y_s2)
-            ratio_u1 = metrics_fn["ratio_s"][0](adv_pred_u1, y_u)
-            ratio_u2 = metrics_fn["ratio_s"][0](adv_pred_u2, y_u)
+            ratio_s2 = metrics_fn["ratio_s"][1](adv_pred_s2, y_s2)
+            ratio_u1 = metrics_fn["ratio_u"][0](adv_pred_u1, y_u)
+            ratio_u2 = metrics_fn["ratio_u"][1](adv_pred_u2, y_u)
             # ========
 
             avg_total = metrics_fn["avg_total"](total_loss.item())
@@ -338,13 +341,14 @@ def train(epoch):
                 time.time() - start_time
             ), end="\r")
 
+
     # using tensorboard to monitor loss and acc\n",
     tensorboard.add_scalar('train/total_loss', avg_total.mean, epoch)
-    tensorboard.add_scalar('train/Lsup', avg_sup.mean, epoch)
-    tensorboard.add_scalar('train/Lcot', avg_cot.mean, epoch)
-    tensorboard.add_scalar('train/Ldiff', avg_diff.mean, epoch)
-    tensorboard.add_scalar("train/acc_1", acc_s1.mean, epoch)
-    tensorboard.add_scalar("train/acc_2", acc_s2.mean, epoch)
+    tensorboard.add_scalar('train/Lsup', avg_sup.mean, epoch )
+    tensorboard.add_scalar('train/Lcot', avg_cot.mean, epoch )
+    tensorboard.add_scalar('train/Ldiff', avg_diff.mean, epoch )
+    tensorboard.add_scalar("train/acc_1", acc_s1.mean, epoch )
+    tensorboard.add_scalar("train/acc_2", acc_s2.mean, epoch )
 
     tensorboard.add_scalar("detail_acc/acc_s1", acc_s1.mean, epoch)
     tensorboard.add_scalar("detail_acc/acc_s2", acc_s2.mean, epoch)
@@ -357,12 +361,10 @@ def train(epoch):
     tensorboard.add_scalar("detail_ratio/ratio_u2", ratio_u2.mean, epoch)
 
     # Return the total loss to check for NaN
-    return total_loss.item(), msg
+    return total_loss.item()
 
 
-# %%
-
-def test(epoch, msg=""):
+def test(epoch, msg = ""):
     start_time = time.time()
     print("")
 
@@ -372,8 +374,8 @@ def test(epoch, msg=""):
 
     with torch.set_grad_enabled(False):
         for batch, (X, y) in enumerate(val_loader):
-            x = X.cuda()
-            y = y.cuda()
+            x = X.cuda().float()
+            y = y.cuda().long()
 
             logits_1 = m1(x)
             logits_2 = m2(x)
@@ -403,10 +405,10 @@ def test(epoch, msg=""):
 
     tensorboard.add_scalar("val/acc_1", acc_1.mean, epoch)
     tensorboard.add_scalar("val/acc_2", acc_2.mean, epoch)
-
-    tensorboard.add_scalar("max/acc_1", maximum_fn("acc_1", acc_1.mean), epoch)
-    tensorboard.add_scalar("max/acc_2", maximum_fn("acc_2", acc_2.mean), epoch)
-
+        
+    tensorboard.add_scalar("max/acc_1", maximum_fn("acc_1", acc_1.mean), epoch )
+    tensorboard.add_scalar("max/acc_2", maximum_fn("acc_2", acc_2.mean), epoch )
+    
     tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
@@ -417,25 +419,18 @@ def test(epoch, msg=""):
 
     # call checkpoint
     checkpoint_m1.step(acc_1.mean)
-    checkpoint_m2.step(acc_2.mean)
 
 
-# %%
-
+# Run training
 print(header)
-
 for epoch in range(0, args.nb_epoch):
-    total_loss, msg = train(epoch)
-
+    total_loss = train(epoch)
+    
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
-
-    test(epoch, msg)
+        
+    test(epoch)
 
 tensorboard.flush()
 tensorboard.close()
-
-# %%
-
-
