@@ -46,6 +46,16 @@ class CheckPoint:
             }
             torch.save(self.best_state, self.name)
             
+    def save(self):
+        self.last_state = {
+            "state_dict": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "best_metric": new_value,
+            "epoch": self.epoch_counter,
+        }
+        torch.save(self.last_state, self.name + ".last")
+        
+            
     def load_best(self):
         if not os.path.isfile(self.name + ".last"):
             return
