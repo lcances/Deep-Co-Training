@@ -52,9 +52,6 @@ class cnn03(nn.Module):
             nn.Flatten(),
             nn.Dropout(0.5),
             nn.Linear(720, 10),
-            #             nn.ReLU(inplace=True),
-            #             nn.Dropout(0.5),
-            #             nn.Linear(64, 10),
         )
 
     def forward(self, x):
