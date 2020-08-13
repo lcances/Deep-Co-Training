@@ -1,9 +1,42 @@
 import augmentation_utils.spec_augmentations as spec_aug
+import augmentation_utils.signal_augmentations as signal_aug
 augmentations = dict(
-    # Spec augmentation
-    flip_up = spec_aug.VerticalFlip(1.0),
-    flip_lr = spec_aug.HorizontalFlip(1.0),
     none = "",
+    
+    # Spec augmentation
+    flip_ud = spec_aug.VerticalFlip(1.0),
+    flip_lr = spec_aug.HorizontalFlip(1.0),
+    
+    usn_1 = spec_aug.UniformSignNoise(1.0, epsilon=0.001, mini=-80, maxi=0),
+    usn_2 = spec_aug.UniformSignNoise(1.0, epsilon=0.005, mini=-80, maxi=0),
+    usn_3 = spec_aug.UniformSignNoise(1.0, epsilon=0.010, mini=-80, maxi=0),
+    usn_4 = spec_aug.UniformSignNoise(1.0, epsilon=0.020, mini=-80, maxi=0),
+    usn_5 = spec_aug.UniformSignNoise(1.0, epsilon=0.030, mini=-80, maxi=0),
+    usn_6 = spec_aug.UniformSignNoise(1.0, epsilon=0.040, mini=-80, maxi=0),
+    usn_7 = spec_aug.UniformSignNoise(1.0, epsilon=0.050, mini=-80, maxi=0),
+    usn_8 = spec_aug.UniformSignNoise(1.0, epsilon=0.060, mini=-80, maxi=0),
+    usn_9 = spec_aug.UniformSignNoise(1.0, epsilon=0.070, mini=-80, maxi=0),
+    usn_10 = spec_aug.UniformSignNoise(1.0, epsilon=0.08, mini=-80, maxi=0),
+    usn_11 = spec_aug.UniformSignNoise(1.0, epsilon=0.09, mini=-80, maxi=0),
+    usn_12 = spec_aug.UniformSignNoise(1.0, epsilon=0.10, mini=-80, maxi=0),
+    usn_13 = spec_aug.UniformSignNoise(1.0, epsilon=0.20, mini=-80, maxi=0),
+    usn_14 = spec_aug.UniformSignNoise(1.0, epsilon=0.30, mini=-80, maxi=0),
+    usn_15 = spec_aug.UniformSignNoise(1.0, epsilon=0.40, mini=-80, maxi=0),
+    usn_16 = spec_aug.UniformSignNoise(1.0, epsilon=0.50, mini=-80, maxi=0),
+    usn_17 = spec_aug.UniformSignNoise(1.0, epsilon=0.60, mini=-80, maxi=0),
+    usn_18 = spec_aug.UniformSignNoise(1.0, epsilon=0.70, mini=-80, maxi=0),
+    usn_19 = spec_aug.UniformSignNoise(1.0, epsilon=0.80, mini=-80, maxi=0),
+    usn_20 = spec_aug.UniformSignNoise(1.0, epsilon=0.90, mini=-80, maxi=0),
+    usn_21 = spec_aug.UniformSignNoise(1.0, epsilon=1.00, mini=-80, maxi=0),
+    usn_22 = spec_aug.UniformSignNoise(1.0, epsilon=2.00, mini=-80, maxi=0),
+    usn_23 = spec_aug.UniformSignNoise(1.0, epsilon=3.00, mini=-80, maxi=0),
+    usn_24 = spec_aug.UniformSignNoise(1.0, epsilon=4.00, mini=-80, maxi=0),
+    usn_25 = spec_aug.UniformSignNoise(1.0, epsilon=5.00, mini=-80, maxi=0),
+    usn_26 = spec_aug.UniformSignNoise(1.0, epsilon=6.00, mini=-80, maxi=0),
+    usn_27 = spec_aug.UniformSignNoise(1.0, epsilon=7.00, mini=-80, maxi=0),
+    usn_28 = spec_aug.UniformSignNoise(1.0, epsilon=8.00, mini=-80, maxi=0),
+    usn_29 = spec_aug.UniformSignNoise(1.0, epsilon=9.00, mini=-80, maxi=0),
+    
     
     noise_snr10 = spec_aug.Noise(1.0, 10),
     noise_snr15 = spec_aug.Noise(1.0, 15),
@@ -37,10 +70,10 @@ augmentations = dict(
     ffs_55 = spec_aug.FractalFreqStretch(1.0, 0.5, rate=(0.4, 1.6), min_chunk_size=6, max_chunk_size=20),
     
     ftd_1 = spec_aug.FractalTimeDropout(1.0, 1, 2),
-    ftd_3 = spec_aug.FractalTimeDropout(1.0, 2, 4),
-    ftd_4 = spec_aug.FractalTimeDropout(1.0, 2, 8),
-    ftd_5 = spec_aug.FractalTimeDropout(1.0, 2, 16),
-    ftd_6 = spec_aug.FractalTimeDropout(1.0, 2, 32),
+    ftd_2 = spec_aug.FractalTimeDropout(1.0, 2, 4),
+    ftd_3 = spec_aug.FractalTimeDropout(1.0, 2, 8),
+    ftd_4 = spec_aug.FractalTimeDropout(1.0, 2, 16),
+    ftd_5 = spec_aug.FractalTimeDropout(1.0, 2, 32),
     
     ffd_1 = spec_aug.FractalFrecDropout(1.0, 1, 2),
     ffd_2 = spec_aug.FractalFrecDropout(1.0, 2, 4),
@@ -71,4 +104,40 @@ augmentations = dict(
     rfd_9 = spec_aug.RandomFreqDropout(1.0, dropout=0.7),
     rfd_10 = spec_aug.RandomFreqDropout(1.0, dropout=0.8),
     rfd_11 = spec_aug.RandomFreqDropout(1.0, dropout=0.9),
+    
+    s_ts_1 = signal_aug.TimeStretch(1.0, rate=(0.95, 1.05)),
+    s_ts_2 = signal_aug.TimeStretch(1.0, rate=(0.9, 1.1)),
+    s_ts_3 = signal_aug.TimeStretch(1.0, rate=(0.85, 1.15)),
+    s_ts_4 = signal_aug.TimeStretch(1.0, rate=(0.8, 1.2)),
+    s_ts_5 = signal_aug.TimeStretch(1.0, rate=(0.75, 1.25)),
+    
+    s_psr_1 = signal_aug.PitchShiftRandom(1.0, steps=(-1, 1)),
+    s_psr_2 = signal_aug.PitchShiftRandom(1.0, steps=(-2, 2)),
+    s_psr_3 = signal_aug.PitchShiftRandom(1.0, steps=(-3, 3)),
+    s_psr_4 = signal_aug.PitchShiftRandom(1.0, steps=(-4, 4)),
+    s_psr_5 = signal_aug.PitchShiftRandom(1.0, steps=(-5, 5)),
+    
+    # signal augmentation
+    s_l_1 = signal_aug.Level(1.0, rate=(0.95, 1.05)),
+    s_l_2 = signal_aug.Level(1.0, rate=(0.9, 1.1)),
+    s_l_3 = signal_aug.Level(1.0, rate=(0.85, 1.15)),
+    s_l_4 = signal_aug.Level(1.0, rate=(0.8, 1.2)),
+    s_l_5 = signal_aug.Level(1.0, rate=(0.75, 1.25)),
+    
+    s_o_1 = signal_aug.Occlusion(1.0, max_size=0.1),
+    s_o_2 = signal_aug.Occlusion(1.0, max_size=0.2),
+    s_o_3 = signal_aug.Occlusion(1.0, max_size=0.3),
+    s_o_4 = signal_aug.Occlusion(1.0, max_size=0.4),
+    s_o_5 = signal_aug.Occlusion(1.0, max_size=0.5),
+    s_o_6 = signal_aug.Occlusion(1.0, max_size=0.6),
+    s_o_7 = signal_aug.Occlusion(1.0, max_size=0.7),
+    s_o_8 = signal_aug.Occlusion(1.0, max_size=0.8),
+    s_o_9 = signal_aug.Occlusion(1.0, max_size=0.9),
+    s_o_10 = signal_aug.Occlusion(1.0, max_size=1.0),
+    
+    s_c_1 = signal_aug.Clip(1.0, range=(-0.95, 0.95)),
+    s_c_2 = signal_aug.Clip(1.0, range=(-0.90, 0.9)),
+    s_c_3 = signal_aug.Clip(1.0, range=(-0.85, 0.85)),
+    s_c_4 = signal_aug.Clip(1.0, range=(-0.80, 0.80)),
+    s_c_5 = signal_aug.Clip(1.0, range=(-0.75, 0.75)),
 )
