@@ -38,11 +38,11 @@ class Warmup:
         self.nb_epoch = nb_epoch
         self.method = method
         self.current_epoch = 0
-        self.value = 0
+        self.value = self.max
 
     def reset(self):
         self.current_epoch = 0
-        self.value = 0
+        self.value = self.max
 
     def step(self):
         if self.current_epoch < self.nb_epoch:
