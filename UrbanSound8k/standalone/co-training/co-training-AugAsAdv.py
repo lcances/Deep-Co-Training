@@ -63,6 +63,8 @@ augmentation_list = list(augmentations.keys())
 selected_augmentation = args.augment 
 
 
+reset_seed(1234)
+
 # ## Prepare the dataset
 audio_root = os.path.join(args.dataset_root, "audio")
 metadata_root = os.path.join(args.dataset_root, "metadata")
