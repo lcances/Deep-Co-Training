@@ -36,38 +36,45 @@ from UrbanSound8k.losses import loss_cot, loss_diff, loss_sup
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
-parser.add_argument("--supervised_ratio", default=0.1, type=float)
-parser.add_argument("--supervised_mult", default=1.0, type=float)
-parser.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
-parser.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
+# parser.add_argument("--supervised_mult", default=1.0, type=float)
 
-parser.add_argument("--model", default="cnn03", type=str)
-parser.add_argument("--batch_size", default=100, type=int)
-parser.add_argument("--nb_epoch", default=1000, type=int)
-parser.add_argument("--learning_rate", default=0.0005, type=float)
+group_t = parser.add_argument_group("Training parameters")
+group_t.add_argument("--supervised_ratio", default=0.1, type=float)
+group_t.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
+group_t.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
+group_t.add_argument("--model", default="cnn03", type=str)
+group_t.add_argument("--batch_size", default=100, type=int)
+group_t.add_argument("--nb_epoch", default=1000, type=int)
+group_t.add_argument("--learning_rate", default=0.0005, type=float)
+group_t.add_argument("--resume", action="store_true", default=False)
+group_t.add_argument("--seed", default=1234, type=int)
 
-parser.add_argument("--lambda_cot_max", default=10, type=float)
-parser.add_argument("--lambda_diff_max", default=0.5, type=float)
-parser.add_argument("--warmup_length", default=1000, type=int)
-parser.add_argument("--epsilon", default=0.02, type=float)
+group_h = parser.add_argument_group('hyperparameters')
+group_h.add_argument("--lambda_cot_max", default=10, type=float)
+group_h.add_argument("--lambda_diff_max", default=0.5, type=float)
+group_h.add_argument("--warmup_length", default=1000, type=int)
+group_h.add_argument("--epsilon", default=0.02, type=float)
 
-parser.add_argument("--loss_scheduler", default="no_rule", type=str)
-parser.add_argument("--loss_scheduler_steps", default=1, type=int)
-parser.add_argument("--loss_scheduler_cycle", default=1, type=int)
-parser.add_argument("--loss_scheduler_beta", default=1, type=int)
+group = parser.add_argument_group('uniloss')
+group.add_argument("--loss_scheduler", default="no_rule", type=str)
+group.add_argument("--steps", default=1, type=int)
+group.add_argument("--cycle", default=1, type=int)
+group.add_argument("--beta", default=1, type=int)
+group.add_argument("--plsup_mini", default=0.0, type=float)
 
-parser.add_argument("--augment", action="append", help="augmentation. use as if python script")
-parser.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
-parser.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
+group_a = parser.add_argument_group("Augmentation")
+group_a.add_argument("--augment", action="append", help="augmentation. use as if python script")
+group_a.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
+group_a.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
 
-parser.add_argument("--checkpoint_path", default="../../model_save/ubs8k/deep-co-training_independant-loss", type=str)
-parser.add_argument("--resume", action="store_true", default=False)
-parser.add_argument("--tensorboard_path", default="../../tensorboard/ubs8k/deep-co-training_independant-loss", type=str)
-parser.add_argument("--tensorboard_sufix", default="", type=str)
+group_l = parser.add_argument_group("Logs")
+group_l.add_argument("--checkpoint_path", default="../../model_save/deep-co-training_independant-loss", type=str)
+group_l.add_argument("--tensorboard_path", default="../../tensorboard/deep-co-training_independant-loss", type=str)
+group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
 
-reset_seed(1234)
+reset_seed(args.seed)
 
 # ## Prepare the dataset
 
@@ -129,14 +136,14 @@ adv_generator_2 = GradientSignAttack(
 # In[551]:
 
 
-def uniform_rule(steps: int = 0):
+def uniform_rule(steps: int = 0, **kwargs):
     sup_steps = [0.34 for _ in range(steps)]
     cot_steps = [0.33 for _ in range(steps)]
     diff_steps = [0.33 for _ in range(steps)]
 
     return sup_steps, cot_steps, diff_steps
 
-def weighted_uniform_rule(steps: int = 0):
+def weighted_uniform_rule(steps: int = 0, **kwargs):
     lcm = args.lambda_cot_max
     ldm = args.lambda_diff_max
     lsm = 1
@@ -283,7 +290,7 @@ def weighted_annealing_cosine_rule(step: int = 10, cycle: int = 1, beta: float =
         
     return sup_steps, cot_steps, diff_steps
 
-def sigmoid_rule(steps: int = 10):
+def sigmoid_rule(steps: int = 10, **kwargs):
     hop_length = np.linspace(0, args.nb_epoch, steps)
     
     sup_steps = np.asarray([sigmoid_rampdown(x, args.nb_epoch) for x in hop_length])
@@ -300,7 +307,7 @@ def sigmoid_rule(steps: int = 10):
     return sup_steps, cot_steps, diff_steps
     
 
-def weighted_sigmoid_rule(steps: int = 10):
+def weighted_sigmoid_rule(steps: int = 10, **kwargs):
     lcm = args.lambda_cot_max
     ldm = args.lambda_diff_max
     lsm = 1
@@ -321,7 +328,7 @@ def weighted_sigmoid_rule(steps: int = 10):
     return sup_steps, cot_steps, diff_steps
     
 
-def rule_maker(rule_fn, steps: int = 5):
+def rule_maker(rule_fn, steps: int = 5, **kwargs):
     p_lsup, p_lcot, p_ldiff = rule_fn(steps)
     
     # making the rules
@@ -352,7 +359,7 @@ def rule_chooser(rule_str):
         "weighted-sigmoid": weighted_sigmoid_rule,
         "cosine": cosine_rule,
         "weighted-cosine": weighted_cosine_rule,
-        "annealing-cosine": annealing_cosine_rule,
+        "anealing-cosine": annealing_cosine_rule,
         "weighted-annealing-cosine": weighted_annealing_cosine_rule,
     }
     
@@ -361,9 +368,15 @@ def rule_chooser(rule_str):
         
     return mapper[rule_str]
 
-steps = args.loss_scheduler_steps
 rule_fn = rule_chooser(args.loss_scheduler)
-rules = rule_maker(rule_fn, steps = steps)
+loss_scheduler_args = {
+    "steps": args.steps,
+    "cycle": args.cycle,
+    "beta": args.beta,
+    "plsup_mini": args.plsup_mini,
+}
+
+rules = rule_maker(rule_fn, **loss_scheduler_args)
 
 # ## Loaders
 
@@ -399,8 +412,8 @@ val_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=Tr
 
 
 # tensorboard
-tensorboard_title = "%s_%s_%.1fS_%se_%slr_%s-rfn_%ss_%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.loss_scheduler, steps, args.tensorboard_sufix)
-checkpoint_title = "%s_%.1fS_%se_%slr_%s-rfn_%ss_%s" % (model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.loss_scheduler, steps, args.tensorboard_sufix)
+tensorboard_title = "%s_%s_%.1fS_%se_%slr_%s-rfn_%ss_%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.loss_scheduler, args.steps, args.tensorboard_sufix)
+checkpoint_title = "%s_%.1fS_%se_%slr_%s-rfn_%ss_%s" % (model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.loss_scheduler, args.steps, args.tensorboard_sufix)
 tensorboard = SummaryWriter(log_dir="%s/%s" % (args.tensorboard_path, tensorboard_title), comment=model_func.__name__)
 
 # Losses

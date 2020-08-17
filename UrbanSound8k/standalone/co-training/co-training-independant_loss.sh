@@ -76,15 +76,15 @@ folds=(
 	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
 )
 
-tensorboard_path_root="--tensorboard_path ../../../tensorboard/ubs8k/deep-co-training_independant-loss/${LOG_SUB_DIR}"
-checkpoint_path_root="--checkpoint_path ../../../model_save/ubs8k/deep-co-training_independant-loss/${LOG_SUB_DIR}"
+tensorboard_path_root="../../tensorboard/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
+checkpoint_path_root="../../model_save/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
 
 # ___________________________________________________________________________________ #
 parameters=""
 
 # -------- tensorboard and checkpoint path --------
-tensorboard_path="${tensorboard_path_root}/${MODEL}/${RATIO}S"
-checkpoint_path=${checkpoint_path_root}/${MODEL}/${RATIO}
+tensorboard_path="--tensorboard_path ${tensorboard_path_root}/${MODEL}/${RATIO}S"
+checkpoint_path="--checkpoint_path ${checkpoint_path_root}/${MODEL}/${RATIO}S"
 parameters="${parameters} ${tensorboard_path} ${checkpoint_path}"
 
 # -------- model --------
@@ -99,7 +99,7 @@ parameters="${parameters} --lambda_cot_max ${LAMBDA_COT_MAX}"
 parameters="${parameters} --lambda_diff_max ${LAMBDA_DIFF_MAX}"
 
 parameters="${parameters} --loss_scheduler ${LOSS_SCHEDULER}"
-parameters="${parameters} --loss_scheduler_steps ${STEPS}"
+parameters="${parameters} --steps ${STEPS}"
 
 # -------- resume training --------
 if [ $RESUME -eq 1 ]; then
