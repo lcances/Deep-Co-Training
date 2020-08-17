@@ -4,16 +4,17 @@
 models=("cnn03")
 schedulers=("annealing-cosine" "weighted-annealing-cosine")
 learning_rate=("0.0005")
-steps=("10" "5000")
+steps=("10" "5")
 epochs=("1000")
 lambda_diff_max=(1)
 lambda_cot_max=(1)
 warmup_length=(1)
 cycle=(8 12 16)
 beta=(1 2 3)
+plsup_mini=("0.0")
 
-tensorboard_dir="../../tensorboard/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
-checkpoint_dir="../../model_save/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
+tensorboard_dir="../../tensorboard/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm/grid_search"
+checkpoint_dir="../../model_save/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm/grid_search"
 
 for m in ${models[@]}; do
 for s in ${schedulers[@]}; do
@@ -24,10 +25,12 @@ for lcm in ${lambda_cot_max[@]}; do
 for ldm in ${lambda_diff_max[@]}; do
 for lc in ${cycle[@]}; do
 for lb in ${beta[@]}; do
-	echo $m $s $l $st
+for psm in ${plsup_mini[@]}; do
+	tensorboard_sufix="${lc}cycle_${lb}beta_${psm}m_plsup"
 	python co-training_independant_loss.py \
 		--tensorboard_path ${tensorboard_dir} \
 		--checkpoint_path ${checkpoint_dir} \
+		--tensorboard_sufix ${tensorboard_sufix} \
 		--warmup_length ${warmup_length} \
 		--model $m \
 		--learning_rate $l \
@@ -36,11 +39,12 @@ for lb in ${beta[@]}; do
 		--lambda_diff_max $ldm \
 		--loss_scheduler $s \
 		--loss_scheduler_steps $st \
-		--loss_scheduler_cycle $lc \
-		--loss_scheduler_beta $lb
-		
+		--cycle $lc \
+		--beta $lb \
+		--plsup_mini $psm
 done			
-done			
+done
+done
 done			
 done			
 done			
