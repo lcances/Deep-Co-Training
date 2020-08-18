@@ -359,7 +359,7 @@ def rule_chooser(rule_str):
         "weighted-sigmoid": weighted_sigmoid_rule,
         "cosine": cosine_rule,
         "weighted-cosine": weighted_cosine_rule,
-        "anealing-cosine": annealing_cosine_rule,
+        "annealing-cosine": annealing_cosine_rule,
         "weighted-annealing-cosine": weighted_annealing_cosine_rule,
     }
     
@@ -863,7 +863,6 @@ tensorboard.close()
 
 
 print("rule function: ", rule_fn)
-print("nb steps: ", steps)
 print("model: ", model_func)
 print("max acc 1: %.2f" % (maximum_fn.max["acc_1"].item() * 100))
 print("max acc 2: %.2f" % (maximum_fn.max["acc_2"].item() * 100))
