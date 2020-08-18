@@ -74,6 +74,7 @@ group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
 
+
 reset_seed(args.seed)
 
 # ## Prepare the dataset
@@ -162,10 +163,11 @@ def weighted_uniform_rule(steps: int = 0, **kwargs):
         
     return sup_steps, cot_steps, diff_steps
 
-def weighted_linear_rule(step: int = 10, plsup_mini = 0.2, **kwargs):
+def weighted_linear_rule(step: int = 10, plsup_mini: float = 0.0, **kwargs):
     lcm = args.lambda_cot_max
     ldm = args.lambda_diff_max
     lsm = 1
+    print("inner plsup_mini: ", plsup_mini)
     
     s_start, s_end = 1, lsm * (plsup_mini)
     c_start, c_end = 0, lcm * (0.5 - (plsup_mini / 2))
@@ -329,7 +331,7 @@ def weighted_sigmoid_rule(steps: int = 10, **kwargs):
     
 
 def rule_maker(rule_fn, steps: int = 5, **kwargs):
-    p_lsup, p_lcot, p_ldiff = rule_fn(steps)
+    p_lsup, p_lcot, p_ldiff = rule_fn(steps, **kwargs)
     
     # making the rules
     hop_length = np.linspace(0, args.nb_epoch, steps)
@@ -364,7 +366,7 @@ def rule_chooser(rule_str):
     }
     
     if rule_str not in mapper:
-        raise ValueError("Loss scheduler must be from [%s]" % (", ".join(mapper.keys())))
+     raise ValueError("Loss scheduler must be from [%s]" % (", ".join(mapper.keys())))
         
     return mapper[rule_str]
 
