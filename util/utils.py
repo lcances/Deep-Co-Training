@@ -162,3 +162,33 @@ class ZipCycle(Iterable, Sized):
 
     def __len__(self) -> int:
         return self._len
+
+    
+def load_dataset(
+        dataset_name: str,
+        dataset_root,
+        supervised_ratio: float = 0.1,
+        batch_size: int = 100,
+    ):
+    
+    parameters = dict(
+        dataset_root = dataset_root,
+        supervised_ratio = supervised_datio,
+        batch_size = batch_size,
+    )
+    
+    if dataset_name == "ubs8k":
+        from ubs8k_loader import load_ubs8k_classic
+        return load_ubs8k_classic(**parameters)
+    
+    elif dataset_name == "cifar10":
+        from cifar10_loader import load_cifar10_classic
+        return load_cifar10_classic(**parameters)
+    
+    else:
+        available_dataset = [
+            "ubs8k",
+            "cifar10"
+        ]
+        
+        raise ValueError("dataset %s is not available.\n Available datasets: %s" % ", ".join(available_dataset))
