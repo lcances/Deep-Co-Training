@@ -2,23 +2,20 @@
 
 # ___________________________________________________________________________________ #
 function show_help {
-    echo "usage:  $BASH_SOURCE [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s SCRIPT] [-h]"
+    echo "usage:  $BASH_SOURCE [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s LAMBDA_SUP_MAX] [-c LAMBDA_COT_MAX] [-d LAMBDA_DIFF_MAX] [-h]"
     echo "    -m MODEL (default cnn03)"
     echo "    -r SUPERVISED RATIO (default 0.1)"
     echo "    -e EPOCH (default 200)"
     echo "    -R RESUME (default FALSE)"
-    echo "    -s SCRIPT (default co-training.py)"
+    echo "    -s LAMBDA SUP MAX (default 1)"
+    echo "    -c LAMBDA COT MAX (default 10)"
+    echo "    -d LAMBDA_DIFF_MAX (default 0.5)"
     echo "    -h help"
     
     echo "Available models"
     echo "\t cnn0"
     echo "\t cnn03"
     echo "\t scallable1"
-    
-    echo "Available script"
-    echo "\t co-training.py - normal co-training"
-    echo "\t co-training_noAdv.py - Ldiff is removed, no adversarial generation needed"
-    echo "\t co-training_independant_loss - loss part are update independantly"
 }
 
 # default parameters
@@ -26,6 +23,9 @@ MODEL=cnn03
 RATIO=0.1
 NB_EPOCH=200
 RESUME=0
+LSM=1
+LCM=10
+LDM=0.5
 SCRIPT="co-training.py"
 
 while getopts "m:r:e:s::R::h" arg; do
@@ -33,7 +33,9 @@ while getopts "m:r:e:s::R::h" arg; do
     m) MODEL=$OPTARG;;
     r) RATIO=$OPTARG;;
     e) NB_EPOCH=$OPTARG;;
-    s) SCRIPT=$OPTARG;;
+    s) LSM=$OPTARG;;
+    c) LCM=$OPTARG;;
+    d) LDM=$OPTARG;;
     R) RESUME=1;;
     h) show_help;;
     *) 
@@ -49,19 +51,19 @@ done
 
 folds=(
 	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
-	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
-	"-t 1 2 4 5 6 7 8 9 10 -v 3" \
-	"-t 1 2 3 5 6 7 8 9 10 -v 4" \
-	"-t 1 2 3 4 6 7 8 9 10 -v 5" \
-	"-t 1 2 3 4 5 7 8 9 10 -v 6" \
-	"-t 1 2 3 4 5 6 8 9 10 -v 7" \
-	"-t 1 2 3 4 5 6 7 9 10 -v 8" \
-	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
-	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
+	# "-t 1 3 4 5 6 7 8 9 10 -v 2" \
+	# "-t 1 2 4 5 6 7 8 9 10 -v 3" \
+	# "-t 1 2 3 5 6 7 8 9 10 -v 4" \
+	# "-t 1 2 3 4 6 7 8 9 10 -v 5" \
+	# "-t 1 2 3 4 5 7 8 9 10 -v 6" \
+	# "-t 1 2 3 4 5 6 8 9 10 -v 7" \
+	# "-t 1 2 3 4 5 6 7 9 10 -v 8" \
+	# "-t 1 2 3 4 5 6 7 8 10 -v 9" \
+	# "-t 1 2 3 4 5 6 7 8 9 -v 10" \
 )
 
-tensorboard_path_root="--tensorboard_path ../../../tensorboard/ubs8k/deep-co-training"
-checkpoint_path_root="--checkpoint_path ../../../model_save/ubs8k/deep-co-training"
+tensorboard_path_root="--tensorboard_path ../../tensorboard/deep-co-training"
+checkpoint_path_root="--checkpoint_path ../../model_save/deep-co-training"
 
 # ___________________________________________________________________________________ #
 parameters=""
@@ -77,6 +79,10 @@ parameters="${parameters} --model ${MODEL}"
 # -------- training parameters --------
 parameters="${parameters} --supervised_ratio ${RATIO}"
 parameters="${parameters} --nb_epoch ${NB_EPOCH}"
+
+parameters="${parameters} --lambda_sup_max ${LSM}"
+parameters="${parameters} --lambda_cot_max ${LCM}"
+parameters="${parameters} --lambda_diff_max ${LDM}"
 
 # -------- resume training --------
 if [ $RESUME -eq 1 ]; then
