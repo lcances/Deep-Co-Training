@@ -23,7 +23,7 @@ from util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
 from util.checkpoint import CheckPoint
 
-from UrbanSound8k.ramps import Warmup, sigmoid_rampup
+from UrbanSound8k.ramps import Warmup, sigmoid_rampup, sigmoid_rampdown
 from UrbanSound8k.losses import loss_cot, loss_diff, loss_sup
 
 # Arguments
@@ -41,6 +41,7 @@ parser.add_argument("--batch_size", default=32, type=int)
 parser.add_argument("--nb_epoch", default=100, type=int)
 parser.add_argument("--learning_rate", default=0.003, type=int)
 
+parser.add_argument("--lambda_sup_max", default=1, type=float)
 parser.add_argument("--lambda_cot_max", default=10, type=float)
 parser.add_argument("--lambda_diff_max", default=0.5, type=float)
 parser.add_argument("--warmup_length", default=80, type=int)
@@ -150,13 +151,14 @@ params = list(m1.parameters()) + list(m2.parameters())
 optimizer = torch.optim.Adam(params, lr=args.learning_rate)
 
 # define the warmups
+lambda_sup = Warmup(args.lambda_sup_max, args.warmup_length, sigmoid_rampdown)
 lambda_cot = Warmup(args.lambda_cot_max, args.warmup_length, sigmoid_rampup)
 lambda_diff = Warmup(args.lambda_diff_max, args.warmup_length, sigmoid_rampup)
 
 # callback
 lr_lambda = lambda epoch: (1.0 + np.cos((epoch - 1) * np.pi / args.nb_epoch))
 lr_scheduler = LambdaLR(optimizer, lr_lambda)
-callbacks = [lr_scheduler, lambda_cot, lambda_diff]
+callbacks = [lr_scheduler, lambda_sup, lambda_cot, lambda_diff]
 
 # checkpoints
 checkpoint_m1 = CheckPoint(m1, optimizer, mode="max", name="%s/%s_m1.torch" % (args.checkpoint_path, checkpoint_title))
@@ -296,7 +298,7 @@ def train(epoch):
             logits_u1, logits_u2, adv_logits_u1, adv_logits_u2
         )
 
-        total_loss = l_sup + lambda_cot() * l_cot + lambda_diff() * l_diff
+        total_loss = lambda_sup() * l_sup + lambda_cot() * l_cot + lambda_diff() * l_diff
         total_loss.backward()
         optimizer.step()
 
