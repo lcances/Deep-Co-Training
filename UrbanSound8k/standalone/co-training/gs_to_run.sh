@@ -38,7 +38,7 @@ for psm in ${plsup_mini[@]}; do
 		--lambda_cot_max $lcm \
 		--lambda_diff_max $ldm \
 		--loss_scheduler $s \
-		--loss_scheduler_steps $st \
+		--steps $st \
 		--cycle $lc \
 		--beta $lb \
 		--plsup_mini $psm
