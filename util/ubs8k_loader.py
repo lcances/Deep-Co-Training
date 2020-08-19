@@ -1,7 +1,10 @@
-from ubs8k.datasetManager import ubs8k_DatasetManager
-from ubs8k.datasets import ubs8k_Dataset
-from utils import ZipCycle
+from ubs8k.datasetManager import DatasetManager
+from ubs8k.datasets import Dataset
+from .utils import ZipCycle
 
+
+import os
+import numpy as np
 import torch.utils.data as torch_data
 
 
@@ -11,6 +14,7 @@ def load_ubs8k_classic(
         batch_size: int = 100,
         train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
         val_folds: tuple = (10, ),
+        verbose = 1,
 ):
     """
     Load the urbansound dataset for Deep Co Training system.
@@ -24,12 +28,12 @@ def load_ubs8k_classic(
     manager = DatasetManager(
         metadata_root, audio_root,
         folds=all_folds,
-        verbose=2
+        verbose=verbose
     )
     
     # prepare the default dataset
-    train_dataset = Dataset(manager, folds=args.train_folds, cached=True)
-    val_dataset = Dataset(manager, folds=args.val_folds, cached=True)
+    train_dataset = Dataset(manager, folds=train_folds, cached=True)
+    val_dataset = Dataset(manager, folds=val_folds, cached=True)
     
     # split the training set into a supervised and unsupervised sets
     s_idx, u_idx = train_dataset.split_s_u(supervised_ratio)
@@ -52,6 +56,6 @@ def load_ubs8k_classic(
     train_loader_u = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
 
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
-    val_loader = data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
     
     return manager, train_loader, val_loader
