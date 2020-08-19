@@ -163,15 +163,14 @@ def weighted_uniform_rule(steps: int = 0, **kwargs):
         
     return sup_steps, cot_steps, diff_steps
 
-def weighted_linear_rule(step: int = 10, plsup_mini: float = 0.0, **kwargs):
+def linear_rule(step: int = 10, plsup_mini = 0.0, **kwargs):
     lcm = args.lambda_cot_max
     ldm = args.lambda_diff_max
-    lsm = 1
-    print("inner plsup_mini: ", plsup_mini)
+    lsm = 0
     
-    s_start, s_end = 1, lsm * (plsup_mini)
-    c_start, c_end = 0, lcm * (0.5 - (plsup_mini / 2))
-    d_start, d_end = 0, ldm * (0.5 - (plsup_mini / 2))
+    s_start, s_end = 1, lsm 
+    c_start, c_end = 0, lcm
+    d_start, d_end = 0, ldm
     
     # normalize
     total = s_end + c_end + d_end
@@ -179,30 +178,31 @@ def weighted_linear_rule(step: int = 10, plsup_mini: float = 0.0, **kwargs):
     c_end /= total
     d_end /= total
     
+    if s_end < plsup_mini:
+        s_end = plsup_mini
+        c_end = c_end - (plsup_mini / 2)
+        d_end = d_end - (plsup_mini / 2)
+    
     sup_steps = np.linspace(s_start, s_end, step)
     cot_steps = np.linspace(d_start, c_end, step)
     diff_steps = np.linspace(d_start, d_end, step)
     
     return sup_steps, cot_steps, diff_steps
 
-def linear_rule(step: int = 10, plsup_mini: float = 0.0, **kwargs):
-    hop_length = np.linspace(0, args.nb_epoch, step)
+def weighted_linear_rule(step: int = 10, **kwargs):
+    lcm = args.lambda_cot_max
+    ldm = args.lambda_diff_max
+    lsm = 1
+    total = lcm + ldm + lsm
     
-    s_start, s_end = 1, plsup_mini
-    c_start, c_end = 0, 0.5 - (plsup_mini / 2)
-    d_start, d_end = 0, 0.5 - (plsup_mini / 2)
+    # normalize
+    lcm /= total
+    ldm /= total
+    lsm /= total
     
-    sup_steps = np.linspace(s_start, s_end, step)
-    cot_steps = np.linspace(d_start, c_end, step)
-    diff_steps = np.linspace(d_start, d_end, step)
-
-     # normalize
-    for i in range(step):
-        summed = sup_steps[i] + cot_steps[i] + diff_steps[i]
-        if summed != 1:
-            sup_steps[i] /= summed
-            cot_steps[i] /= summed
-            diff_steps[i] /= summed
+    sup_steps = np.linspace(1, lsm, step)
+    cot_steps = np.linspace(0, lcm, step)
+    diff_steps = np.linspace(0, ldm, step)
     
     return sup_steps, cot_steps, diff_steps
 
