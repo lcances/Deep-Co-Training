@@ -328,14 +328,13 @@ def weighted_sigmoid_rule(steps: int = 10, **kwargs):
         diff_steps[i] /= summed
 
     return sup_steps, cot_steps, diff_steps
-    
 
-def rule_maker(rule_fn, steps: int = 5, **kwargs):
+def rule_maker(rule_fn, steps: int = 10, **kwargs):
     p_lsup, p_lcot, p_ldiff = rule_fn(steps, **kwargs)
     
     # making the rules
-    hop_length = np.linspace(0, args.nb_epoch, steps)
-
+    hop_length = np.linspace(0, args.nb_epoch, len(p_lsup))
+    
     rules = dict()
     for i, epoch in enumerate(hop_length):
         rules[epoch] = {"lsup": p_lsup[i], "lcot": p_lcot[i], "ldiff": p_ldiff[i]}
