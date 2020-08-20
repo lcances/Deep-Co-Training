@@ -24,11 +24,8 @@ from torch.utils.tensorboard import SummaryWriter
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 
-import sys
-sys.path.append("../../..")
-
-from util.utils import reset_seed, get_datetime, get_model_from_name
-from util.checkpoint import CheckPoint
+from DCT.util.utils import reset_seed, get_datetime, get_model_from_name
+from DCT.util.checkpoint import CheckPoint
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
 
 
@@ -39,7 +36,7 @@ from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
+parser.add_argument("-d", "--dataset_root", default="../../datasets/ubs8k", type=str)
 parser.add_argument("--supervised_ratio", default=1.0, type=float)
 parser.add_argument("-t", "--train_folds", nargs="+", required=True, type=int)
 parser.add_argument("-v", "--val_folds", nargs="+", required=True, type=int)
@@ -49,9 +46,9 @@ parser.add_argument("--batch_size", default=32, type=int)
 parser.add_argument("--nb_epoch", default=100, type=int)
 parser.add_argument("--learning_rate", default=0.003, type=int)
 
-parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/full_supervised", type=str)
+parser.add_argument("--checkpoint_path", default="../../model_save/ubs8k/full_supervised", type=str)
 parser.add_argument("--resume", action="store_true", default=False)
-parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/full_supervised", type=str)
+parser.add_argument("--tensorboard_path", default="../../tensorboard/ubs8k/full_supervised", type=str)
 parser.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
