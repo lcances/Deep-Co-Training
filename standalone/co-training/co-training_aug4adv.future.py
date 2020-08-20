@@ -16,24 +16,22 @@ from advertorch.attacks import GradientSignAttack
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 
-import sys
-sys.path.append("../../..")
-
-from util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
+from DCT.util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
-from util.checkpoint import CheckPoint
+from DCT.util.checkpoint import CheckPoint
 
-from UrbanSound8k.ramps import Warmup, sigmoid_rampup
-from UrbanSound8k.losses import loss_cot, loss_diff, loss_sup
+from DCT.ramps import Warmup, sigmoid_rampup
+from DCT.losses import loss_cot, loss_diff, loss_sup
 
 import augmentation_utils.spec_augmentations as spec_aug
-from UrbanSound8k.augmentation_list import augmentations
+from DCT.augmentation_list import augmentations
 
 
 # # Arguments
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
+parser.add_argument("-d", "--dataset_root", default="../../datasets/ubs8k", type=str)
+parser.add_argument("-D", "--dataset", default="ubs8k", type=str, help="available [ubs8k | cifar10]")
 parser.add_argument("--supervised_ratio", default=0.1, type=float)
 parser.add_argument("--supervised_mult", default=1.0, type=float)
 parser.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
@@ -54,12 +52,22 @@ parser.add_argument("--augment_S", action="store_true", help="augmentation will 
 parser.add_argument("--augment_U", action="store_true", help="augmentation will apply on unsupervised part")
 parser.add_argument("--augment_adv", action="append", help="augmentation to use for the adversarial generation")
 
-parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/deep-co-training_aug4adv", type=str)
+parser.add_argument("--checkpoint_path", default="../../model_save/ubs8k/deep-co-training_aug4adv", type=str)
 parser.add_argument("--resume", action="store_true", default=False)
-parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/deep-co-training_aug4adv", type=str)
+parser.add_argument("--tensorboard_path", default="../../tensorboard/ubs8k/deep-co-training_aug4adv", type=str)
 parser.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
+
+# modify checkpoint and tensorboard path to fit the dataset
+checkpoint_path_ = args.checkpoint_path.split("/")
+tensorboard_path_ = args.tensorboard_path.split("/")
+
+checkpoint_path_[3] = args.dataset
+tensorboard_path_[3] = args.dataset
+
+args.checkpoint_path = "/".join(checkpoint_path_)
+args.tensorboard_path = "/".join(tensorboard_path_)
 
 
 reset_seed(1234)

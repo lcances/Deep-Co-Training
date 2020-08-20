@@ -2,7 +2,8 @@
 
 # ___________________________________________________________________________________ #
 function show_help {
-    echo "usage:  $BASH_SOURCE [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s LAMBDA_SUP_MAX] [-c LAMBDA_COT_MAX] [-d LAMBDA_DIFF_MAX] [-h]"
+    echo "usage:  $BASH_SOURCE [-D DATASET] [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s LAMBDA_SUP_MAX] [-c LAMBDA_COT_MAX] [-d LAMBDA_DIFF_MAX] [-h]"
+    echo "    -D DATASET (default ubs8k)"
     echo "    -m MODEL (default cnn03)"
     echo "    -r SUPERVISED RATIO (default 0.1)"
     echo "    -e EPOCH (default 200)"
@@ -12,6 +13,10 @@ function show_help {
     echo "    -d LAMBDA_DIFF_MAX (default 0.5)"
     echo "    -h help"
     
+    echo "Available datasets"
+    echo "    ubs8k"
+    echo "    cifar10"
+    
     echo "Available models"
     echo "\t cnn0"
     echo "\t cnn03"
@@ -19,6 +24,7 @@ function show_help {
 }
 
 # default parameters
+DATASET="ubs8k"
 MODEL=cnn03
 RATIO=0.1
 NB_EPOCH=200
@@ -28,8 +34,9 @@ LCM=10
 LDM=0.5
 SCRIPT="co-training.py"
 
-while getopts "m:r:e:s::R::h" arg; do
+while getopts "D:m:r:e:s::R::h" arg; do
   case $arg in
+    D) DATASET=$OPTARG;;
     m) MODEL=$OPTARG;;
     r) RATIO=$OPTARG;;
     e) NB_EPOCH=$OPTARG;;
@@ -62,8 +69,8 @@ folds=(
 	# "-t 1 2 3 4 5 6 7 8 9 -v 10" \
 )
 
-tensorboard_path_root="--tensorboard_path ../../tensorboard/deep-co-training"
-checkpoint_path_root="--checkpoint_path ../../model_save/deep-co-training"
+tensorboard_path_root="--tensorboard_path ../../tensorboard/${DATASET}/deep-co-training"
+checkpoint_path_root="--checkpoint_path ../../model_save/${DATASET}/deep-co-training"
 
 # ___________________________________________________________________________________ #
 parameters=""

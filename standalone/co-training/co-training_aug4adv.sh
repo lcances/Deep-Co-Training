@@ -74,8 +74,8 @@ folds=(
 	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
 )
 
-tensorboard_path_root="--tensorboard_path ../../../tensorboard/ubs8k/deep-co-training_aug4adv/$MODEL/${RATIO}S"
-checkpoint_path_root="--checkpoint_path ../../../model_save/ubs8k/deep-co-training_aug4adv"
+tensorboard_path_root="--tensorboard_path ../../tensorboard/ubs8k/deep-co-training_aug4adv/$MODEL/${RATIO}S"
+checkpoint_path_root="--checkpoint_path ../../model_save/ubs8k/deep-co-training_aug4adv"
 
 # ___________________________________________________________________________________ #
 parameters=""
