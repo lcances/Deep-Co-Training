@@ -1,17 +1,17 @@
-from ubs8k.datasetManager import ubs8k_DatasetManager
-from ubs8k.datasets import ubs8k_Dataset
-from utils import ZipCycle
+from .utils import ZipCycle
 
-import random
+import random, os
+import numpy as np
 import torch.utils.data as torch_data
-import torchvision.datasets.CIFAR10 as CIFAR10
+import torchvision.datasets
+import torchvision.transforms as transforms
 
 def split_s_u(train_dataset, s_ratio: float = 0.1):
     if s_ratio == 1.0:
         return list(range(len(train_dataset)))
     
     # add indexes
-    datasets = [(idx, x, y) for x, y in train_dataset]
+    datasets = [(idx, x, y) for idx, (x, y) in enumerate(train_dataset)]
     
     # separate the dataset into classes
     classes = [[] for _ in range(10)]
@@ -40,13 +40,19 @@ def load_cifar10_classic(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
+        **kwargs
 ):
     """
     Load the cifar10 dataset for Deep Co Training system.
     """
     # Prepare the default dataset
-    train_dataset = datasets.CIFAR10(root=os.path.join(dataset_root, "cifar10"), train=True, download=True, transform=None)
-    val_dataset = datasets.CIFAR10(root=os.path.join(dataset_root, "cifar10"), train=False, download=True, transform=None)
+    transform = transforms.Compose(
+        [transforms.ToTensor(),
+         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+    )
+
+    train_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=True, download=True, transform=transform)
+    val_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=False, download=True, transform=transform)
     
     # Split the training dataset into a supervised and unsupervised sets
     s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
@@ -69,9 +75,6 @@ def load_cifar10_classic(
     train_loader_u = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
 
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
-    val_loader = data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
     
-    return manager, train_loader, val_loader
-    
-    
-    return manager, train_loader, val_loader
+    return None, train_loader, val_loader
