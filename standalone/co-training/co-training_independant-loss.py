@@ -1,3 +1,9 @@
+# # import
+
+
+# In[2]:
+
+
 import os
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
@@ -14,50 +20,54 @@ from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
 
+# In[5]:
+
+
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 
-import sys
-sys.path.append("../../..")
-
-from util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
-from util.checkpoint import CheckPoint
+from DCT.util.checkpoint import CheckPoint
+from DCT.util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle, load_dataset
 
-from UrbanSound8k.ramps import Warmup, sigmoid_rampup, sigmoid_rampdown
-from UrbanSound8k.losses import loss_cot, loss_diff, loss_sup
+from DCT.ramps import Warmup, sigmoid_rampup, sigmoid_rampdown
+from DCT.losses import loss_cot, loss_diff, loss_sup
 
-
-# # Arguments
-
-# In[548]:
+# In[6]:
 
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
+
+
+parser.add_argument("-d", "--dataset_root", default="../../datasets", type=str)
+parser.add_argument("-D", "--dataset", default="ubs8k", type=str, help="available [ubs8k | cifar10]")
 # parser.add_argument("--supervised_mult", default=1.0, type=float)
 
-group_t = parser.add_argument_group("Training parameters")
+group_t = parser.add_argument_group("Commun parameters")
+group_t.add_argument("-m", "--model", default="cnn03", type=str)
 group_t.add_argument("--supervised_ratio", default=0.1, type=float)
-group_t.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
-group_t.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
-group_t.add_argument("--model", default="cnn03", type=str)
 group_t.add_argument("--batch_size", default=100, type=int)
-group_t.add_argument("--nb_epoch", default=1000, type=int)
+group_t.add_argument("--nb_epoch", default=5000, type=int)
 group_t.add_argument("--learning_rate", default=0.0005, type=float)
 group_t.add_argument("--resume", action="store_true", default=False)
 group_t.add_argument("--seed", default=1234, type=int)
 
+group_u = parser.add_argument_group("UrbanSound8k parameters")
+group_u.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
+group_u.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
+
+group_c = parser.add_argument_group("Cifar10 parameters")
+
 group_h = parser.add_argument_group('hyperparameters')
-group_h.add_argument("--lambda_cot_max", default=10, type=float)
-group_h.add_argument("--lambda_diff_max", default=0.5, type=float)
-group_h.add_argument("--warmup_length", default=1000, type=int)
+group_h.add_argument("--lambda_cot_max", default=1, type=float)
+group_h.add_argument("--lambda_diff_max", default=1, type=float)
+group_h.add_argument("--warmup_length", default=1, type=int)
 group_h.add_argument("--epsilon", default=0.02, type=float)
 
 group = parser.add_argument_group('uniloss')
-group.add_argument("--loss_scheduler", default="no_rule", type=str)
-group.add_argument("--steps", default=1, type=int)
+group.add_argument("--loss_scheduler", default="weighted-linear", type=str)
+group.add_argument("--steps", default=10, type=int)
 group.add_argument("--cycle", default=1, type=int)
 group.add_argument("--beta", default=1, type=int)
 group.add_argument("--plsup_mini", default=0.0, type=float)
@@ -68,94 +78,58 @@ group_a.add_argument("--augment_S", action="store_true", help="Apply augmentatio
 group_a.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
 
 group_l = parser.add_argument_group("Logs")
-group_l.add_argument("--checkpoint_path", default="../../model_save/deep-co-training_independant-loss", type=str)
-group_l.add_argument("--tensorboard_path", default="../../tensorboard/deep-co-training_independant-loss", type=str)
+group_l.add_argument("--checkpoint_path", default="../../model_save/ubs8k/deep-co-training_independant-loss", type=str)
+group_l.add_argument("--tensorboard_path", default="../../tensorboard/ubs8k/deep-co-training_independant-loss", type=str)
 group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
-args = parser.parse_args()
+args = parser.parse_args("")
 
 
-reset_seed(args.seed)
-
-# ## Prepare the dataset
-
-# In[5]:
+# In[7]:
 
 
-audio_root = os.path.join(args.dataset_root, "audio")
-metadata_root = os.path.join(args.dataset_root, "metadata")
-all_folds = args.train_folds + args.val_folds
+# modify checkpoint and tensorboard path to fit the dataset
+checkpoint_path_ = args.checkpoint_path.split("/")
+tensorboard_path_ = args.tensorboard_path.split("/")
 
-manager = DatasetManager(
-    metadata_root, audio_root,
-    folds=all_folds,
-    verbose=1
-)
+checkpoint_path_[3] = args.dataset
+tensorboard_path_[3] = args.dataset
 
-
-# In[24]:
+args.checkpoint_path = "/".join(checkpoint_path_)
+args.tensorboard_path = "/".join(tensorboard_path_)
+args
 
 
-# prepare the sampler with the specified number of supervised file
-train_dataset = Dataset(manager, folds=args.train_folds, cached=True)
-val_dataset = Dataset(manager, folds=args.val_folds, cached=True)
+# In[8]:
 
 
-# ## Models
-
-# In[549]:
-
-
-torch.cuda.empty_cache()
-model_func = get_model_from_name(args.model)
-
-m1, m2 = model_func(manager=manager), model_func(manager=manager)
-
-m1 = m1.cuda()
-m2 = m2.cuda()
-
-
-# ## Adversarial generator
-
-# In[550]:
-
-
-# adversarial generation
-adv_generator_1 = GradientSignAttack(
-    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-80, clip_max=0, targeted=True
-)
-
-adv_generator_2 = GradientSignAttack(
-    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-80, clip_max=0, targeted=True
-)
+reset_seed(1234)
 
 
 # ## Rules makers
 
-# In[551]:
+# In[9]:
 
 
-def uniform_rule(steps: int = 0, **kwargs):
-    sup_steps = [0.34 for _ in range(steps)]
-    cot_steps = [0.33 for _ in range(steps)]
-    diff_steps = [0.33 for _ in range(steps)]
-
+def uniform_rule(step: int = 0, **kwargs):
+    sup_steps = [0.34 for _ in range(step)]
+    cot_steps = [0.33 for _ in range(step)]
+    diff_steps = [0.33 for _ in range(step)]
+    
     return sup_steps, cot_steps, diff_steps
 
-def weighted_uniform_rule(steps: int = 0, **kwargs):
+
+def weighted_uniform_rule(step: int = 10, **kwargs):
     lcm = args.lambda_cot_max
     ldm = args.lambda_diff_max
     lsm = 1
-    total = lcm + ldm + lsm
-
-    sup_steps = [lsm * 0.34 for _ in range(steps)]
-    cot_steps = [lcm * 0.33 for _ in range(steps)]
-    diff_steps = [ldm * 0.33 for _ in range(steps)]
-
+    
+    sup_steps = [lsm * 0.34 for _ in range(step)]
+    cot_steps = [lcm * 0.33 for _ in range(step)]
+    diff_steps = [ldm * 0.33 for _ in range(step)]
+    
     # normalize
-    for i in range(steps):
+    for i in range(step):
         summed = sup_steps[i] + cot_steps[i] + diff_steps[i]
         sup_steps[i] /= summed
         cot_steps[i] /= summed
@@ -270,6 +244,10 @@ def weighted_annealing_cosine_rule(step: int = 10, cycle: int = 1, beta: float =
     ldm = args.lambda_diff_max
     lsm = 1
     
+    print("step: ", step)
+    print("cycle: ", cycle)
+    print("beta: ", beta)
+    
     hop_length = np.linspace(0, args.nb_epoch, step * cycle)
     
     # create original steps
@@ -292,42 +270,50 @@ def weighted_annealing_cosine_rule(step: int = 10, cycle: int = 1, beta: float =
         
     return sup_steps, cot_steps, diff_steps
 
-def sigmoid_rule(steps: int = 10, **kwargs):
-    hop_length = np.linspace(0, args.nb_epoch, steps)
+def sigmoid_rule(step: int = 10, **kwargs):
+    hop_length = np.linspace(0, args.nb_epoch, step)
     
     sup_steps = np.asarray([sigmoid_rampdown(x, args.nb_epoch) for x in hop_length])
     cot_steps = np.asarray([sigmoid_rampup(x, args.nb_epoch) for x in hop_length])
     diff_steps = np.asarray([sigmoid_rampup(x, args.nb_epoch) for x in hop_length])
     
     # normalize
-    for i in range(steps):
+    for i in range(step):
         summed = sup_steps[i] + cot_steps[i] + diff_steps[i]
         sup_steps[i] /= summed
         cot_steps[i] /= summed
         diff_steps[i] /= summed
-
+        
     return sup_steps, cot_steps, diff_steps
-    
 
-def weighted_sigmoid_rule(steps: int = 10, **kwargs):
+def weighted_sigmoid_rule(step: int = 10, **kwargs):
     lcm = args.lambda_cot_max
     ldm = args.lambda_diff_max
     lsm = 1
 
-    hop_length = np.linspace(0, args.nb_epoch, steps)
+    hop_length = np.linspace(0, args.nb_epoch, step)
     
     sup_steps = np.asarray([lsm * sigmoid_rampdown(x, args.nb_epoch) for x in hop_length])
     cot_steps = np.asarray([lcm * sigmoid_rampup(x, args.nb_epoch) for x in hop_length])
     diff_steps = np.asarray([ldm * sigmoid_rampup(x, args.nb_epoch) for x in hop_length])
     
     # normalize
-    for i in range(steps):
+    for i in range(step):
         summed = sup_steps[i] + cot_steps[i] + diff_steps[i]
         sup_steps[i] /= summed
         cot_steps[i] /= summed
         diff_steps[i] /= summed
-
+        
     return sup_steps, cot_steps, diff_steps
+
+def loss_chooser(epoch):
+    for k in reversed(rules.keys()):
+        if epoch >= k:
+            chance = list(rules[k].values())
+            break
+    
+    loss_function = ["sup", "cot", "diff"]
+    return np.random.choice(loss_function, p=chance)
 
 def rule_maker(rule_fn, steps: int = 10, **kwargs):
     p_lsup, p_lcot, p_ldiff = rule_fn(steps, **kwargs)
@@ -340,15 +326,6 @@ def rule_maker(rule_fn, steps: int = 10, **kwargs):
         rules[epoch] = {"lsup": p_lsup[i], "lcot": p_lcot[i], "ldiff": p_ldiff[i]}
         
     return rules
-
-def loss_chooser(epoch):
-    for k in reversed(rules.keys()):
-        if epoch >= k:
-            chance = list(rules[k].values())
-            break
-    
-    loss_function = ["sup", "cot", "diff"]
-    return np.random.choice(loss_function, p=chance)
 
 def rule_chooser(rule_str):
     mapper = {
@@ -365,56 +342,130 @@ def rule_chooser(rule_str):
     }
     
     if rule_str not in mapper:
-     raise ValueError("Loss scheduler must be from [%s]" % (", ".join(mapper.keys())))
+        raise ValueError("Loss scheduler must be from [%s]" % (", ".join(mapper.keys())))
         
     return mapper[rule_str]
 
-rule_fn = rule_chooser(args.loss_scheduler)
-loss_scheduler_args = {
-    "steps": args.steps,
-    "cycle": args.cycle,
-    "beta": args.beta,
-    "plsup_mini": args.plsup_mini,
-}
 
-rules = rule_maker(rule_fn, **loss_scheduler_args)
+# def weighted_linear_rule(step: int = 10, **kwargs):
+#     lcm = args.lambda_cot_max
+#     ldm = args.lambda_diff_max
+#     lsm = 1
+#     total = lcm + ldm + lsm
+#     
+#     # normalize
+#     lcm /= total
+#     ldm /= total
+#     lsm /= total
+#     
+#     sup_steps = np.linspace(1, lsm, step)
+#     cot_steps = np.linspace(0, lcm, step)
+#     diff_steps = np.linspace(0, ldm, step)
+#     
+#     return sup_steps, cot_steps, diff_steps
+# 
 
-# ## Loaders
-
-# In[553]:
+# In[10]:
 
 
-s_idx, u_idx = train_dataset.split_s_u(args.supervised_ratio)
+scheduler_args = dict(
+    steps = args.steps,
+    cycle=8,
+    beta=3,
+    plsup_mini=0.0,
+)
 
-# Calc the size of the Supervised and Unsupervised batch
-nb_s_file = len(s_idx)
-nb_u_file = len(u_idx)
+rule_fn = rule_chooser("weighted-annealing-cosine")#args.loss_scheduler)
+print(rule_fn)
+rules = rule_maker(rule_fn, **scheduler_args)
 
-ratio = nb_s_file / nb_u_file
-s_batch_size = int(np.floor(args.batch_size * ratio))
-u_batch_size = int(np.ceil(args.batch_size * (1 - ratio)))
 
-# create the sampler, the loader and "zip" them
-sampler_s1 = data.SubsetRandomSampler(s_idx)
-sampler_s2 = data.SubsetRandomSampler(s_idx)
-sampler_u = data.SubsetRandomSampler(u_idx)
+# In[11]:
 
-train_loader_s1 = data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s1)
-train_loader_s2 = data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s2)
-train_loader_u = data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
 
-train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
-val_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+def create_fig(rules):
+    import matplotlib.pyplot as plt
+    lsup = np.asarray([rules[k]["lsup"] for k in rules])
+    lcot = np.asarray([rules[k]["lcot"] for k in rules])
+    ldiff = np.asarray([rules[k]["ldiff"] for k in rules])
+    steps = [k for k in rules]
+    xticks = ["%d" % s for s in steps]
+
+
+    fig = plt.figure(0, figsize=(10, 10))
+    plt.title("linear rule", fontsize=18)
+    plt.xlabel("epochs", fontsize=14)
+    plt.ylabel("Probabilities", fontsize=14)
+    plt.ylim(0, 1)
+
+    # plt.bar(range(len(steps)), lsup, bottom=0, label="P lsup")
+    # plt.bar(range(len(steps)), lcot, bottom=lsup, label="P lcot")
+    # plt.bar(range(len(steps)), ldiff, bottom=lsup+lcot, label="P ldiff")
+#     plt.xticks(range(len(steps)), xticks)
+
+    plt.plot(steps, lsup, marker="o", label="P Lsup")
+    plt.plot(steps, lcot, marker="+", label="P Lcot", alpha=0.5)
+    plt.plot(steps, ldiff, marker=".", label="P Ldiff")
+#     plt.xticks(steps, xticks)
+    
+    return fig
+fig = create_fig(rules)
+
+
+# # Load the dataset and create the dataloader
+
+# In[38]:
+
+manager, train_loader, val_loader = load_dataset(
+    args.dataset,
+    dataset_root = args.dataset_root,
+    supervised_ratio = args.supervised_ratio,
+    batch_size = args.batch_size,
+    train_folds = args.train_folds,
+    val_folds = args.val_folds,
+    verbose = 2
+)
+
+
+# ## Models
+
+# In[23]:
+
+
+torch.cuda.empty_cache()
+model_func = get_model_from_name(args.model)
+
+m1, m2 = model_func(manager=manager), model_func(manager=manager)
+
+m1 = m1.cuda()
+m2 = m2.cuda()
+
+
+# ## Adversarial generator
+
+# In[24]:
+
+
+# adversarial generation
+adv_generator_1 = GradientSignAttack(
+    m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+    eps=args.epsilon, clip_min=-80, clip_max=0, targeted=True
+)
+
+adv_generator_2 = GradientSignAttack(
+    m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+    eps=args.epsilon, clip_min=-80, clip_max=0, targeted=True
+)
 
 
 # ## training parameters
 
-# In[554]:
+# In[27]:
 
 
 # tensorboard
-tensorboard_title = "%s_%s_%.1fS_%se_%slr_%s-rfn_%ss_%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.loss_scheduler, args.steps, args.tensorboard_sufix)
-checkpoint_title = "%s_%.1fS_%se_%slr_%s-rfn_%ss_%s" % (model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.loss_scheduler, args.steps, args.tensorboard_sufix)
+tensorboard_title = "%s_%s_%.1f_%se_%slr_%sw_%s-rfn_%ss" % (get_datetime(), model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.warmup_length, rule_fn.__name__, args.steps)
+checkpoint_title =  "%s_%.1f_%se_%slr_%sw_%s-rfn_%ss" % (model_func.__name__, args.supervised_ratio, args.nb_epoch, args.learning_rate, args.warmup_length, rule_fn.__name__, args.steps)
 tensorboard = SummaryWriter(log_dir="%s/%s" % (args.tensorboard_path, tensorboard_title), comment=model_func.__name__)
 
 # Losses
@@ -460,7 +511,7 @@ def reset_metrics():
             item.reset()
 
 
-# In[555]:
+# In[28]:
 
 
 reset_metrics()
@@ -468,22 +519,20 @@ reset_metrics()
 
 # ## Can resume previous training
 
-# In[556]:
+# In[29]:
 
 
-args.resume
 
+# In[30]:
 
-# In[557]:
-
-
+# If resume is True, load last epoch from model
 if args.resume:
     checkpoint_m1.load_last()
 
 
 # ## Metrics and hyperparameters
 
-# In[558]:
+# In[31]:
 
 
 def get_lr(optimizer):
@@ -506,7 +555,7 @@ maximum_fn = maximum()
 
 # # Training functions
 
-# In[559]:
+# In[32]:
 
 
 UNDERLINE_SEQ = "\033[1;4m"
@@ -521,7 +570,6 @@ header = header_form.format(
     "", "Epoch", "%", "Losses:", "Lsup", "Lcot", "Ldiff", "total", "metrics: ", "acc_s1", "acc_u1","Time"
 )
 
-
 train_form = value_form
 val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
 
@@ -534,7 +582,7 @@ print(header)
 
 # ## Train sup
 
-# In[560]:
+# In[33]:
 
 
 def train_sup_helper(start_time, epoch, batch, x_s1, x_s2, y_s1, y_s2):
@@ -590,7 +638,7 @@ def train_sup_helper(start_time, epoch, batch, x_s1, x_s2, y_s1, y_s2):
 
 # ## Train cot
 
-# In[561]:
+# In[34]:
 
 
 def train_cot_helper(start_time, epoch, batch, x_u, y_u):
@@ -641,7 +689,7 @@ def train_cot_helper(start_time, epoch, batch, x_u, y_u):
 
 # ## Train diff
 
-# In[562]:
+# In[35]:
 
 
 def train_diff_helper(start_time, epoch, batch, x_s1, x_s2, x_u, y_s1, y_s2, y_u):
@@ -752,7 +800,7 @@ def train_diff_helper(start_time, epoch, batch, x_s1, x_s2, x_u, y_s1, y_s2, y_u
     return total_loss.item()
 
 
-# In[563]:
+# In[36]:
 
 
 def train(epoch):
@@ -780,7 +828,7 @@ def train(epoch):
             return train_diff_helper(st, epoch, batch, x_s1, x_s2, x_u, y_s1, y_s2, y_u)
 
 
-# In[564]:
+# In[37]:
 
 
 def test(epoch, msg = ""):
@@ -842,7 +890,7 @@ def test(epoch, msg = ""):
 
 # # Training
 
-# In[565]:
+# In[38]:
 
 
 print(header)
@@ -860,13 +908,17 @@ tensorboard.flush()
 tensorboard.close()
 
 
-# In[566]:
+# In[40]:
 
 
 print("rule function: ", rule_fn)
+print("nb steps: ", args.steps)
 print("model: ", model_func)
 print("max acc 1: %.2f" % (maximum_fn.max["acc_1"].item() * 100))
 print("max acc 2: %.2f" % (maximum_fn.max["acc_2"].item() * 100))
 
 
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
+
+
+

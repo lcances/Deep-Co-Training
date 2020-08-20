@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+dataset="ubs8k"
 models=("cnn03")
 schedulers=("annealing-cosine" "weighted-annealing-cosine")
 learning_rate=("0.0005")
@@ -13,8 +13,8 @@ cycle=(8 12 16)
 beta=(1 2 3)
 plsup_mini=("0.0")
 
-tensorboard_dir="../../tensorboard/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm/grid_search"
-checkpoint_dir="../../model_save/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm/grid_search"
+tensorboard_dir="../../tensorboard/${dataset}/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm/grid_search"
+checkpoint_dir="../../model_save/${dataset}/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm/grid_search"
 
 for m in ${models[@]}; do
 for s in ${schedulers[@]}; do
@@ -28,6 +28,7 @@ for lb in ${beta[@]}; do
 for psm in ${plsup_mini[@]}; do
 	tensorboard_sufix="${lc}cycle_${lb}beta_${psm}m_plsup"
 	python co-training_independant_loss.py \
+        --dataset ${dataset} \
 		--tensorboard_path ${tensorboard_dir} \
 		--checkpoint_path ${checkpoint_dir} \
 		--tensorboard_sufix ${tensorboard_sufix} \

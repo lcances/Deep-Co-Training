@@ -2,7 +2,8 @@
 
 # ___________________________________________________________________________________ #
 function show_help {
-    echo "usage:  $BASH_SOURCE [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s LOSS SCHEDULER] [-l LEARNING_RATE] [-S STEPS] [-c LAMBDA_COT_MAX] [-d LAMBDA DIFF MAX] [-t LOG SUB DIR] [-h]"
+    echo "usage:  $BASH_SOURCE [-D DATASET] [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s LOSS SCHEDULER] [-l LEARNING_RATE] [-S STEPS] [-c LAMBDA_COT_MAX] [-d LAMBDA DIFF MAX] [-t LOG SUB DIR] [-h]"
+    echo "    -D DATASET (default ubs8k)"
     echo "    -m MODEL (default cnn03)"
     echo "    -r SUPERVISED RATIO (default 0.1)"
     echo "    -e EPOCH (default 3000)"
@@ -15,19 +16,24 @@ function show_help {
     echo "    -t LOG SUB DIRECTORY (default \"\")"
     echo "    -h help"
     
+    echo "Available datasets"
+    echo "    ubs8k"
+    echo "    cifar10"
+    
     echo "Available models"
-    echo "	cnn0"
-    echo "	cnn03"
-    echo "	scallable1"
+    echo "    cnn0"
+    echo "    cnn03"
+    echo "    scallable1"
 
     echo "Available loss scheduler"
-    echo "	linear"
-    echo "	weighted linear"
-    echo "	sigmoid"
-    echo "	weighted sigmoid"
+    echo "    linear"
+    echo "    weighted linear"
+    echo "    sigmoid"
+    echo "    weighted sigmoid"
 }
 
 # default parameters
+DATASET="ubs8k"
 MODEL=cnn03
 RATIO=0.1
 NB_EPOCH=3000
@@ -39,8 +45,9 @@ LAMBDA_DIFF_MAX=0.5
 RESUME=0
 LOG_SUB_DIR=""
 
-while getopts "m:r:e:s:S:l:c:d:t::R::h" arg; do
+while getopts "D:m:r:e:s:S:l:c:d:t::R::h" arg; do
   case $arg in
+    D) DATASET=$OPTARG;;
     m) MODEL=$OPTARG;;
     r) RATIO=$OPTARG;;
     e) NB_EPOCH=$OPTARG;;
@@ -76,8 +83,8 @@ folds=(
 	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
 )
 
-tensorboard_path_root="../../tensorboard/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
-checkpoint_path_root="../../model_save/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
+tensorboard_path_root="../../tensorboard/${DATASET}/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
+checkpoint_path_root="../../model_save/${DATASET}/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
 
 # ___________________________________________________________________________________ #
 parameters=""
