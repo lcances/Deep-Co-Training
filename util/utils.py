@@ -169,21 +169,22 @@ def load_dataset(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
+        **kwargs
     ):
     
     parameters = dict(
         dataset_root = dataset_root,
-        supervised_ratio = supervised_datio,
+        supervised_ratio = supervised_ratio,
         batch_size = batch_size,
     )
     
     if dataset_name == "ubs8k":
-        from ubs8k_loader import load_ubs8k_classic
-        return load_ubs8k_classic(**parameters)
+        from .ubs8k_loader import load_ubs8k_classic
+        return load_ubs8k_classic(**parameters, **kwargs)
     
     elif dataset_name == "cifar10":
-        from cifar10_loader import load_cifar10_classic
-        return load_cifar10_classic(**parameters)
+        from .cifar10_loader import load_cifar10_classic
+        return load_cifar10_classic(**parameters,**kwargs)
     
     else:
         available_dataset = [
