@@ -16,24 +16,21 @@ from advertorch.attacks import GradientSignAttack
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 
-import sys
-sys.path.append("../../..")
-
-from util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
+from DCT.util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
-from util.checkpoint import CheckPoint
+from DCT.util.checkpoint import CheckPoint
 
-from UrbanSound8k.ramps import Warmup, sigmoid_rampup
-from UrbanSound8k.losses import loss_cot, loss_diff, loss_sup
+from DCT.ramps import Warmup, sigmoid_rampup
+from DCT.losses import loss_cot, loss_diff, loss_sup
 
 import augmentation_utils.spec_augmentations as spec_aug
-from UrbanSound8k.augmentation_list import augmentations
+from DCT.augmentation_list import augmentations
 
 
 # # Arguments
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--dataset_root", default="../../../datasets/ubs8k", type=str)
+parser.add_argument("-d", "--dataset_root", default="../../datasets/ubs8k", type=str)
 parser.add_argument("--supervised_ratio", default=0.1, type=float)
 parser.add_argument("--supervised_mult", default=1.0, type=float)
 parser.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
@@ -51,9 +48,9 @@ parser.add_argument("--epsilon", default=0.02, type=float)
 
 parser.add_argument("--augment", action="append", help="augmentation. use as if python script")
 
-parser.add_argument("--checkpoint_path", default="../../../model_save/ubs8k/deep-co-training_aug4adv", type=str)
+parser.add_argument("--checkpoint_path", default="../../model_save/ubs8k/deep-co-training_aug4adv", type=str)
 parser.add_argument("--resume", action="store_true", default=False)
-parser.add_argument("--tensorboard_path", default="../../../tensorboard/ubs8k/deep-co-training_aug4adv", type=str)
+parser.add_argument("--tensorboard_path", default="../../tensorboard/ubs8k/deep-co-training_aug4adv", type=str)
 parser.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
