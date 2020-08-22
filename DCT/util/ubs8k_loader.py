@@ -8,7 +8,45 @@ import numpy as np
 import torch.utils.data as torch_data
 
 
-def load_ubs8k_classic(
+def load_ubs8k_supervised(
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 64,
+    train_folds: tuple = (1, 2, 3, 4, 5, 6, 7 ,8, 9),
+    val_folds: tuple = (10, ),
+    verbose = 1,
+):
+    """
+    Load the UrbanSound dataset for supervised systems.
+    """
+    audio_root = os.path.join(dataset_root, "ubs8k", "audio")
+    metadata_root = os.path.join(dataset_root, "ubs8k", "metadata")
+    
+    all_folds = train_folds + val_folds
+ 
+    # Create the dataset manager
+    manager = DatasetManager(
+        metadata_root, audio_root,
+        folds=all_folds,
+        verbose=verbose
+    )
+    
+    # prepare the default dataset
+    train_dataset = Dataset(manager, folds=train_folds, cached=True)
+    val_dataset = Dataset(manager, folds=val_folds, cached=True)
+    
+    # split the training set into a supervised and unsupervised sets
+    s_idx, u_idx = train_dataset.split_s_u(supervised_ratio)
+
+    # Train loader only use the s_idx
+    sampler_s = torch_data.SubsetRandomSampler(s_idx)
+    train_loader = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    
+    return manager, train_loader, val_loader
+
+    
+def load_ubs8k_dct(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
