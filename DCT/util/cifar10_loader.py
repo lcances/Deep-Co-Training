@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 
 def split_s_u(train_dataset, s_ratio: float = 0.1):
     if s_ratio == 1.0:
-        return list(range(len(train_dataset)))
+        return list(range(len(train_dataset))), []
     
     # add indexes
     datasets = [(idx, x, y) for idx, (x, y) in enumerate(train_dataset)]
@@ -36,7 +36,7 @@ def split_s_u(train_dataset, s_ratio: float = 0.1):
     return s_idx, u_idx
     
 
-def load_cifar10_classic(
+def load_cifar10_dct(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
@@ -48,8 +48,8 @@ def load_cifar10_classic(
     # Prepare the default dataset
     transform = transforms.Compose(
         [transforms.ToTensor(),
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
+         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
 
     train_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=True, download=True, transform=transform)
     val_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=False, download=True, transform=transform)
@@ -76,5 +76,37 @@ def load_cifar10_classic(
 
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
     val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    
+    return None, train_loader, val_loader
+
+
+def load_cifar10_supervised(
+        dataset_root,
+        supervised_ratio: float = 0.1,
+        batch_size: int = 64,
+        extra_train_transform: list = [],
+        **kwargs
+):
+    """
+    Load the cifar10 dataset for Deep Co Training system.
+    """
+    # Prepare the default dataset
+    commun_transform = [
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+    ]
+    
+    train_transform = transforms.Compose(extra_train_transform + commun_transform)
+    val_transform = transforms.Compose(commun_transform)
+
+    train_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=True, download=True, transform=train_transform)
+    val_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=False, download=True, transform=val_transform)
+    
+    # Split the training dataset into a supervised and unsupervised sets
+    s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
+    
+    sampler_s1 = torch_data.SubsetRandomSampler(s_idx)
+    train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s1, num_workers=4, pin_memory=True, )
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True, )
     
     return None, train_loader, val_loader
