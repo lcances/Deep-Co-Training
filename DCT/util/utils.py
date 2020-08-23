@@ -85,12 +85,13 @@ def get_datetime():
 
 
 def get_model_from_name(model_name):
-    import UrbanSound8k.models as ubs8k_models
-    import UrbanSound8k.models_test as ubs8k_models_test
+    import DCT.ubs8k_models as ubs8k_models
+    import DCT.cifar10_models as cifar10_models
+    import DCT.models_test as ubs8k_models_test
     import inspect
 
     all_members = []
-    for module in [ubs8k_models, ubs8k_models_test]:
+    for module in [ubs8k_models, ubs8k_models_test, cifar10_models]:
         all_members += inspect.getmembers(module)
     
     for name, obj in all_members:
@@ -166,11 +167,16 @@ class ZipCycle(Iterable, Sized):
     
 def load_dataset(
         dataset_name: str,
+        framework: str,
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
         **kwargs
     ):
+    """Load the proper dataset for the proper framework.
+    
+    :param dataset_name: The name of the dataset, available are "ubs8k", "cifar10"
+    :param framework": For which framework should the dataset be loaded. "dct", "supervised"    """
     
     parameters = dict(
         dataset_root = dataset_root,
@@ -179,12 +185,24 @@ def load_dataset(
     )
     
     if dataset_name == "ubs8k":
-        from .ubs8k_loader import load_ubs8k_classic
-        return load_ubs8k_classic(**parameters, **kwargs)
+        from .ubs8k_loader import load_ubs8k_dct, load_ubs8k_supervised
+        
+        if framework == "dct":
+            return load_ubs8k_dct(**parameters, **kwargs)
+        elif framework == "supervised":
+            return load_ubs8k_supervised(**parameters, **kwargs)
+        else:
+            raise ValueError("framework %s do not exist. Available [\"supervised\", \"dct\"]")
     
     elif dataset_name == "cifar10":
-        from .cifar10_loader import load_cifar10_classic
-        return load_cifar10_classic(**parameters,**kwargs)
+        from .cifar10_loader import load_cifar10_dct, load_cifar10_supervised
+        
+        if framework == "dct":
+            return load_cifar10_dct(**parameters,**kwargs)
+        elif framework == "supervised":
+            return load_cifar10_supervised(**parameters, **kwargs)
+        else:
+            raise ValueError("framework %s do not exist. Available [\"supervised\", \"dct\"]")
     
     else:
         available_dataset = [
