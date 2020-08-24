@@ -85,9 +85,9 @@ def get_datetime():
 
 
 def get_model_from_name(model_name):
-    import DCT.ubs8k_models as ubs8k_models
-    import DCT.cifar10_models as cifar10_models
-    import DCT.models_test as ubs8k_models_test
+    import DCT.ubs8k.models as ubs8k_models
+    import DCT.ubs8k.models_test as ubs8k_models_test
+    import DCT.cifar10.models as cifar10_models
     import inspect
 
     all_members = []
@@ -99,7 +99,10 @@ def get_model_from_name(model_name):
             if obj.__name__ == model_name:
                 logging.info("Model loaded: %s" % model_name)
                 return obj
-    raise AttributeError("This model does not exist: %s " % model_name)
+            
+    msg = "This model does not exist: %s\n" % model_name
+    msg += "Available models are: %s" % [name for name, obj in all_members if inspect.isclass(obj) or inspect.isfunction(obj)]
+    raise AttributeError("This model does not exist: %s " % msg)
 
 
 def reset_seed(seed):
@@ -185,7 +188,7 @@ def load_dataset(
     )
     
     if dataset_name == "ubs8k":
-        from .ubs8k_loader import load_ubs8k_dct, load_ubs8k_supervised
+        from DCT.ubs8K.loader import load_ubs8k_dct, load_ubs8k_supervised
         
         if framework == "dct":
             return load_ubs8k_dct(**parameters, **kwargs)
@@ -195,7 +198,7 @@ def load_dataset(
             raise ValueError("framework %s do not exist. Available [\"supervised\", \"dct\"]")
     
     elif dataset_name == "cifar10":
-        from .cifar10_loader import load_cifar10_dct, load_cifar10_supervised
+        from DCT.cifar10.loader import load_cifar10_dct, load_cifar10_supervised
         
         if framework == "dct":
             return load_cifar10_dct(**parameters,**kwargs)
