@@ -188,12 +188,14 @@ def load_dataset(
     )
     
     if dataset_name == "ubs8k":
-        from DCT.ubs8K.loader import load_ubs8k_dct, load_ubs8k_supervised
+        from DCT.ubs8k.loader import load_ubs8k_dct, load_ubs8k_supervised, load_ubs8k_dct_aug4adv
         
         if framework == "dct":
             return load_ubs8k_dct(**parameters, **kwargs)
         elif framework == "supervised":
             return load_ubs8k_supervised(**parameters, **kwargs)
+        elif framework == "aug4adv":
+            return load_ubs8k_dct_aug4adv(**parameters, **kwargs)
         else:
             raise ValueError("framework %s do not exist. Available [\"supervised\", \"dct\"]")
     
