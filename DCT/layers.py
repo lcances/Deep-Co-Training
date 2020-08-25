@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-
-
 class DenseConvBlock(nn.Module):
     def __init__(self, in_size, out_size):
         super().__init__()
