@@ -1,15 +1,3 @@
-# # import
-
-# In[38]:
-
-
-# get_ipython().run_line_magic('load_ext', 'autoreload')
-# get_ipython().run_line_magic('autoreload', '2')
-
-
-# In[39]:
-
-
 import os
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
@@ -25,19 +13,12 @@ from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
-
-# In[40]:
-
-
 from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 
-import sys
-sys.path.append("../..")
-
+from DCT.util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
 from DCT.util.checkpoint import CheckPoint
-from DCT.util.utils import reset_seed, get_datetime, get_model_from_name, ZipCycle, load_dataset
 
 from DCT.ramps import Warmup, sigmoid_rampup
 from DCT.losses import loss_cot, loss_diff, loss_sup
@@ -47,6 +28,7 @@ from DCT.augmentation_list import augmentations
 
 
 # # Arguments
+<<<<<<< HEAD
 
 
 
@@ -169,6 +151,122 @@ m2 = m2.cuda()
 # tensorboard
 tensorboard_title = "%s_%s_%.1f_%s-%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, args.augment_m1, args.augment_m2)
 checkpoint_title = "%s_%.1f" % (model_func.__name__, args.supervised_ratio)
+=======
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--dataset_root", default="../../datasets/ubs8k", type=str)
+parser.add_argument("--supervised_ratio", default=0.1, type=float)
+parser.add_argument("--supervised_mult", default=1.0, type=float)
+parser.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
+parser.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
+
+parser.add_argument("--model", default="cnn03", type=str)
+parser.add_argument("--batch_size", default=100, type=int)
+parser.add_argument("--nb_epoch", default=100, type=int)
+parser.add_argument("--learning_rate", default=0.003, type=int)
+
+parser.add_argument("--lambda_cot_max", default=10, type=float)
+parser.add_argument("--lambda_diff_max", default=0.5, type=float)
+parser.add_argument("--warmup_length", default=80, type=int)
+parser.add_argument("--epsilon", default=0.02, type=float)
+
+parser.add_argument("--augment", action="append", help="augmentation. use as if python script")
+
+parser.add_argument("--checkpoint_path", default="../../model_save/ubs8k/deep-co-training_aug4adv", type=str)
+parser.add_argument("--resume", action="store_true", default=False)
+parser.add_argument("--tensorboard_path", default="../../tensorboard/ubs8k/deep-co-training_aug4adv", type=str)
+parser.add_argument("--tensorboard_sufix", default="", type=str)
+
+args = parser.parse_args()
+
+
+augmentation_list = list(augmentations.keys())
+selected_augmentation = args.augment 
+
+
+reset_seed(1234)
+
+# ## Prepare the dataset
+audio_root = os.path.join(args.dataset_root, "audio")
+metadata_root = os.path.join(args.dataset_root, "metadata")
+all_folds = args.train_folds + args.val_folds
+
+manager = DatasetManager(
+    metadata_root, audio_root,
+    folds=all_folds,
+    verbose=1
+)
+
+
+# prepare the sampler with the specified number of supervised file
+train_dataset = Dataset(manager, folds=args.train_folds, cached=True)
+val_dataset = Dataset(manager, folds=args.val_folds, cached=True)
+
+
+# ## Models
+torch.cuda.empty_cache()
+model_func = get_model_from_name(args.model)
+
+m1, m2 = model_func(manager=manager), model_func(manager=manager)
+
+m1 = m1.cuda()
+m2 = m2.cuda()
+
+
+# ## Loaders
+s_idx, u_idx = train_dataset.split_s_u(args.supervised_ratio)
+
+# Calc the size of the Supervised and Unsupervised batch
+nb_s_file = len(s_idx)
+nb_u_file = len(u_idx)
+
+ratio = nb_s_file / nb_u_file
+s_batch_size = int(np.floor(args.batch_size * ratio))
+u_batch_size = int(np.ceil(args.batch_size * (1 - ratio)))
+
+# create the sampler, the loader and "zip" them
+sampler_s1 = data.SubsetRandomSampler(s_idx)
+sampler_s2 = data.SubsetRandomSampler(s_idx)
+sampler_u = data.SubsetRandomSampler(u_idx)
+
+train_loader_s1 = data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s1)
+train_loader_s2 = data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s2)
+train_loader_u = data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
+
+train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
+val_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+
+
+# ## Adversarial generator
+if len(selected_augmentation) == 1:
+    augment_1 = selected_augmentation[0]
+    augment_2 = selected_augmentation[1]
+elif len(selected_augmentation) >= 2:
+    augment_1, augment_2 = selected_augmentation[:2]
+else:
+    raise ValueError("At least one augmentation must be provide. Use --augment <augment name> in the execution parameters")
+
+train_dataset_aug1 = Dataset(manager, folds=args.train_folds, augments=(augmentations[augment_1], ), cached=True)
+train_dataset_aug2 = Dataset(manager, folds=args.train_folds, augments=(augmentations[augment_2], ), cached=True)
+
+
+train_loader_s1_aug1 = data.DataLoader(train_dataset_aug1, batch_size=s_batch_size, sampler=sampler_s1, num_workers=4)
+train_loader_u_aug1 = data.DataLoader(train_dataset_aug1, batch_size=u_batch_size, sampler=sampler_u, num_workers=4)
+train_loader_aug1 = ZipCycle([train_loader_s1_aug1, train_loader_u_aug1])
+
+train_loader_s2_aug2 = data.DataLoader(train_dataset_aug2, batch_size=s_batch_size, sampler=sampler_s2, num_workers=4)
+train_loader_u_aug2 = data.DataLoader(train_dataset_aug2, batch_size=u_batch_size, sampler=sampler_u, num_workers=4)
+train_loader_aug2 = ZipCycle([train_loader_s2_aug2, train_loader_u_aug2])
+
+
+final_train_loader = ZipCycle([train_loader, train_loader_aug1, train_loader_aug2])
+
+
+# ## training parameters
+# tensorboard
+tensorboard_title = "%s_%s_%.1f_%s-%s" % (get_datetime(), model_func.__name__, args.supervised_ratio, augment_1, augment_2)
+checkpoint_title = "%s_%.1f_%s-%s" % (model_func.__name__, args.supervised_ratio, augment_1, augment_2)
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 tensorboard = SummaryWriter(log_dir="%s/%s" % (args.tensorboard_path, tensorboard_title), comment=model_func.__name__)
 
 # Losses
@@ -213,21 +311,14 @@ def reset_metrics():
         else:
             item.reset()
 
+reset_metrics()
+
 
 # ## Can resume previous training
-
-# In[47]:
-
-
 if args.resume:
     checkpoint_m1.load_last()
 
-
 # ## Metrics and hyperparameters
-
-# In[48]:
-
-
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -247,15 +338,10 @@ maximum_fn = maximum()
 
 
 # # Training functions
-
-# In[49]:
-
-
 UNDERLINE_SEQ = "\033[1;4m"
-
 RESET_SEQ = "\033[0m"
 
-
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} | {:<6.6} | {:<6.6} | {:<6.6} - {:<9.9} {:<9.9} | {:<9.9}- {:<6.6}"
 value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
 
@@ -282,6 +368,35 @@ def split_to_cuda(x_y):
 
 # In[51]:
 
+=======
+train_form = value_form
+val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
+
+def format_data(data: tuple):
+    def format_triple(data):
+        S1, S2, U = data
+        x_s1, y_s1 = S1
+        x_s2, y_s2 = S2
+        x_u, y_u = U
+
+        x_s1, x_s2, x_u = x_s1.cuda().float(), x_s2.cuda().float(), x_u.cuda().float()
+        y_s1, y_s2, y_u = y_s1.cuda().long(), y_s2.cuda().long(), y_u.cuda().long()
+        return x_s1, x_s2, x_u, y_s1, y_s2, y_u
+    
+    def format_double(data: tuple):
+        S, U = data
+        x_s, _ = S
+        x_u, _ = U
+        x_s, x_u = x_s.cuda().float(), x_u.cuda().float()
+        
+        return x_s, x_u
+    
+    if len(data) == 3:
+        return format_triple(data)
+    elif len(data) == 2:
+        return format_double(data)
+    else:
+        raise ValueError("data must a Iterable of size 2 or 3")
 
 def train(epoch):
     start_time = time.time()
@@ -291,6 +406,7 @@ def train(epoch):
     m1.train()
     m2.train()
 
+<<<<<<< HEAD
     for batch, (t_s1, t_s2, t_u1, t_u2, a_s1, a_s2, a_u1, a_u2) in enumerate(train_loader):
         x_s1, y_s1 = split_to_cuda(t_s1)
         x_s2, y_s2 = split_to_cuda(t_s2)
@@ -307,16 +423,36 @@ def train(epoch):
         logits_s2 = m2(x_s2)
         logits_u1 = m1(x_u1)
         logits_u2 = m2(x_u2)
+=======
+    for batch, (normal, aug1, aug2) in enumerate(final_train_loader):
+        x_s1, x_s2, x_u, y_s1, y_s2, y_u = format_data(normal)
+        x_s1_aug1, x_u_aug1 = format_data(aug1)
+        x_s2_aug2, x_u_aug2 = format_data(aug2)
+        
+        # Predict normal data
+        logits_s1 = m1(x_s1)
+        logits_s2 = m2(x_s2)
+        logits_u1 = m1(x_u)
+        logits_u2 = m2(x_u)
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 
         # pseudo labels of U
         pred_u1 = torch.argmax(logits_u1, 1)
         pred_u2 = torch.argmax(logits_u2, 1)
         
         # Predict augmented (adversarial data)
+<<<<<<< HEAD
         adv_logits_s1 = m1(ax_s2)
         adv_logits_u1 = m1(ax_u2)
         adv_logits_s2 = m2(ax_s1)
         adv_logits_u2 = m2(ax_u1)
+=======
+        adv_logits_s1 = m1(x_s2_aug2)
+        adv_logits_u1 = m1(x_u_aug2)
+        
+        adv_logits_s2 = m2(x_s1_aug1)
+        adv_logits_u2 = m2(x_u_aug1)
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 
         # ======== calculate the differents loss ========
         # zero the parameter gradients ----
@@ -346,8 +482,13 @@ def train(epoch):
 
             acc_s1 = metrics_fn["acc_s"][0](pred_s1, y_s1)
             acc_s2 = metrics_fn["acc_s"][1](pred_s2, y_s2)
+<<<<<<< HEAD
             acc_u1 = metrics_fn["acc_u"][0](pred_u1, y_u1)
             acc_u2 = metrics_fn["acc_u"][1](pred_u2, y_u2)
+=======
+            acc_u1 = metrics_fn["acc_u"][0](pred_u1, y_u)
+            acc_u2 = metrics_fn["acc_u"][1](pred_u2, y_u)
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 
             # ratios  ----
             adv_pred_s1 = torch.argmax(adv_logits_s1, 1)
@@ -357,8 +498,13 @@ def train(epoch):
 
             ratio_s1 = metrics_fn["ratio_s"][0](adv_pred_s1, y_s1)
             ratio_s2 = metrics_fn["ratio_s"][1](adv_pred_s2, y_s2)
+<<<<<<< HEAD
             ratio_u1 = metrics_fn["ratio_u"][0](adv_pred_u1, y_u1)
             ratio_u2 = metrics_fn["ratio_u"][1](adv_pred_u2, y_u2)
+=======
+            ratio_u1 = metrics_fn["ratio_u"][0](adv_pred_u1, y_u)
+            ratio_u2 = metrics_fn["ratio_u"][1](adv_pred_u2, y_u)
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
             # ========
 
             avg_total = metrics_fn["avg_total"](total_loss.item())
@@ -399,9 +545,12 @@ def train(epoch):
     return total_loss.item()
 
 
+<<<<<<< HEAD
 # In[52]:
 
 
+=======
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 def test(epoch, msg = ""):
     start_time = time.time()
     print("")
@@ -459,11 +608,16 @@ def test(epoch, msg = ""):
     checkpoint_m1.step(acc_1.mean)
 
 
+<<<<<<< HEAD
 # In[ ]:
 
 
 print(header)
 
+=======
+# Run training
+print(header)
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 for epoch in range(0, args.nb_epoch):
     total_loss = train(epoch)
     
@@ -472,6 +626,7 @@ for epoch in range(0, args.nb_epoch):
         break
         
     test(epoch)
+<<<<<<< HEAD
     tensorboard.flush()
     
 tensorboard.close()
@@ -488,3 +643,8 @@ tensorboard.close()
 
 
 
+=======
+
+tensorboard.flush()
+tensorboard.close()
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
