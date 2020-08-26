@@ -6,21 +6,23 @@ import librosa
 
 from ubs8k.datasetManager import DatasetManager, conditional_cache_v2
 from DCT.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool
-from torchvision.models import ResNet
-import torchvision.models as tm
+from .wideresnet import ResNet
 
 # =============================================================================
-#    WIDE RES NET
+#    PyTorch WIDE RESNET
 # =============================================================================
-def wideresnet50_2(**kwargs):
-    model = ResNet(tm.resnet.Bottleneck, [3, 4, 6, 3], num_classes=10, **kwargs)
-    return model
+# def wideresnet50_2(**kwargs):
+#     model = ResNet(tm.resnet.Bottleneck, [3, 4, 6, 3], num_classes=10, **kwargs)
+#     return model
 
-def wideresnet28_2(**kwargs):
-    model = ResNet(tm.resnet.Bottleneck, [2, 2, 2, 2], num_classes=10, **kwargs)
-    return model
+# def wideresnet28_2(**kwargs):
+#     model = ResNet(tm.resnet.Bottleneck, [2, 2, 2, 2], num_classes=10, **kwargs)
+#     return model
+
 
 # =============================================================================
+def wideresnet28_2():
+    return ResNet([4, 4, 4], num_classes=10)
 
 
 class Pmodel(nn.Module):
