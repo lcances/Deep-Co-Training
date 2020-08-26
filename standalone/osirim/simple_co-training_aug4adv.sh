@@ -78,6 +78,12 @@ cat << EOT > .sbatch_tmp.sh
 #SBATCH --gres-flags=enforce-binding
 
 
+# sbatch configuration
+container=/logiciels/containercollections/cuda10/pytorch.sif
+python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
+script=../standalone/co-training_AugAsAdv.py
+
+
 tensorboard_path_root="--tensorboard_path ../../tensorboard/ubs8k/deep-co-training_aug4adv/${MODEL}/${RATIO}S"
 checkpoint_path_root="--checkpoint_path ../../model_save/ubs8k/deep-co-training_aug4adv"
 
@@ -107,5 +113,10 @@ if [ $RESUME -eq 1 ]; then
     parameters="\${parameters} --resume"
 fi
 
-echo python co-training-AugAsAdv.py ${folds} \${tensorboard_sufix} \${parameters}
-python co-training-AugAsAdv.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
+echo python co-training-AugAsAdv.py ${folds} \${parameters}
+srun -n 1 -N 1 singularity exec \${container} \${python} \${script} ${folds} ${parameters}
+
+EOT
+
+echo "sbatch store in .sbatch_tmp.sh"
+sbatch .sbatch_tmp.sh
