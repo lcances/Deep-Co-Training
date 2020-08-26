@@ -94,8 +94,13 @@ parameters="${parameters} --nb_epoch ${NB_EPOCH}"
 parameters="${parameters} --learning_rate ${LEARNING_RATE}"
 
 # -------- augmentations --------
+<<<<<<< HEAD
 parameters="${parameters} --augment_m1 ${AUGMENT_1}"
 parameters="${parameters} --augment_m2 ${AUGMENT_2}"
+=======
+parameters="${parameters} --augment ${AUGMENT_1}"
+parameters="${parameters} --augment ${AUGMENT_2}"
+>>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 
 # -------- resume training --------
 if [ $RESUME -eq 1 ]; then
