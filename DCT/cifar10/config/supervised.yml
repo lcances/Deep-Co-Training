@@ -1,0 +1,17 @@
+# Dataset configuration
+dataset_path: "../datasets"
+dataset: "cifar10"
+supervised_ratio: 1.0
+
+# Training configuration
+model: wideresnet28_2
+batch_size: 128
+epoch: 200
+learning_rate: 0.1
+optimizer: cifar10_supervised # Loaded by loader<load_optim>
+resume: False
+
+# Miscalenous
+checkpoint_path: "../model_save/cifar10/full_supervised"
+tensorboard_path: "../tensorboard/cifar10/supervised"
+tensorboard_sufix: ""
