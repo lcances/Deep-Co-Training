@@ -65,7 +65,7 @@ fi
 folds="-t 1 2 3 4 5 6 7 8 9 -v 10"
 
 # ___________________________________________________________________________________ #
-$SBATCH_JOB_NAME = a4a_${MODEL}_${AUGMENT_1}_${AUGMENT_2}
+SBATCH_JOB_NAME=a4a_${MODEL}_${AUGMENT_1}_${AUGMENT_2}
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
