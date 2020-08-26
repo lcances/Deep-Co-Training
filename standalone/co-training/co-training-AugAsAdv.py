@@ -473,16 +473,3 @@ for epoch in range(0, args.nb_epoch):
     tensorboard.flush()
     
 tensorboard.close()
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
