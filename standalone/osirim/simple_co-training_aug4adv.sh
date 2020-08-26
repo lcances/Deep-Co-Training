@@ -65,6 +65,8 @@ fi
 folds="-t 1 2 3 4 5 6 7 8 9 -v 10"
 
 # ___________________________________________________________________________________ #
+$SBATCH_JOB_NAME = a4a_${MODEL}_${AUGMENT_1}_${AUGMENT_2}
+
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
 #SBATCH --job-name=$SBATCH_JOB_NAME
@@ -114,7 +116,7 @@ if [ $RESUME -eq 1 ]; then
 fi
 
 echo python co-training-AugAsAdv.py ${folds} \${parameters}
-srun -n 1 -N 1 singularity exec \${container} \${python} \${script} ${folds} ${parameters}
+srun -n 1 -N 1 singularity exec \${container} \${python} \${script} ${folds} \${parameters}
 
 EOT
 
