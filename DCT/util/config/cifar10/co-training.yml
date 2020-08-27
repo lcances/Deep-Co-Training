@@ -7,7 +7,6 @@ supervised_ratio: 0.1
 model: wideresnet28_2
 batch_size: 100
 epoch: 300
-learning_rate: 0.1
 optimizer: dct   # look at supervisor.py
 resume: False
 
