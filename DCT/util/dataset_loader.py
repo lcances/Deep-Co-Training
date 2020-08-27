@@ -1,6 +1,6 @@
 
 def load_cifar10_datasets(framework: str, **kwargs):
-    from DCT.cifar10.loader import load_cifar10_dct, load_cifar10_supervised
+    from DCT.cifar10.dataset_loader import load_cifar10_dct, load_cifar10_supervised
     
     if framework == "dct":
         return load_cifar10_dct(**kwargs)
@@ -13,7 +13,7 @@ def load_cifar10_datasets(framework: str, **kwargs):
         raise ValueError("framework %s do not exist. Available frameworks %s" % (framework, available))
 
 def load_ubs8k_datasets(framework: str):
-    from DCT.ubs8k.loader import load_ubs8k_dct, load_ubs8k_supervised, load_ubs8k_dct_aug4adv
+    from DCT.ubs8k.dataset_loader import load_ubs8k_dct, load_ubs8k_supervised, load_ubs8k_dct_aug4adv
         
     if framework == "dct":
         return load_ubs8k_dct(**kwargs)
