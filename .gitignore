@@ -13,3 +13,4 @@ tensorboard/ubs8k/ubs8k/test/2020-08-25_10:53:34_cnn03_0.1_s_n_20-flip_lr/events
 ._sync_cc565afc60a3.db-wal
 DCT.egg-info/
 venv.yml
+model_save/
