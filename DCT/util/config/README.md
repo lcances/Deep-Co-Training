@@ -21,9 +21,10 @@ Each configuration file must fullfil the following requirement
 - Specify a `supervised_ratio`
 - Specify the `model` to use
 - The training parameters such as:
+    - The `seed`
     - `batch_size`
-    - nb of `epoch`
-    - the `optimizer` function to use (see DCT/<dataset>/train_parameters.py)
+    - Number of `epoch`
+    - The `optimizer` function to use (see DCT/<dataset>/train_parameters.py)
 - Some log information such as:
     - The directory to save the model `checkpoint_path`
     - The diretory to save the tensorboard logs `tensorboard_path`
