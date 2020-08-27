@@ -28,3 +28,18 @@ Each configuration file must fullfil the following requirement
     - The directory to save the model `checkpoint_path`
     - The diretory to save the tensorboard logs `tensorboard_path`
     - A custom tensorboard name sufix `tensorboard_sufix`
+
+Depending on the framework use, some extra parameters would be needed
+- **Deep Co-Training**
+    - Hyperparameter `lambda_cot_max`
+    - Hyperparameter `lambda_diff_max`
+    - Hyperparameter `lambda_sup_max`
+    - Adversarial generation parameter `epsilon`
+
+- **Dee Co-Training Uniloss**
+    - Parameters from Deep Co-Training
+    - Loss scheduler name `loss_scheduler`
+    - Loss scheduler number of `steps`
+    - Cosine based loss scheduler number of `cycle`
+    - Annealed based loss scheduler decay scale `beta`
+    - Minimum draw probability for supervised loss `plsup_mini`
