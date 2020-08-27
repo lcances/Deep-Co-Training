@@ -5,6 +5,7 @@ supervised_ratio: 0.08
 
 # Training configuration
 model: wideresnet28_2
+seed: 1234
 batch_size: 100
 epoch: 300
 optimizer: dct   # look at supervisor.py

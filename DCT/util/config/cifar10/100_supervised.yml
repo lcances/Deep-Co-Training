@@ -4,6 +4,7 @@ dataset: "cifar10"
 supervised_ratio: 1.0
 
 # Training configuration
+seed: 1234
 model: wideresnet28_2
 batch_size: 128
 epoch: 200

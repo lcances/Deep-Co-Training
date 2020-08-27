@@ -4,6 +4,7 @@ dataset: "ubs8k"
 supervised_ratio: 1.0
 
 # Training configuration
+seed: 1234
 model: cnn03
 batch_size: 64
 epoch: 100
