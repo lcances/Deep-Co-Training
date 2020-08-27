@@ -6,7 +6,7 @@ import torch.utils.data as torch_data
 import torchvision.datasets
 import torchvision.transforms as transforms
 
-def split_s_u(train_dataset, s_ratio: float = 0.1):
+def _split_s_u(train_dataset, s_ratio: float = 0.1):
     if s_ratio == 1.0:
         return list(range(len(train_dataset))), []
     
@@ -55,7 +55,7 @@ def load_cifar10_dct(
     val_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=False, download=True, transform=transform)
     
     # Split the training dataset into a supervised and unsupervised sets
-    s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
+    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
     
     # Calc the size of the supervised and unsupervised batch
     nb_s_file = len(s_idx)
@@ -82,8 +82,8 @@ def load_cifar10_dct(
 
 def load_cifar10_supervised(
         dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 64,
+        supervised_ratio: float = 1.0,
+        batch_size: int = 128,
         extra_train_transform: list = [],
         **kwargs
 ):
@@ -103,7 +103,7 @@ def load_cifar10_supervised(
     val_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=False, download=True, transform=val_transform)
     
     # Split the training dataset into a supervised and unsupervised sets
-    s_idx, u_idx = split_s_u(train_dataset, supervised_ratio)
+    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
     
     sampler_s1 = torch_data.SubsetRandomSampler(s_idx)
     train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s1, num_workers=4, pin_memory=True, )
