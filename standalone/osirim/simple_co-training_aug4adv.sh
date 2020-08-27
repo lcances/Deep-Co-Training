@@ -10,6 +10,9 @@ function show_help {
     echo "    -l LEARNING_RATE (default 0.003)"
     echo "    -a AUGMENT ID"
     echo "    -h help"
+
+    echo "Osirm parameters"
+    echo "    -n NODE (default gpu-nc07)"
     
     echo "Available models"
     echo "	cnn0"
@@ -26,9 +29,11 @@ RATIO=0.1
 NB_EPOCH=200
 LEARNING_RATE=0.003
 RESUME=0
+NODE="gpu-nc07"
 
-while getopts "m:r:e:l:a::R::h" arg; do
+while getopts "n:m:r:e:l:a::R::h" arg; do
   case $arg in
+    n) NODE=$OPTARG;;
     m) MODEL=$OPTARG;;
     r) RATIO=$OPTARG;;
     e) NB_EPOCH=$OPTARG;;
@@ -44,7 +49,6 @@ while getopts "m:r:e:l:a::R::h" arg; do
   esac
 done
 
-echo "nb augmentation " ${#AUGMENT[@]}
 # Check augmentation
 if [ "${#AUGMENT[@]}" = "1" ]; then
        AUGMENT_1=${AUGMENT[0]}       
@@ -58,57 +62,63 @@ else
 	exit 2
 fi
 
-# ___________________________________________________________________________________ #
-# ___________________________________________________________________________________ #
+folds="-t 1 2 3 4 5 6 7 8 9 -v 10"
 
-folds=(
-	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
-	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
-	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
-	"-t 1 2 4 5 6 7 8 9 10 -v 3" \
-	"-t 1 2 3 5 6 7 8 9 10 -v 4" \
-	"-t 1 2 3 4 6 7 8 9 10 -v 5" \
-	"-t 1 2 3 4 5 7 8 9 10 -v 6" \
-	"-t 1 2 3 4 5 6 8 9 10 -v 7" \
-	"-t 1 2 3 4 5 6 7 9 10 -v 8" \
-	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
-)
+# ___________________________________________________________________________________ #
+SBATCH_JOB_NAME=a4a_${MODEL}_${AUGMENT_1}_${AUGMENT_2}
 
-tensorboard_path_root="--tensorboard_path ../../tensorboard/ubs8k/deep-co-training_aug4adv/$MODEL/${RATIO}S"
+cat << EOT > .sbatch_tmp.sh
+#!/bin/bash
+#SBATCH --job-name=$SBATCH_JOB_NAME
+#SBATCH --output=${SBATCH_JOB_NAME}.out
+#SBATCH --error=${SBATCH_JOB_NAME}.err
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=5
+#SBATCH --partition=GPUNodes
+#SBATCH --nodelist=$NODE
+#SBATCH --gres=gpu:1
+#SBATCH --gres-flags=enforce-binding
+
+
+# sbatch configuration
+container=/logiciels/containercollections/cuda10/pytorch.sif
+python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
+script=../standalone/co-training_AugAsAdv.py
+
+
+tensorboard_path_root="--tensorboard_path ../../tensorboard/ubs8k/deep-co-training_aug4adv/${MODEL}/${RATIO}S"
 checkpoint_path_root="--checkpoint_path ../../model_save/ubs8k/deep-co-training_aug4adv"
 
 # ___________________________________________________________________________________ #
 parameters=""
 
 # -------- tensorboard and checkpoint path --------
-tensorboard_path="${tensorboard_path_root}/${MODEL}/${RATIO}S"
-checkpoint_path=${checkpoint_path_root}/${MODEL}/${RATIO}
+tensorboard_path="\${tensorboard_path_root}/${MODEL}/${RATIO}S"
+checkpoint_path=\${checkpoint_path_root}/${MODEL}/${RATIO}
 parameters="${parameters} ${tensorboard_path} ${checkpoint_path}"
 
 # -------- model --------
-parameters="${parameters} --model ${MODEL}"
+parameters="\${parameters} --model ${MODEL}"
 
 # -------- training parameters --------
-parameters="${parameters} --supervised_ratio ${RATIO}"
-parameters="${parameters} --nb_epoch ${NB_EPOCH}"
-parameters="${parameters} --learning_rate ${LEARNING_RATE}"
+parameters="\${parameters} --supervised_ratio ${RATIO}"
+parameters="\${parameters} --nb_epoch ${NB_EPOCH}"
+parameters="\${parameters} --learning_rate ${LEARNING_RATE}"
 
 # -------- augmentations --------
-parameters="${parameters} --augment_m1 ${AUGMENT_1}"
-parameters="${parameters} --augment_m2 ${AUGMENT_2}"
+parameters="\${parameters} --augment_m1 ${AUGMENT_1}"
+parameters="\${parameters} --augment_m2 ${AUGMENT_2}"
 
 # -------- resume training --------
 if [ $RESUME -eq 1 ]; then
     echo "$RESUME"
-    parameters="${parameters} --resume"
+    parameters="\${parameters} --resume"
 fi
 
-run_number=0
-for i in ${!folds[*]}
-do
-    run_number=$(( $run_number + 1 ))
-    tensorboard_sufix="--tensorboard_sufix run${run_number}"
-    
-    echo python co-training-AugAsAdv.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
-    # python co-training-AugAsAdv.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
-done
+echo python co-training-AugAsAdv.py ${folds} \${parameters}
+srun -n 1 -N 1 singularity exec \${container} \${python} \${script} ${folds} \${parameters}
+
+EOT
+
+echo "sbatch store in .sbatch_tmp.sh"
+sbatch .sbatch_tmp.sh
