@@ -32,12 +32,34 @@ See *DCT/util/config* directory for more detail.
 The configuration files are written in YAML format and are easy to read. However need to follow some rules.
 More detail can be found in their dedicated README file. (DCT/util/config/README.md)
 
-- **Reproduce full supervised learning for UrbanSound8k dataset**
+## Reproduce full supervised learning for UrbanSound8k dataset
 ```bash
 conda activate dct
 python standalone/full_supervised/full_supervised.py --from-config DCT/util/config/ubs8k/100_supervised.yml
 ```
 
+<!--
+
+# Dataset preparation
+Some of the dataset doesn't need any preparation as they will be automatically download by the script thanks to torchvision or ...
+
+- **Cifar10**
+Automatically download
+
+- **UrbanSound8k**
+
+Can be download from [Justil Salamon website](http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_urbansound_acmmm14.pdf)
+
+Implementation make use of HDF file to reduce loading time. It can really make a difference for distributed system where storage is not on the same machine the the model will train.
+
+TODO finish readme 
+
+- **ESC-10 / 50 / US**
+
+https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YDEPUT
+
+- **Audioset**
+[Features]()        
 
 <!--
 
