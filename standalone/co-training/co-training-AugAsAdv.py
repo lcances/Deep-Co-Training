@@ -224,7 +224,6 @@ maximum_fn = maximum()
 UNDERLINE_SEQ = "\033[1;4m"
 RESET_SEQ = "\033[0m"
 
->>>>>>> 21361b5822f49b94856405535b4c0b3bc175f0a6
 header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} | {:<6.6} | {:<6.6} | {:<6.6} - {:<9.9} {:<9.9} | {:<9.9}- {:<6.6}"
 value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
 
@@ -251,7 +250,6 @@ def split_to_cuda(x_y):
 
 # In[51]:
 
-=======
 train_form = value_form
 val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
 
