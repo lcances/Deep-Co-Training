@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Datasets/ESC-50"
+		},
+		{
+			"path": "../Datasets/UrbanSound8K"
+		}
+	],
+	"settings": {}
+}
