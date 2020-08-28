@@ -29,7 +29,7 @@ RATIO=0.1
 NB_EPOCH=200
 LEARNING_RATE=0.003
 RESUME=0
-NODE="gpu-nc07"
+NODE=" "
 
 while getopts "n:m:r:e:l:a::R::h" arg; do
   case $arg in
@@ -62,29 +62,35 @@ else
 	exit 2
 fi
 
+if [ "${NODE}" = " " ]; then
+   NODELINE=""
+else
+    NODELINE="#SBATCH --nodelist=${NODE}"
+fi
+
 folds="-t 1 2 3 4 5 6 7 8 9 -v 10"
 
 # ___________________________________________________________________________________ #
+LOG_DIR="logs"
 SBATCH_JOB_NAME=a4a_${MODEL}_${AUGMENT_1}_${AUGMENT_2}
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
-#SBATCH --job-name=$SBATCH_JOB_NAME
-#SBATCH --output=${SBATCH_JOB_NAME}.out
-#SBATCH --error=${SBATCH_JOB_NAME}.err
+#SBATCH --job-name=${SBATCH_JOB_NAME}
+#SBATCH --output=${LOG_DIR}/${SBATCH_JOB_NAME}.out
+#SBATCH --error=${LOG_DIR}/${SBATCH_JOB_NAME}.err
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=5
 #SBATCH --partition=GPUNodes
-#SBATCH --nodelist=$NODE
+$NODELINE
 #SBATCH --gres=gpu:1
 #SBATCH --gres-flags=enforce-binding
 
 
 # sbatch configuration
-container=/logiciels/containercollections/cuda10/pytorch.sif
-python=/users/samova/lcances/.miniconda3/envs/dl/bin/python
-script=../standalone/co-training_AugAsAdv.py
-
+container=/logiciels/containerCollections/CUDA10/pytorch.sif
+python=/users/samova/lcances/.miniconda3/envs/dct/bin/python
+script=../co-training/co-training-AugAsAdv.py
 
 tensorboard_path_root="--tensorboard_path ../../tensorboard/ubs8k/deep-co-training_aug4adv/${MODEL}/${RATIO}S"
 checkpoint_path_root="--checkpoint_path ../../model_save/ubs8k/deep-co-training_aug4adv"
@@ -122,3 +128,4 @@ EOT
 
 echo "sbatch store in .sbatch_tmp.sh"
 sbatch .sbatch_tmp.sh
+
