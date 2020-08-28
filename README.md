@@ -1,12 +1,13 @@
 # UrbanSound8K
 
-Application of Deep Co-Training for audio tagging on the UrbanSound8K dataset.
+Application of Deep Co-Training for audio tagging on several audio dataset.
 
 # Requirements
 ```bash
 conda create -n dct python=3 pip
 conda activate ubs8k
 conda install pytorch
+conda install torchvision
 conda install pandas
 conda install numpy
 conda install h5py
@@ -17,15 +18,50 @@ pip install advertorch
 pip install tensorboard
 pip install scikit-image
 
-# if not automatically install
-pip install torchvision # dependency for advertorch
 
 pip install --upgrade git+https://github.com/leocances/pytorch_metrics.git@v2 # <-- personnal pytorch metrics functions
 pip install --upgrade git+https://github.com/leocances/augmentation_utils.git # <-- personnal audio & image augmentation 
-pip install --upgrade git+https://github.com/leocances/UrbanSound8K.git # UBS8K dataset manager
+pip install --upgrade git+https://github.com/leocances/UrbanSound8K.git@new_data_management # UBS8K dataset manager
 ```
 
+# Reproducability
+In order to reproduce the best results from the experiments, a set of configuration files are already written
+with the best parameters values for each dataset and framework. 
+See *DCT/util/config* directory for more detail.
 
+The configuration files are written in YAML format and are easy to read. However need to follow some rules.
+More detail can be found in their dedicated README file. (DCT/util/config/README.md)
+
+## Reproduce full supervised learning for UrbanSound8k dataset
+```bash
+conda activate dct
+python standalone/full_supervised/full_supervised.py --from-config DCT/util/config/ubs8k/100_supervised.yml
+```
+
+<!--
+
+# Dataset preparation
+Some of the dataset doesn't need any preparation as they will be automatically download by the script thanks to torchvision or ...
+
+- **Cifar10**
+Automatically download
+
+- **UrbanSound8k**
+
+Can be download from [Justil Salamon website](http://www.justinsalamon.com/uploads/4/3/9/4/4394963/salamon_urbansound_acmmm14.pdf)
+
+Implementation make use of HDF file to reduce loading time. It can really make a difference for distributed system where storage is not on the same machine the the model will train.
+
+TODO finish readme 
+
+- **ESC-10 / 50 / US**
+
+https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/YDEPUT
+
+- **Audioset**
+[Features]()        
+
+<!--
 
 # Prepare the dataset
 
