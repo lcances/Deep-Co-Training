@@ -21,7 +21,7 @@ from .wideresnet import ResNet
 
 
 # =============================================================================
-def wideresnet28_2():
+def wideresnet28_2(**kwargs):
     return ResNet([4, 4, 4], num_classes=10)
 
 

@@ -1,0 +1,30 @@
+# Dataset configuration
+dataset_path: "../datasets"
+dataset: "ubs8k"
+supervised_ratio: 0.10
+
+# Training configuration
+seed: 1234
+model: cnn03
+batch_size: 100
+epoch: 5000
+optimizer: dct-uniloss   # look at supervisor.py
+resume: False
+
+# Deep Co Training specific parameters
+lambda_cot_max: 1
+lambda_diff_max: 1
+lambda_sup_max: 1
+epsilon: 0.02
+
+# Uniloss specific parameters
+loss_scheduler: "weighted-linear"
+steps: 10
+cycle: 1
+beta: 1
+plsup_mini: 0
+
+# Miscalenous
+checkpoint_path: "../model_save/cifar10/co-training"
+tensorboard_path: "../tensorboard/cifar10/co-training"
+tensorboard_sufix: ""

@@ -1,35 +1,37 @@
 import numpy as np
 
 def linear_rampup(current_epoch, ramp_length):
-    if current_epoch >= ramp_length:
+    if ramp_length == 0 or current_epoch >= ramp_length:
         return 1.0
-    else:
-        return current_epoch / ramp_length
+
+    return current_epoch / ramp_length
 
 def cosine_rampup(current_epoch, ramp_length):
     """Cosine rampdown from https://arxiv.org/abs/1608.03983"""
-    assert 0 <= current_epoch <= ramp_length
+    if ramp_length == 0 or current_epoch >= ramp_length:
+        return 1.0
+    
     return - float(.5 * (np.cos(np.pi * current_epoch / ramp_length) - 1))
 
-def sigmoid_rampup(current_epoch, rampup_length):
+def sigmoid_rampup(current_epoch, ramp_length):
     """
     https://arxiv.org/pdf/1803.05984.pdf
     Exponential rampup from https://arxiv.org/abs/1610.02242
     """
-    if rampup_length == 0:
+    if ramp_length == 0 or current_epoch >= ramp_length:
         return 1.0
-    else:
-        current = np.clip(current_epoch, 0.0, rampup_length)
-        phase = 1.0 - current / rampup_length
-        return float(np.exp(-5.0 * phase * phase))
+
+    current = np.clip(current_epoch, 0.0, rampup_length)
+    phase = 1.0 - current / rampup_length
+    return float(np.exp(-5.0 * phase * phase))
     
 def sigmoid_rampdown(current_epoch, ramp_length):
-    if ramp_length == 0:
+    if ramp_length == 0 or current_epoch >= ramp_length:
         return 1.0
-    else:
-        current = np.clip(current_epoch, 0.0, ramp_length)
-        phase = 1.0 - (current / ramp_length)
-        return 1 - float(np.exp(-5.0 * phase**2))
+
+    current = np.clip(current_epoch, 0.0, ramp_length)
+    phase = 1.0 - (current / ramp_length)
+    return 1 - float(np.exp(-5.0 * phase**2))
 
 
 class Warmup:

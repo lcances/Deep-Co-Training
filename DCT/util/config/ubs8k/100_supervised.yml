@@ -1,0 +1,17 @@
+# Dataset configuration
+dataset_path: "../datasets"
+dataset: "ubs8k"
+supervised_ratio: 1.0
+
+# Training configuration
+seed: 1234
+model: cnn03
+batch_size: 64
+epoch: 100
+optimizer: supervised   # look at supervisor.py
+resume: False
+
+# Miscalenous
+checkpoint_path: "../model_save/ubs8k/supervised"
+tensorboard_path: "../tensorboard/ubs8k/supervised"
+tensorboard_sufix: ""
