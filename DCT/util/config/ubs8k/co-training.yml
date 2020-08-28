@@ -1,0 +1,23 @@
+# Dataset configuration
+dataset_path: "../datasets"
+dataset: "ubs8k"
+supervised_ratio: 0.1
+
+# Training configuration
+seed: 1234
+model: cnn03
+batch_size: 100
+epoch: 300
+optimizer: dct   # look at DCT/ubs8k/train_parameters.py
+resume: False
+
+# Deep Co Training specific parameters
+lambda_cot_max: 10
+lambda_diff_max: 0.5
+lambda_sup_max: 1
+epsilon: 0.02
+
+# Miscalenous
+checkpoint_path: "../model_save/ubs8k/co-training"
+tensorboard_path: "../tensorboard/ubs8k/co-training"
+tensorboard_sufix: ""

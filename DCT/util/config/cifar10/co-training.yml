@@ -1,0 +1,23 @@
+# Dataset configuration
+dataset_path: "../datasets"
+dataset: "cifar10"
+supervised_ratio: 0.08
+
+# Training configuration
+model: wideresnet28_2
+seed: 1234
+batch_size: 100
+epoch: 300
+optimizer: dct   # look at supervisor.py
+resume: False
+
+# Deep Co Training specific parameters
+lambda_cot_max: 10
+lambda_diff_max: 0.5
+lambda_sup_max: 1
+epsilon: 0.02
+
+# Miscalenous
+checkpoint_path: "../model_save/cifar10/co-training"
+tensorboard_path: "../tensorboard/cifar10/co-training"
+tensorboard_sufix: ""
