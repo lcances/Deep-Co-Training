@@ -4,10 +4,10 @@ dataset: "cifar10"
 supervised_ratio: 0.08
 
 # Training configuration
-model: wideresnet28_2
+model: Pmodel
 seed: 1234
 batch_size: 100
-epoch: 300
+epoch: 600
 optimizer: dct   # look at supervisor.py
 resume: False
 
