@@ -2,13 +2,16 @@ import torch.optim
 import torch.optim.lr_scheduler as lr_scheduler
 
 def _get_cifar10_optimizer(framework: str) -> (torch.optim, lr_scheduler):
-    from DCT.cifar10.train_parameters import supervised, dct
+    from DCT.cifar10.train_parameters import supervised, dct, dct_uniloss
 
     if framework == "supervised":
         return supervised()
 
     elif framework == "dct":
         return dct()
+
+    elif framework == "dct_uniloss":
+        return dct_uniloss
 
     else:
         available_framework = ["supervised", "dct"]
