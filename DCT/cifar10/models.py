@@ -53,14 +53,14 @@ class Pmodel(nn.Module):
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.BatchNorm1d(128, momentum=0.999),
-            nn.utils.weight_norm( nn.Linear(128, 10) )
+            nn.utils.weight_norm( nn.Linear(128, 10) ),
         )
         
     def conv_block(self, in_size, out_size, kernel, padding):
         return [
-            nn.BatchNorm2d(in_size, momentum=0.999),
-            nn.LeakyReLU(0.1),
             nn.utils.weight_norm( nn.Conv2d(in_size, out_size, kernel, stride=1, padding=padding) ),
+            nn.BatchNorm2d(out_size, momentum=0.999),
+            nn.LeakyReLU(0.1),
         ]
 
     def forward(self, x):
