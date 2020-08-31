@@ -59,7 +59,7 @@ class Pmodel(nn.Module):
     def conv_block(self, in_size, out_size, kernel, padding):
         return [
             nn.utils.weight_norm( nn.Conv2d(in_size, out_size, kernel, stride=1, padding=padding) ),
-            nn.BatchNorm2d(in_size, momentum=0.999),
+            nn.BatchNorm2d(out_size, momentum=0.999),
             nn.LeakyReLU(0.1),
         ]
 
