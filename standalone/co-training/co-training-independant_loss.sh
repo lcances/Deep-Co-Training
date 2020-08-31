@@ -1,30 +1,52 @@
 #!/bin/bash
 
 # ___________________________________________________________________________________ #
+parse_long() {
+    if [ "$1" ]; then
+        echo $1
+    else
+        echo "Missing argument value" >&2
+        exit 1
+    fi
+}
+
 function show_help {
-    echo "usage:  $BASH_SOURCE [-D DATASET] [-m MODEL] [-r SUPERVISED RATIO] [-e EPOCH] [-R RESUME] [-s LOSS SCHEDULER] [-l LEARNING_RATE] [-S STEPS] [-c LAMBDA_COT_MAX] [-d LAMBDA DIFF MAX] [-t LOG SUB DIR] [-h]"
-    echo "    -D DATASET (default ubs8k)"
-    echo "    -m MODEL (default cnn03)"
-    echo "    -r SUPERVISED RATIO (default 0.1)"
-    echo "    -e EPOCH (default 3000)"
+    echo "usage:  $BASH_SOURCE [--dataset] [--model] [--learning_rate] [--ratio] [--epoch] [--lambda_sup_max] [--lambda_cot_max] [--lambda_diff_max] \
+    [--crossval] [-R] [-h]"
+    echo "    --dataset DATASET (default ubs8k)"
+    echo "    --model MODEL (default cnn03)"
+    echo "    --learning_rate (default 0.0005)"
+    echo "    --ratio SUPERVISED RATIO (default 0.1)"
+    echo "    --epoch EPOCH (default 5000)"
+    echo ""
+    echo "Co-training hyperparameters"
+    echo "    --lambda_sup_max LAMBDA SUP MAX (default 1)"
+    echo "    --lambda_cot_max LAMBDA COT MAX (default 1)"
+    echo "    --lambda_diff_max LAMBDA_DIFF_MAX (default 1)"
+    echo ""
+    echo "Uniloss parameters"
+    echo "    --loss_scheduler LOSS SCHEDULER (default weighted-linear)"
+    echo "    --steps STEPS (default 10)"
+    echo "    --cycle CYCLE (default 1)"
+    echo "    --beta BETA (default 0)"
+    echo ""
+    echo "Miscalleous arguments"
+    echo "    --crossval (default FALSE)"
     echo "    -R RESUME (default FALSE)"
-    echo "    -s LOSS SCHEDULER (default weighted-linear)"
-    echo "    -S STEPS (default 10)"
-    echo "    -l LEARNING_RATE (default 0.0005)"
-    echo "    -c LAMBDA COT MAX (default 10)"
-    echo "    -d LAMBDA DIFF MAX (default 0.5)"
-    echo "    -t LOG SUB DIRECTORY (default \"\")"
     echo "    -h help"
     
+    echo "====================================================================="
     echo "Available datasets"
     echo "    ubs8k"
     echo "    cifar10"
-    
+    echo "" 
     echo "Available models"
+    echo "    PModel"
+    echo "    wideresnet28_2"
     echo "    cnn0"
     echo "    cnn03"
     echo "    scallable1"
-
+    echo ""
     echo "Available loss scheduler"
     echo "    linear"
     echo "    weighted linear"
@@ -35,53 +57,66 @@ function show_help {
 # default parameters
 DATASET="ubs8k"
 MODEL=cnn03
+LEARNING_RATE=0.0005
 RATIO=0.1
-NB_EPOCH=3000
+EPOCH=5000
+
+LSM=1
+LCM=1
+LDM=1
+
 LOSS_SCHEDULER="weighted-linear"
 STEPS=10
-LEARNING_RATE=0.0005
-LAMBDA_COT_MAX=10
-LAMBDA_DIFF_MAX=0.5
+CYCLE=0
+BETA=1
+
 RESUME=0
-LOG_SUB_DIR=""
+CROSSVAL=0
 
-while getopts "D:m:r:e:s:S:l:c:d:t::R::h" arg; do
-  case $arg in
-    D) DATASET=$OPTARG;;
-    m) MODEL=$OPTARG;;
-    r) RATIO=$OPTARG;;
-    e) NB_EPOCH=$OPTARG;;
-    s) LOSS_SCHEDULER=$OPTARG;;
-    S) STEPS=$OPTARG;;
-    l) LEARNING_RATE=$OPTARG;;
-    c) LAMBDA_COT_MAX=$OPTARG;;
-    d) LAMBDA_DIFF_MAX=$OPTARG;;
-    t) LOG_SUB_DIR=$OPTARG;;
-    R) RESUME=1;;
-    h) show_help;;
-    *) 
-        echo "invalide option" 1>&2
-        show_help
-        exit 1
-        ;;
-  esac
+while :; do
+    case $1 in
+        -h | -\? | --help) show_help; exit 1;;
+        -R) RESUME=1; SHIFT;;
+        --crossval) CROSSVAL=1; shift;;
+
+        --dataset) DATASET=$(parse_long $2); shift; shift;;
+        --model) MODEL=$(parse_long $2); shift; shift;;
+        --learning_rate) LR=$(parse_long $2); shift; shift;;
+        --ratio) RATIO=$(parse_long $2); shift; shift;;
+        --epoch) EPOCH=$(parse_long $2); shift; shift;;
+
+        --lambda_sup_max) LSM=$(parse_long $2); shift; shift;;
+        --lambda_cot_max) LCM=$(parse_long $2); shift; shift;;
+        --lambda_diff_max) LDM=$(parse_long $2); shift; shift;;
+
+        --loss_scheduler) LOSS_SCHEDULER=$(parse_long $2); shift; shift;;
+        --steps) STEP=$(parse_long $2); shift; shift;;
+        --cycle) CYCLE=$(parse_long $2); shift; shift;;
+        --beta) BETA=$(parse_long $2); shift; shift;;
+
+        -?*) echo "Invalide option $1" >&2; show_help; exit 1;;
+    esac
 done
-
-# ___________________________________________________________________________________ #
 # ___________________________________________________________________________________ #
 
-folds=(
-	"-t 1 2 3 4 5 6 7 8 9 -v 10" \
-	"-t 2 3 4 5 6 7 8 9 10 -v 1" \
-	"-t 1 3 4 5 6 7 8 9 10 -v 2" \
-	"-t 1 2 4 5 6 7 8 9 10 -v 3" \
-	"-t 1 2 3 5 6 7 8 9 10 -v 4" \
-	"-t 1 2 3 4 6 7 8 9 10 -v 5" \
-	"-t 1 2 3 4 5 7 8 9 10 -v 6" \
-	"-t 1 2 3 4 5 6 8 9 10 -v 7" \
-	"-t 1 2 3 4 5 6 7 9 10 -v 8" \
-	"-t 1 2 3 4 5 6 7 8 10 -v 9" \
-)
+
+if [ $CROSSVAL -eq 1 ]; then
+    echo "Cross validation activated"
+    folds=(
+        "-t 1 2 3 4 5 6 7 8 9 -v 10" \
+        "-t 2 3 4 5 6 7 8 9 10 -v 1" \
+        "-t 1 3 4 5 6 7 8 9 10 -v 2" \
+        "-t 1 2 4 5 6 7 8 9 10 -v 3" \
+        "-t 1 2 3 5 6 7 8 9 10 -v 4" \
+        "-t 1 2 3 4 6 7 8 9 10 -v 5" \
+        "-t 1 2 3 4 5 7 8 9 10 -v 6" \
+        "-t 1 2 3 4 5 6 8 9 10 -v 7" \
+        "-t 1 2 3 4 5 6 7 9 10 -v 8" \
+        "-t 1 2 3 4 5 6 7 8 10 -v 9" \
+    )
+else
+    folds=("-t 1 2 3 4 5 6 7 8 9 -v 10")
+fi
 
 tensorboard_path_root="../../tensorboard/${DATASET}/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
 checkpoint_path_root="../../model_save/${DATASET}/deep-co-training_independant-loss/${lambda_cot_max}lcm_${lambda_diff_max}ldm"
