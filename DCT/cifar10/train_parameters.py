@@ -22,15 +22,28 @@ def supervised(params):
 
 
 def dct(params):
-    lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1)*np.pi/args.nb_epoch)) * 0.5
-
     optimizer = optim.SGD(
         params=params,
-        lr=0.05,
+        lr=0.1,
         momentum=0.9,
         weight_decay=0.0001,
     )
 
     lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1)*np.pi/args.nb_epoch)) * 0.5
+    lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    return optimizer, lr_scheduler
+
+
+def dct_uniloss(params):
+    optimizers = optim.SGD(
+        params = params,
+        lr = 0.1,
+        momentum=0.9,
+        weight_decay=0.0001,
+    )
+
+    lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1)*np.pi/args.nb_epoch)) * 0.5
+    lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
     return optimizer, lr_scheduler

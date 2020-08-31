@@ -5,10 +5,10 @@ supervised_ratio: 0.08
 
 # Training configuration
 seed: 1234
-model: wideresnet28_2
+model: Pmodel
 batch_size: 100
-epoch: 300
-optimizer: dct   # look at supervisor.py
+epoch: 1000
+optimizer: dct_uniloss   # look at supervisor.py
 resume: False
 
 # Deep Co Training specific parameters
@@ -25,6 +25,6 @@ beta: 1
 plsup_mini: 0
 
 # Miscalenous
-checkpoint_path: "../model_save/cifar10/co-training"
-tensorboard_path: "../tensorboard/cifar10/co-training"
+checkpoint_path: "../model_save/cifar10/co-training_independant-loss"
+tensorboard_path: "../tensorboard/cifar10/co-training_independant-loss"
 tensorboard_sufix: ""
