@@ -3,14 +3,14 @@
 
 # # import
 
-# In[1]:
+# In[11]:
 
 
-# get_ipython().run_line_magic('load_ext', 'autoreload')
-# get_ipython().run_line_magic('autoreload', '2')
+#get_ipython().run_line_magic('load_ext', 'autoreload')
+#get_ipython().run_line_magic('autoreload', '2')
 
 
-# In[2]:
+# In[12]:
 
 
 import os
@@ -30,7 +30,7 @@ from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
 
-# In[3]:
+# In[13]:
 
 
 from ubs8k.datasetManager import DatasetManager
@@ -48,7 +48,7 @@ from DCT.losses import loss_cot, loss_diff, loss_sup
 
 # # Arguments
 
-# In[4]:
+# In[14]:
 
 
 import argparse
@@ -98,7 +98,7 @@ checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoi
 
 # # Initialization
 
-# In[5]:
+# In[15]:
 
 
 reset_seed(args.seed)
@@ -106,7 +106,7 @@ reset_seed(args.seed)
 
 # # Prepare the dataset
 
-# In[20]:
+# In[16]:
 
 
 """
@@ -114,9 +114,8 @@ we pre-processed the images using ZCA and augmented the dataset using horizontal
 were drawn from [−2, 2] pixels,
 """
 extra_train_transforms = [
-    transforms.Pad(4, padding_mode='reflect'),
+    transforms.RandomAffine(0, translate=(1/16,1/16)), # translation at most two pixels
     transforms.RandomHorizontalFlip(),
-    transforms.RandomCrop(32),
 ]
 
 manager, train_loader, val_loader = load_dataset(
@@ -162,14 +161,17 @@ print(os.path.join(tensorboard_path, tensorboard_title))
 
 # ## cifar10 optimizer
 
-# In[23]:
+# In[ ]:
 
 
+# TODO ATTENTION, CET SECTION DE CODE DOIT ÊTRE SUPPRIMER AU PROFIL DU CONFIGURATEUR
+# VOIR DCT/<dataset>/train_parameters.py
+# ========================
 if args.dataset == "cifar10":
     params = list(m1.parameters()) + list(m2.parameters())
-    optimizer = torch.optim.SGD(params, lr=0.05, momentum=0.9, weight_decay=0.0001)
+    optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.9, weight_decay=0.0001)
     
-    lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1)*np.pi/args.nb_epoch))
+    lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1)*np.pi/args.nb_epoch)) * 0.5
     
 
 
@@ -182,6 +184,7 @@ if args.dataset == "ubs8k":
     params = list(m1.parameters()) + list(m2.parameters())
     optimizer = torch.optim.Adam(params, lr=args.learning_rate)
     lr_lambda = lambda epoch: (1.0 + numpy.cos((epoch-1)*numpy.pi/args.nb_epoch)) * 0.5
+# ===========================
 
 
 # ## Adversarial generator
@@ -192,12 +195,12 @@ if args.dataset == "ubs8k":
 # adversarial generation
 adv_generator_1 = GradientSignAttack(
     m1, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=0, clip_max=1, targeted=True
+    eps=args.epsilon, clip_min=-np.inf, clip_max=np.inf, targeted=False
 )
 
 adv_generator_2 = GradientSignAttack(
     m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=0, clip_max=1, targeted=True
+    eps=args.epsilon, clip_min=-np.inf, clip_max=np.in, targeted=False
 )
 
 
@@ -492,7 +495,7 @@ def test(epoch, msg = ""):
     checkpoint_m1.step(acc_1.mean)
 
 
-# In[ ]:
+# In[33]:
 
 
 print(header)
