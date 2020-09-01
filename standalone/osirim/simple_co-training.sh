@@ -31,7 +31,7 @@ function show_help {
     echo "    -h help"
     echo "    -? help"
 
-    echo "Osirm parameters"
+    echo "Osirim parameters"
     echo "    -n NODE (default gpu-nc07)"
     echo ""
     echo "Available datasets"
@@ -42,6 +42,8 @@ function show_help {
     echo "    cnn0"
     echo "    cnn03"
     echo "    scallable1"
+    echo "    Pmodel"
+    echo "    wideresnet28_2"
 }
 
 # default parameters
@@ -63,10 +65,12 @@ while :; do
     case $1 in
         -h | -\? | --help) show_help; exit 1;;
         -n | --node) NODE=$(parse_long $2); shift; shift;;
+
         --dataset) DATASET=$(parse_long $2); shift; shift;;
         --model) MODEL=$(parse_long $2); shift; shift;;
         --ratio) RATIO=$(parse_long $2); shift; shift;;
         --epoch) EPOCH=$(parse_long $2); shift; shift;;
+
         --learning_rate) LEARNING_RATE=$(parse_long $2); shift; shift;;
         --lambda_cot_max) L_COT_MAX=$(parse_long $2); shift; shift;;
         --lambda_diff_max) L_DIFF_MAX=$(parse_long $2); shift; shift;;
@@ -110,7 +114,7 @@ tensorboard_path_root="--tensorboard_path ../../tensorboard/${DATASET}/deep-co-t
 checkpoint_path_root="--checkpoint_path ../../model_save/${DATASET}/deep-co-training"
 
 # ___________________________________________________________________________________ #
-parameters=""
+parameters="--dataset_root ../../datasets"
 
 # -------- tensorboard and checkpoint path --------
 tensorboard_path="\${tensorboard_path_root}/${MODEL}/${RATIO}S"
