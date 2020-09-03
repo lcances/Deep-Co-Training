@@ -5,33 +5,25 @@ import numpy as np
 import torch.utils.data as torch_data
 import torchvision.datasets
 import torchvision.transforms as transforms
+import hashlib
 
-def _split_s_u(train_dataset, s_ratio: float = 0.1):
+def _split_s_u(train_dataset, s_ratio: float = 0.08, nb_class: int = 10):
     if s_ratio == 1.0:
         return list(range(len(train_dataset))), []
     
-    # add indexes
-    datasets = [(idx, x, y) for idx, (x, y) in enumerate(train_dataset)]
+    s_idx, u_idx = [], []
+    nb_s = int(np.ceil(len(train_dataset) * s_ratio) // nb_class)
+    cls_idx = [[] for _ in range(nb_class)]
     
-    # separate the dataset into classes
-    classes = [[] for _ in range(10)]
-    for i, x, y in datasets:
-        classes[y].append((i, x, y))
+    # To each file, an index is assigned, then they are split into classes
+    for i in range(len(train_dataset)):
+        _, y = train_dataset[i]
+        cls_idx[y].append(i)
         
-    # shuffle
-    for i in range(len(classes)):
-        random.shuffle(classes[i])
-        
-    # separate
-    s_classes, u_classes = [], []
-    for c in range(len(classes)):
-        nb_s_file = int(np.floor(len(classes[c]) * s_ratio))
-        s_classes.extend(classes[c][:nb_s_file])
-        u_classes.extend(classes[c][nb_s_file:])
-        
-    # recover supervised and unsupervised indexes
-    s_idx = [idx for idx, _, _ in s_classes]
-    u_idx = [idx for idx, _, _ in u_classes]
+    for i in range(len(cls_idx)):
+        random.shuffle(cls_idx[i])
+        s_idx += cls_idx[i][:nb_s]
+        u_idx += cls_idx[i][nb_s:]
     
     return s_idx, u_idx
     
@@ -48,7 +40,7 @@ def load_cifar10_dct(
     # Prepare the default dataset
     transform = transforms.Compose(
         [transforms.ToTensor(),
-         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+#          transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
     train_dataset = torchvision.datasets.CIFAR10(root=os.path.join(dataset_root, "CIFAR10"), train=True, download=True, transform=transform)
@@ -66,12 +58,11 @@ def load_cifar10_dct(
     u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
     
     # Create the sample, the loader and zip them
-    sampler_s1 = torch_data.SubsetRandomSampler(s_idx)
-    sampler_s2 = torch_data.SubsetRandomSampler(s_idx)
+    sampler_s = torch_data.SubsetRandomSampler(s_idx)
     sampler_u = torch_data.SubsetRandomSampler(u_idx)
 
-    train_loader_s1 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s1)
-    train_loader_s2 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s2)
+    train_loader_s1 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
+    train_loader_s2 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
     train_loader_u = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
 
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
