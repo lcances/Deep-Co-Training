@@ -1,9 +1,9 @@
+
 import torch
 import os
 
-
 class CheckPoint:
-    def __init__(self, model, optimizer, mode: str="max", name: str="best", verbose: bool=True):
+    def __init__(self, model: list, optimizer, mode: str="max", name: str="best", verbose: bool=True):
         self.mode = mode
         self.name = name
         self.verbose = verbose
@@ -15,7 +15,11 @@ class CheckPoint:
         self.last_state = dict()
         self.best_metric = 0 if mode == "max" else 100000
         self.epoch_counter = 0
-        
+
+        # Preparation
+        if not isinstance(self.model, list):
+            self.model = [self.model]
+
         self.create_directory()
         
     def create_directory(self):
@@ -25,12 +29,7 @@ class CheckPoint:
         self.epoch_counter += 1
         
         # Save last epoch
-        self.last_state = {
-            "state_dict": self.model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "best_metric": new_value,
-            "epoch": self.epoch_counter,
-        }
+        self.last_state = self.get_state()
         torch.save(self.last_state, self.name + ".last")
 
         if self._check_is_better(new_value):
@@ -38,56 +37,49 @@ class CheckPoint:
                 print("\n better performance: saving ...")
 
             self.best_metric = new_value
-            self.best_state = {
-                "state_dict": self.model.state_dict(),
-                "optimizer": self.optimizer.state_dict(),
-                "best_metric": self.best_metric,
-                "epoch": self.epoch_counter,
-            }
+            self.best_state = self.get_state()
             torch.save(self.best_state, self.name)
             
-    def save(self):
-        self.last_state = {
-            "state_dict": self.model.state_dict(),
+    def get_state(self) -> dict:
+        state = {
+            "state_dict": [m.state_dict() for m in self.model],
             "optimizer": self.optimizer.state_dict(),
             "best_metric": new_value,
             "epoch": self.epoch_counter,
         }
-        torch.save(self.last_state, self.name + ".last")
+        return state
+
+    def save(self):
+        torch.save(self.get_state, self.name + ".last")
         
-            
     def load_best(self):
         if not os.path.isfile(self.name + ".last"):
             return
 
         data = torch.load(self.name)
-        
-        for k, v in data.items():
-            self.best_state[k] = v
-            
-        self.model.load_state_dict(self.best_state["state_dict"])
-        self.optimizer.load_state_dict(self.best_state["optimizer"])
-        self.epoch_counter = self.best_state["epoch"]
+        self._load_helper(data, self.best_state)
             
     def load_last(self):
         if not os.path.isfile(self.name + ".last"):
             return
 
         data = torch.load(self.name + ".last")
+        self._load_helper(data, self.last_state)
         
+    def _load_helper(self, state, destination):
         for k, v in data.items():
-            self.last_state[k] = v
+            destination = v
             
-        self.model.load_state_dict(self.last_state["state_dict"])
-        self.optimizer.load_state_dict(self.last_state["optimizer"])
-        self.epoch_counter = self.last_state["epoch"]
+        self.optimizer.load_state_dict(self.best_state["optimizer"])
+        self.epoch_counter = self.best_state["epoch"]
+        self.best_metric = self.best_state["best_metric"]
+
+        for i in range(len(self.model)):
+            self.model[i].load_state_dict(self.best_state["state_dict"][i])
 
     def _check_is_better(self, new_value):
+        tester = lambda x, y: x > y
         if self.mode == "max":
-            if self.best_metric <= new_value:
-                return True
-            return False
-
-        if self.best_metric <= new_value:
-            return False
-        return True
+             tester = lambda x, y: y > x
+        
+        return any(tester, self.best_metric, new_value)
