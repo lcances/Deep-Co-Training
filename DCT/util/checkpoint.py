@@ -13,7 +13,7 @@ class CheckPoint:
 
         self.best_state = dict()
         self.last_state = dict()
-        self.best_metric = 0 if mode == "max" else 100000
+        self.best_metric = None
         self.epoch_counter = 0
 
         # Preparation
@@ -26,12 +26,14 @@ class CheckPoint:
         os.makedirs(os.path.dirname(self.name), exist_ok=True)
 
     def step(self, new_value):
-        self.epoch_counter += 1
+        if self.epoch_counter == 0:
+            self.best_metric = new_value
         
         # Save last epoch
         self.last_state = self._get_state(new_value)
         torch.save(self.last_state, self.name + ".last")
 
+        # save best epoch
         if self._check_is_better(new_value):
             if self.verbose:
                 print("\n better performance: saving ...")
@@ -39,6 +41,8 @@ class CheckPoint:
             self.best_metric = new_value
             self.best_state = self._get_state(new_value)
             torch.save(self.best_state, self.name)
+
+        self.epoch_counter += 1
             
     def _get_state(self, new_value = None) -> dict:
         state = {
@@ -80,14 +84,16 @@ class CheckPoint:
             self.model[i].load_state_dict(self.best_state["state_dict"][i])
 
     def _check_is_better(self, new_value):
-        if not isinstance(new_value, Iterable):
-            new_value = [new_value]
-            
-        if not isinstance(self.best_metric, Iterable):
-            self.best_metric = [self.best_metric]
-            
-        tester = lambda x, y: x > y
+        assert len(self.best_metric.shape) == len(new_value.shape)
+
+        # The case of 0-d tensor
+        if len(self.best_metric.shape) == 0:
+            if self.model == "max":
+                return self.best_metric < new_value
+            return self.best_metric > new_value
+
+        # Multi-dimension tensor
         if self.mode == "max":
-             tester = lambda x, y: y > x
-        
-        return any(map(tester, self.best_metric, new_value))
+             return any(new_value > self.best_metric)
+            
+        return any(self.best_metric > new_value)
