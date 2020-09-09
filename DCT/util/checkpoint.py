@@ -1,4 +1,4 @@
-
+from typing import Iterable
 import torch
 import os
 
@@ -29,7 +29,7 @@ class CheckPoint:
         self.epoch_counter += 1
         
         # Save last epoch
-        self.last_state = self.get_state()
+        self.last_state = self._get_state(new_value)
         torch.save(self.last_state, self.name + ".last")
 
         if self._check_is_better(new_value):
@@ -37,20 +37,22 @@ class CheckPoint:
                 print("\n better performance: saving ...")
 
             self.best_metric = new_value
-            self.best_state = self.get_state()
+            self.best_state = self._get_state(new_value)
             torch.save(self.best_state, self.name)
             
-    def get_state(self) -> dict:
+    def _get_state(self, new_value = None) -> dict:
         state = {
             "state_dict": [m.state_dict() for m in self.model],
             "optimizer": self.optimizer.state_dict(),
-            "best_metric": new_value,
             "epoch": self.epoch_counter,
         }
+        if new_value is not None:
+            state["best_metric"] = new_value
+            
         return state
 
     def save(self):
-        torch.save(self.get_state, self.name + ".last")
+        torch.save(self._get_state, self.name + ".last")
         
     def load_best(self):
         if not os.path.isfile(self.name + ".last"):
@@ -78,8 +80,14 @@ class CheckPoint:
             self.model[i].load_state_dict(self.best_state["state_dict"][i])
 
     def _check_is_better(self, new_value):
+        if not isinstance(new_value, Iterable):
+            new_value = [new_value]
+            
+        if not isintance(self.best_metric, Iterable):
+            self.best_metric = [self.best_metric]
+            
         tester = lambda x, y: x > y
         if self.mode == "max":
              tester = lambda x, y: y > x
         
-        return any(tester, self.best_metric, new_value)
+        return any(map(tester, self.best_metric, new_value))
