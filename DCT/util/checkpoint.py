@@ -83,7 +83,7 @@ class CheckPoint:
         if not isinstance(new_value, Iterable):
             new_value = [new_value]
             
-        if not isintance(self.best_metric, Iterable):
+        if not isinstance(self.best_metric, Iterable):
             self.best_metric = [self.best_metric]
             
         tester = lambda x, y: x > y
