@@ -8,7 +8,7 @@ This abstraction layer allow the standalone script to work with any dataset.
 
 import DCT.ubs8k.dataset_loader as u8
 import DCT.cifar10.dataset_loader as c10
-#import DCT.esc.dataset_loader as esc
+import DCT.esc.dataset_loader as esc
 #import DCT.GTZAN.dataset_loader as gtzan
 #import DCT.SpeechCommand.dataset_loader as SC
 
@@ -29,15 +29,15 @@ dataset_mapper = {
         "dct": esc.load_dct,
     },
 
-    "gtzan": {
-        "supervised": gtzan.load_supervised,
-        "dct": gtzan.load_dct,
-    },
-
-    "SpeechCommand": {
-        "supervised": SC.load_supervised,
-        "dct": SC.load_dct,
-    },
+#    "gtzan": {
+#        "supervised": gtzan.load_supervised,
+#        "dct": gtzan.load_dct,
+#    },
+#
+#    "SpeechCommand": {
+#        "supervised": SC.load_supervised,
+#        "dct": SC.load_dct,
+#    },
 }
 
 def load_datasets_helper(framework: str, mapper: dict, **kwargs):
