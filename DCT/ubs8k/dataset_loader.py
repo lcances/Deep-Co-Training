@@ -10,7 +10,7 @@ from copy import copy
 import torch.utils.data as torch_data
 
 
-def load_ubs8k_supervised(
+def load_supervised(
     dataset_root,
     supervised_ratio: float = 1.0,
     batch_size: int = 64,
@@ -50,7 +50,7 @@ def load_ubs8k_supervised(
     return manager, train_loader, val_loader
 
     
-def load_ubs8k_dct(
+def load_dct(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
@@ -105,7 +105,7 @@ def load_ubs8k_dct(
     return manager, train_loader, val_loader
 
 
-def load_ubs8k_dct_aug4adv(
+def load_dct_aug4adv(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
