@@ -10,7 +10,9 @@ __pycache__/
 .*.db-wal
 DCT.egg-info/
 venv.yml
+
 model_save/
+datasets/*
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
