@@ -28,7 +28,7 @@ def _split_s_u(train_dataset, s_ratio: float = 0.08, nb_class: int = 10):
     return s_idx, u_idx
     
 
-def load_cifar10_dct(
+def load_dct(
         dataset_root,
         supervised_ratio: float = 0.1,
         batch_size: int = 100,
@@ -71,7 +71,7 @@ def load_cifar10_dct(
     return None, train_loader, val_loader
 
 
-def load_cifar10_supervised(
+def load_supervised(
         dataset_root,
         supervised_ratio: float = 1.0,
         batch_size: int = 128,
