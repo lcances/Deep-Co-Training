@@ -59,7 +59,7 @@ class CheckPoint:
         torch.save(self._get_state, self.name + ".last")
         
     def load_best(self):
-        if not os.path.isfile(self.name + ".last"):
+        if not os.path.isfile(self.name):
             return
 
         data = torch.load(self.name)
@@ -73,15 +73,20 @@ class CheckPoint:
         self._load_helper(data, self.last_state)
         
     def _load_helper(self, state, destination):
-        for k, v in data.items():
-            destination = v
+        print(list(state.keys()))
+        for k, v in state.items():
+            destination[k] = v
             
-        self.optimizer.load_state_dict(self.best_state["optimizer"])
-        self.epoch_counter = self.best_state["epoch"]
-        self.best_metric = self.best_state["best_metric"]
+        self.optimizer.load_state_dict(destination["optimizer"])
+        self.epoch_counter = destination["epoch"]
+        self.best_metric = destination["best_metric"]
+        
+        # Path to fit with previous version of checkpoint
+        if not isinstance(destination["state_dict"], list):
+            destination["state_dict"] = [destination["state_dict"]]
 
         for i in range(len(self.model)):
-            self.model[i].load_state_dict(self.best_state["state_dict"][i])
+            self.model[i].load_state_dict(destination["state_dict"][i])
 
     def _check_is_better(self, new_value):
         assert len(self.best_metric.shape) == len(new_value.shape)
