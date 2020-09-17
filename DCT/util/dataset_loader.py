@@ -24,10 +24,14 @@ dataset_mapper = {
         "dct": c10.load_dct
     },
 
-    "esc": {
-        "supervised": esc.load_supervised,
-        "dct": esc.load_dct,
+    "esc10": {
+        "supervised": esc.load_esc10_supervised,
+        #"dct": esc.load_dct,
     },
+
+    "esc50": {
+        "supervised": esc.load_esc50_supervised,
+    }
 
 #    "gtzan": {
 #        "supervised": gtzan.load_supervised,

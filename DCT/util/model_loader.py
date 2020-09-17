@@ -1,13 +1,14 @@
 import DCT.ubs8k.models as ubs8k_models
 import DCT.ubs8k.models_test as ubs8k_models_test
 import DCT.cifar10.models as cifar10_models
+import DCT.esc.models as esc_models
 import inspect
 import logging
 
 def get_model_from_name(model_name):
 
     all_members = []
-    for module in [ubs8k_models, ubs8k_models_test, cifar10_models]:
+    for module in [ubs8k_models, ubs8k_models_test, cifar10_models, esc_models]:
         all_members += inspect.getmembers(module)
     
     for name, obj in all_members:
