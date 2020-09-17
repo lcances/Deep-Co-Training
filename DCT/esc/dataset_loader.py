@@ -2,11 +2,14 @@ from DCT.util.utils import ZipCycle
 
 import random, os
 import numpy as np
+from torch.nn import Module
+from torch import Tensor
 import torch.utils.data as torch_data
 from torchaudio.datasets import ESC10, ESC50
 
 from typing import Union, Tuple
 from torch.utils.data import DataLoader
+from DCT.util.utils import conditional_cache_v2
 
 def _split_s_u(train_dataset, s_ratio: float = 1.0, nb_class: int = 10):
     if s_ratio == 1.0:
@@ -27,6 +30,31 @@ def _split_s_u(train_dataset, s_ratio: float = 1.0, nb_class: int = 10):
         u_idx += cls_idx[i][nb_s:]
     
     return s_idx, u_idx
+
+
+def cache_feature(func):
+    def decorator(*args, **kwargs):
+        key = ",".join(map(str, args))
+        
+        if key not in decorator.cache:
+            decorator.cache[key] = func(*args, **kwargs)
+            
+        return decorator.cache[key]
+    
+    decorator.cache = dict()
+    return decorator
+
+class ESC10_NoSR(ESC10):
+    @cache_feature
+    def __getitem__(self, index: int) -> Tuple[Tensor, int]:
+        x, sr, y = super().__getitem__(index)
+        return x, y
+
+class ESC50_NoSR(ESC50):
+    @cache_feature
+    def __getitem__(self, index: int) -> Tuple[Tensor, int]:
+        x, sr, y = super().__getitem__(index)
+        return x, y
     
 
 def load_dct(dataset_root, supervised_ratio: float = 0.1, batch_size: int = 100, **kwargs ):
@@ -42,7 +70,7 @@ def load_esc10_supervised(
         train_folds: tuple = (1, 2, 3, 4),
         val_folds: tuple = (5, ),
         **kwargs) -> Tuple[DataLoader, DataLoader]:
-        return _load_supervised_helper(ESC10, dataset_root, supervised_ratio, batch_size, train_folds, val_folds, **kwargs)
+        return _load_supervised_helper(ESC10_NoSR, dataset_root, supervised_ratio, batch_size, train_folds, val_folds, **kwargs)
 
 
 def load_esc50_supervised(
@@ -52,7 +80,7 @@ def load_esc50_supervised(
         train_folds: tuple = (1, 2, 3, 4),
         val_folds: tuple = (5, ),
         **kwargs) -> Tuple[DataLoader, DataLoader]:
-        return _load_supervised_helper(ESC50, dataset_root, supervised_ratio, batch_size, train_folds, val_folds, **kwargs)
+        return _load_supervised_helper(ESC50_NoSR, dataset_root, supervised_ratio, batch_size, train_folds, val_folds, **kwargs)
 
 
 def _load_supervised_helper(
@@ -62,36 +90,29 @@ def _load_supervised_helper(
         batch_size: int = 128,
         train_folds: tuple = (1, 2, 3, 4),
         val_folds: tuple = (5, ),
-        **kwargs
-) -> Tuple[DataLoader, DataLoader]:
+        transform: Module = None,
+        **kwargs) -> Tuple[DataLoader, DataLoader]:
     """
     Load the cifar10 dataset for Deep Co Training system.
     """
-    dataset_path = os.path.join(dataset_root, "ESC-50-master")
-    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True)
-    val_dataset = dataset_class(root=dataset_path, folds=val_folds, download=True)
-    
-    # Split the training dataset into a supervised and unsupervised sets
-    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio, nb_class=train_dataset.nb_class)
-    
-    # Calc the size of the supervised and unsupervised batch
-    nb_s_file = len(s_idx)
-    nb_u_file = len(u_idx)
-    
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
-    
-    # Create the sample, the loader and zip them
-    sampler_s = torch_data.SubsetRandomSampler(s_idx)
-    sampler_u = torch_data.SubsetRandomSampler(u_idx)
+    num_workers = kwargs.get("num_workers", 0)
+    dataset_path = os.path.join(dataset_root)
 
-    train_loader_s1 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
-    train_loader_s2 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
-    train_loader_u = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
-
-    train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
+    # validation subset
+    val_dataset = dataset_class(root=dataset_path, folds=val_folds, download=True, transform=transform)
     val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+
+    # Training subset
+    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True, transform=transform)
+
+    if supervised_ratio == 1.0:
+        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    
+    else:
+        s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio, nb_class=train_dataset.nb_class)
+    
+        sampler_s = torch_data.SubsetRandomSampler(s_idx)
+        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s)
     
     return None, train_loader, val_loader
     
