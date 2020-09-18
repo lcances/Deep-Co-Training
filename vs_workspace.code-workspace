@@ -1,14 +1,16 @@
 {
 	"folders": [
 		{
+			"path": "../Datasets"
+		},
+		{
 			"path": "."
 		},
 		{
-			"path": "../Datasets/ESC-50"
-		},
-		{
-			"path": "../Datasets/UrbanSound8K"
+			"path": "../PyTorch"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"python.pythonPath": "/home/lcances/.miniconda3/envs/dct/bin/python"
+	}
 }

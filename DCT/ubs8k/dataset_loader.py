@@ -19,6 +19,7 @@ def load_supervised(
     val_folds: tuple = (10, ),
     
     verbose = 1,
+    **kwargs,
 ):
     """
     Load the UrbanSound dataset for supervised systems.
@@ -34,18 +35,23 @@ def load_supervised(
         folds=all_folds,
         verbose=verbose
     )
-    
-    # prepare the default dataset
-    train_dataset = Dataset(manager, folds=train_folds, cached=True)
-    val_dataset = Dataset(manager, folds=val_folds, cached=True)
-    
-    # split the training set into a supervised and unsupervised sets
-    s_idx, u_idx = train_dataset.split_s_u(supervised_ratio)
 
-    # Train loader only use the s_idx
-    sampler_s = torch_data.SubsetRandomSampler(s_idx)
-    train_loader = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
+    # validation subset
+    val_dataset = Dataset(manager, folds=val_folds, cached=True)
     val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+
+    # training subset
+    train_dataset = Dataset(manager, folds=train_folds, cached=True)
+    
+    if supervised_ratio == 1.0:
+        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    else:
+        s_idx, u_idx = train_dataset.split_s_u(supervised_ratio)
+
+        # Train loader only use the s_idx
+        sampler_s = torch_data.SubsetRandomSampler(s_idx)
+        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s)
     
     return manager, train_loader, val_loader
 

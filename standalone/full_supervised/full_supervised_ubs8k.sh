@@ -13,7 +13,7 @@ parse_long() {
 function show_help {
     echo "usage:  $BASH_SOURCE [--dataset] [--model] [--ratio] [--epoch] [--learning_rate] \
         [--batch_size] [--num_classes] [-C | --crossval] [-R | --resume] [-h]"
-    echo "    --dataset         DATASET (default esc10)"
+    echo "    --dataset         DATASET (default ubs8k)"
     echo "    --model           MODEL (default wideresnet28_4)"
     echo "    --ratio           SUPERVISED RATIO (default 1.0)"
     echo "    --epoch           EPOCH (default 200)"
@@ -38,7 +38,7 @@ function show_help {
 }
 
 # default parameters
-DATASET="esc10"
+DATASET="ubs8k"
 MODEL=cnn03
 RATIO=1.0
 EPOCH=200
@@ -69,14 +69,19 @@ done
 # ___________________________________________________________________________________ #
 # ___________________________________________________________________________________ #
 
-folds=("-t 1 2 3 4 -v 5")
+folds=("-t 1 2 3 4 5 6 7 8 9 -v 10")
 if [ $CROSSVAL -eq 1 ]; then
     folds=(
-        "-t 1 2 3 4 -v 5" \
-        "-t 2 3 4 5 -v 1" \
-        "-t 1 3 4 2 -v 2" \
-        "-t 1 2 4 5 -v 3" \
-        "-t 1 2 3 5 -v 4" \
+        "-t 1 2 3 4 5 6 7 8 9 -v 10" \
+        "-t 2 3 4 5 6 7 8 9 10 -v 1" \
+        "-t 1 3 4 5 6 7 8 9 10 -v 2" \
+        "-t 1 2 4 5 6 7 8 9 10 -v 3" \
+        "-t 1 2 3 5 6 7 8 9 10 -v 4" \
+        "-t 1 2 3 4 6 7 8 9 10 -v 5" \
+        "-t 1 2 3 4 5 7 8 9 10 -v 6" \
+        "-t 1 2 3 4 5 6 8 9 10 -v 7" \
+        "-t 1 2 3 4 5 6 7 9 10 -v 8" \
+        "-t 1 2 3 4 5 6 7 8 10 -v 9" \
     )
 fi
 
@@ -129,6 +134,6 @@ do
         tensorboard_sufix=""
     fi
     
-    echo python full_supervised_esc.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
-    python full_supervised_esc.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
+    echo python full_supervised_ubs8k.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
+    python full_supervised_ubs8k.py ${folds[$i]} ${tensorboard_sufix} ${parameters}
 done
