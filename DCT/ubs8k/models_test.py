@@ -7,6 +7,8 @@ import librosa
 from ubs8k.datasetManager import DatasetManager, conditional_cache_v2
 from DCT.layers import ConvPoolReLU, ConvReLU, ConvBNReLUPool, ConvAdvBNReLUPool, ConvBNPoolReLU6
 
+from typing import Tuple
+
 
 # ===============================================================
 #    WIDE RESNET CODE
@@ -111,7 +113,10 @@ class cnn0(nn.Module):
 
 
 class cnn03(nn.Module):
-    def __init__(self, **kwargs):
+    def __init__(self,
+            input_shape: Tuple[int, int] = (64, 173),
+            num_classes: int = 10,
+            **kwargs) -> nn.Module:
         super().__init__()
 
         self.features = nn.Sequential(
@@ -122,10 +127,15 @@ class cnn03(nn.Module):
             ConvReLU(72, 72, 3, 1, 1),
         )
 
+        linear_input = input_shape[0] // 64  # // 4 // 4 // 2 // 2
+        linear_input *= input_shape[1] // 16
+        linear_input *= 72
+        print(linear_input, num_classes)
+
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Dropout(0.5),
-            nn.Linear(720, 10),
+            nn.Linear(linear_input, num_classes),
         )
 
     def forward(self, x):
