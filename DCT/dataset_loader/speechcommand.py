@@ -1,18 +1,14 @@
-from DCT.util.utils import ZipCycle
-
 import copy
-import random, os
+import random
+import os
 import numpy as np
 from torch.nn import Module
-from torch.nn.functional import one_hot
 from torch import Tensor
-import tqdm
 import torch.utils.data as torch_data
 from torchaudio.datasets import SPEECHCOMMANDS
 
-from typing import Union, Tuple
+from typing import Tuple
 from torch.utils.data import DataLoader
-from DCT.util.utils import conditional_cache_v2
 
 target_mapper = {
     "bed": 0,
@@ -58,33 +54,33 @@ def _split_s_u(train_dataset, s_ratio: float = 1.0):
 
     if s_ratio == 1.0:
         return list(range(len(train_dataset))), []
-    
+
     s_idx, u_idx = [], []
     nb_s = int(np.ceil(len(train_dataset) * s_ratio) // nb_class)
     cls_idx = [[] for _ in range(nb_class)]
-    
+
     # To each file, an index is assigned, then they are split into classes
     for i in range(len(train_dataset)):
         _, y = train_dataset[i]
         cls_idx[y].append(i)
-        
+
     for i in range(len(cls_idx)):
         random.shuffle(cls_idx[i])
         s_idx += cls_idx[i][:nb_s]
         u_idx += cls_idx[i][nb_s:]
-    
+
     return s_idx, u_idx
 
 
 def cache_feature(func):
     def decorator(*args, **kwargs):
         key = ",".join(map(str, args))
-        
+
         if key not in decorator.cache:
             decorator.cache[key] = func(*args, **kwargs)
-            
+
         return decorator.cache[key]
-    
+
     decorator.cache = dict()
     return decorator
 
@@ -96,7 +92,8 @@ class SpeechCommands(SPEECHCOMMANDS):
         return waveform, target_mapper[label]
 
     def split_train_val(self, ratio: float = 0.2):
-        """ To split train and validation, let try to not have same speaker in both training and validation. """
+        """ To split train and validation, let try to not have same speaker in
+            both training and validation. """
         def create_metadata() -> Tuple[str, str, int, int]:
             labels, speaker_ids, utterance_numbers = [], [], []
             filepaths = []
@@ -128,7 +125,8 @@ class SpeechCommands(SPEECHCOMMANDS):
         val_speakers = unique_speaker[:nb_val_speakers]
         train_speakers = unique_speaker[nb_val_speakers:]
 
-        train_speaker_mask = sum([speaker_ids == s for s in train_speakers]) >= 1
+        train_speaker_mask = sum(
+            [speaker_ids == s for s in train_speakers]) >= 1
         val_speaker_mask = sum([speaker_ids == s for s in val_speakers]) >= 1
 
         train_dataset = copy.deepcopy(self)
@@ -140,7 +138,8 @@ class SpeechCommands(SPEECHCOMMANDS):
         return train_dataset, val_dataset
 
 
-def load_dct(dataset_root, supervised_ratio: float = 0.1, batch_size: int = 100, **kwargs ):
+def load_dct(dataset_root, supervised_ratio: float = 0.1,
+             batch_size: int = 100, **kwargs):
     raise NotImplementedError
 
 
@@ -151,7 +150,8 @@ def load_supervised(
         dataset_root,
         supervised_ratio: float = 1.0,
         batch_size: int = 128,
-        transform: Module = None,
+        train_transform: Module = None,
+        val_transform: Module = None,
         **kwargs) -> Tuple[DataLoader, DataLoader]:
     """
     Load the SppechCommand for a supervised training
@@ -160,25 +160,32 @@ def load_supervised(
     dataset_path = os.path.join(dataset_root)
 
     # main dataset
-    dataset = SpeechCommands(root=dataset_path, download=True, transform=transform)
+    dataset = SpeechCommands(
+        root=dataset_path, download=True)
 
     train_dataset, val_dataset = dataset.split_train_val()
+    train_dataset.transform = train_transform
+    val_dataset.transform = val_transform
 
     # validation subset
-    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch_data.DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=True)
 
     # Training subset
     if supervised_ratio == 1.0:
-        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    
+        train_loader = torch_data.DataLoader(
+            train_dataset, batch_size=batch_size,
+            shuffle=True, num_workers=num_workers)
+
     else:
         s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
-    
+
         sampler_s = torch_data.SubsetRandomSampler(s_idx)
-        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s)
-    
+        train_loader = torch_data.DataLoader(
+            train_dataset, batch_size=batch_size, sampler=sampler_s)
+
     return None, train_loader, val_loader
-    
+
 
 if __name__ == "__main__":
     _, td, vd = load_supervised("/corpus/corpus")
