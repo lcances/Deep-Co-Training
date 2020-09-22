@@ -1,9 +1,11 @@
-from typing import Iterable
 import torch
 import os
 
+
 class CheckPoint:
-    def __init__(self, model: list, optimizer, mode: str="max", name: str="best", verbose: bool=True):
+    def __init__(self, model: list, optimizer,
+                 mode: str = "max", name: str = "best",
+                 verbose: bool = True):
         self.mode = mode
         self.name = name
         self.verbose = verbose
@@ -21,14 +23,14 @@ class CheckPoint:
             self.model = [self.model]
 
         self.create_directory()
-        
+
     def create_directory(self):
         os.makedirs(os.path.dirname(self.name), exist_ok=True)
 
     def step(self, new_value):
         if self.epoch_counter == 0:
             self.best_metric = new_value
-        
+
         # Save last epoch
         self.last_state = self._get_state(new_value)
         torch.save(self.last_state, self.name + ".last")
@@ -43,8 +45,8 @@ class CheckPoint:
             torch.save(self.best_state, self.name)
 
         self.epoch_counter += 1
-            
-    def _get_state(self, new_value = None) -> dict:
+
+    def _get_state(self, new_value=None) -> dict:
         state = {
             "state_dict": [m.state_dict() for m in self.model],
             "optimizer": self.optimizer.state_dict(),
@@ -52,35 +54,35 @@ class CheckPoint:
         }
         if new_value is not None:
             state["best_metric"] = new_value
-            
+
         return state
 
     def save(self):
         torch.save(self._get_state, self.name + ".last")
-        
+
     def load_best(self):
         if not os.path.isfile(self.name):
             return
 
         data = torch.load(self.name)
         self._load_helper(data, self.best_state)
-            
+
     def load_last(self):
         if not os.path.isfile(self.name + ".last"):
             return
 
         data = torch.load(self.name + ".last")
         self._load_helper(data, self.last_state)
-        
+
     def _load_helper(self, state, destination):
         print(list(state.keys()))
         for k, v in state.items():
             destination[k] = v
-            
+
         self.optimizer.load_state_dict(destination["optimizer"])
         self.epoch_counter = destination["epoch"]
         self.best_metric = destination["best_metric"]
-        
+
         # Path to fit with previous version of checkpoint
         if not isinstance(destination["state_dict"], list):
             destination["state_dict"] = [destination["state_dict"]]
@@ -99,6 +101,6 @@ class CheckPoint:
 
         # Multi-dimension tensor
         if self.mode == "max":
-             return any(new_value > self.best_metric)
-            
+            return any(new_value > self.best_metric)
+
         return any(self.best_metric > new_value)
