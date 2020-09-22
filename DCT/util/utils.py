@@ -9,31 +9,48 @@ import time
 from collections import Iterable, Sized
 
 # TODO write q timer decorator that deppend on the logging level
+
+
 def timeit_logging(func):
     def decorator(*args, **kwargs):
         start_time = time.time()
         func(*args, **kwargs)
-        logging.info("%s executed in: %.3fs" % (func.__name__, time.time()-start_time))
-        
+        logging.info("%s executed in: %.3fs" %
+                     (func.__name__, time.time()-start_time))
+
     return decorator
+
 
 def conditional_cache_v2(func):
     def decorator(*args, **kwargs):
         key_list = ",".join(map(str, args))
         key = kwargs.get("key", None)
         cached = kwargs.get("cached", None)
-        
+
         if cached is not None and key is not None:
             if key not in decorator.cache.keys():
                 decorator.cache[key] = func(*args, **kwargs)
 
             return decorator.cache[key]
-        
+
         return func(*args, **kwargs)
 
     decorator.cache = dict()
 
     return decorator
+
+
+def track_maximum():
+    def func(key, value):
+        if key not in func.max:
+            func.max[key] = value
+        else:
+            if func.max[key] < value:
+                func.max[key] = value
+        return func.max[key]
+
+    func.max = dict()
+    return func
 
 
 def get_datetime():
@@ -50,15 +67,16 @@ def get_model_from_name(model_name):
     all_members = []
     for module in [ubs8k_models, ubs8k_models_test, cifar10_models]:
         all_members += inspect.getmembers(module)
-    
+
     for name, obj in all_members:
         if inspect.isclass(obj) or inspect.isfunction(obj):
             if obj.__name__ == model_name:
                 logging.info("Model loaded: %s" % model_name)
                 return obj
-            
+
     msg = "This model does not exist: %s\n" % model_name
-    msg += "Available models are: %s" % [name for name, obj in all_members if inspect.isclass(obj) or inspect.isfunction(obj)]
+    msg += "Available models are: %s" % [name for name,
+                                         obj in all_members if inspect.isclass(obj) or inspect.isfunction(obj)]
     raise AttributeError("This model does not exist: %s " % msg)
 
 
@@ -67,9 +85,8 @@ def reset_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
-    torch.backends.cudnn.deterministic=True
+    torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
 
     from typing import Iterable, Sized
 

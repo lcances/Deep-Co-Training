@@ -10,3 +10,15 @@ def lr_lambda(e):
 
     else:
         return 0.008
+
+
+def supervised(**kwargs) -> list:
+    return [lr_lambda]
+
+
+def dct(**kwargs) -> list:
+    return [lr_lambda]
+
+
+def dct_uniloss() -> list:
+    return [lr_lambda]
