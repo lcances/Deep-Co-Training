@@ -1,16 +1,17 @@
 """
 Each dataset have they specificity and split into Supervised and Unsupervised
 subset is different for most of them. This utility function allow to get the
-train_loader and val_loader for each dataset and framework. 
+train_loader and val_loader for each dataset and framework.
 
 This abstraction layer allow the standalone script to work with any dataset.
 """
 
-import DCT.ubs8k.dataset_loader as u8
-import DCT.cifar10.dataset_loader as c10
-import DCT.esc.dataset_loader as esc
-#import DCT.GTZAN.dataset_loader as gtzan
-import DCT.SpeechCommand.dataset_loader as SC
+import DCT.dataset_loader.esc as esc
+import DCT.dataset_loader.cifar10 as c10
+import DCT.dataset_loader.ubs8k as u8
+import DCT.dataset_loader.speechcommand as SC
+
+# import DCT.GTZAN.dataset_loader as gtzan
 
 dataset_mapper = {
     "ubs8k": {
@@ -26,29 +27,30 @@ dataset_mapper = {
 
     "esc10": {
         "supervised": esc.load_esc10_supervised,
-        #"dct": esc.load_dct,
+        # "dct": esc.load_dct,
     },
 
     "esc50": {
         "supervised": esc.load_esc50_supervised,
     },
 
-#    "gtzan": {
-#        "supervised": gtzan.load_supervised,
-#        "dct": gtzan.load_dct,
-#    },
-#
+    #    "gtzan": {
+    #        "supervised": gtzan.load_supervised,
+    #        "dct": gtzan.load_dct,
+    #    },
+    #
     "SpeechCommand": {
         "supervised": SC.load_supervised,
-#        "dct": SC.load_dct,
+        #        "dct": SC.load_dct,
     },
 }
 
 
 def load_datasets_helper(framework: str, mapper: dict, **kwargs):
     if framework not in mapper:
-        raise ValueError("Framework %s doesn't exist. Available framewokrs are {%s}" % (list(mapper.keys())))
-    
+        raise ValueError("Framework %s doesn't exist. Available framewokrs are {%s}" % (
+            list(mapper.keys())))
+
     else:
         return mapper[framework](**kwargs)
 
@@ -67,5 +69,5 @@ def load_dataset(dataset_name: str, framework: str, dataset_root: str,
         raise ValueError("dataset %s is not available.\n Available datasets: {%s}" % (
             dataset_name, available_dataset
         ))
-    
+
     return load_datasets_helper(framework, dataset_mapper[dataset_name], **parameters, **kwargs)
