@@ -150,6 +150,7 @@ def load_supervised(
         dataset_root,
         supervised_ratio: float = 1.0,
         batch_size: int = 128,
+        
         train_transform: Module = None,
         val_transform: Module = None,
         **kwargs) -> Tuple[DataLoader, DataLoader]:

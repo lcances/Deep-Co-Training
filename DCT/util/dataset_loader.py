@@ -70,4 +70,5 @@ def load_dataset(dataset_name: str, framework: str, dataset_root: str,
             dataset_name, available_dataset
         ))
 
-    return load_datasets_helper(framework, dataset_mapper[dataset_name], **parameters, **kwargs)
+    return load_datasets_helper(framework, dataset_mapper[dataset_name],
+                                **parameters, **kwargs)

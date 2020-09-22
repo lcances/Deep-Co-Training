@@ -38,6 +38,8 @@ def get_model_from_name(model_name, module_list):
 
 
 def load_model(dataset_name: str, model_name: str):
+    dataset_name = dataset_name.lower()
+    
     if dataset_name not in dataset_mapper:
         available_dataset = ", ".join(list(dataset_mapper.keys()))
         raise ValueError(
