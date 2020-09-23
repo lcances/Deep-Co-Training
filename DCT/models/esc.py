@@ -44,16 +44,16 @@ class mWideResnet(ResNet):
         return self._forward_impl(x)
 
 
-def esc_wideresnet28_2(**kwargs):
+def wideresnet28_2(**kwargs):
     num_classes = kwargs.get("num_classes", 10)
     return mWideResnet([4, 4, 4], num_classes=num_classes)
 
 
-def esc_wideresnet28_4(**kwargs):
+def wideresnet28_4(**kwargs):
     num_classes = kwargs.get("num_classes", 10)
     return mWideResnet([4, 4, 4], num_classes=num_classes, width=4)
 
 
-def esc_wideresnet28_8(**kwargs):
+def wideresnet28_8(**kwargs):
     num_classes = kwargs.get("num_classes", 10)
     return mWideResnet([4, 4, 4], num_classes=num_classes, width=8)
