@@ -4,14 +4,14 @@ from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
 
 from typing import Tuple
 
+commun_transforms = Sequential(
+    MelSpectrogram(sample_rate=44100, n_fft=2048,
+                   hop_length=512, n_mels=64),
+    AmplitudeToDB(),
+)
+
 
 def supervised() -> Tuple[Module, Module]:
-    commun_transforms = Sequential(
-        MelSpectrogram(sample_rate=44100, n_fft=2048,
-                       hop_length=512, n_mels=64),
-        AmplitudeToDB(),
-    )
-
     train_transform = commun_transforms
     val_transform = commun_transforms
 
@@ -19,7 +19,10 @@ def supervised() -> Tuple[Module, Module]:
 
 
 def dct() -> Tuple[Module, Module]:
-    raise NotImplementedError
+    train_transform = commun_transforms
+    val_transform = commun_transforms
+
+    return train_transform, val_transform
 
 
 def dct_uniloss() -> Tuple[Module, Module]:
