@@ -13,6 +13,8 @@ venv.yml
 
 model_save/
 datasets/*
+logs/
+standalone/osirim/logs/
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
