@@ -7,6 +7,7 @@ import torch
 import logging
 import time
 from collections import Iterable, Sized
+import torch.distributed as dist
 
 # TODO write q timer decorator that deppend on the logging level
 
@@ -140,3 +141,17 @@ class ZipCycle(Iterable, Sized):
 
     def __len__(self) -> int:
         return self._len
+
+
+def DDP_setup(rank, world_size):
+    """Initialization required to use DistributedDataParallel"""
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+
+    # initialize the process group
+    dist.init_process_group("gloo", rank=rank, world_size=world_size)
+
+
+def DDP_cleanup():
+    """Proper way to finish system using DistributedDataParallel"""
+    dist.destroy_process_group()

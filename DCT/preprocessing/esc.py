@@ -26,7 +26,10 @@ def dct() -> Tuple[Module, Module]:
 
 
 def dct_uniloss() -> Tuple[Module, Module]:
-    raise NotImplementedError
+    train_transform = commun_transforms
+    val_transform = commun_transforms
+
+    return train_transform, val_transform
 
 
 def dct_aug4adv() -> Tuple[Module, Module]:

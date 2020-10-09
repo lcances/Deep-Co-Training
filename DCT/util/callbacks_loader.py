@@ -9,35 +9,35 @@ dataset_mapper = {
     "ubs8k": {
         "supervised": u8.supervised,
         "dct": u8.dct,
-        "uniloss": None,
+        "uniloss": u8.dct_uniloss,
         "aug4adv": None,
     },
 
     "cifar10": {
         "supervised": c10.supervised,
         "dct": c10.dct,
-        "uniloss": None,
+        "uniloss": c10.dct_uniloss,
         "aug4adv": None,
     },
 
     "esc10": {
         "supervised": esc.supervised,
         "dct": esc.dct,
-        "uniloss": None,
+        "uniloss": esc.dct_uniloss,
         "aug4adv": None,
     },
 
     "esc50": {
         "supervised": esc.supervised,
         "dct": esc.dct,
-        "uniloss": None,
+        "uniloss": esc.dct_uniloss,
         "aug4adv": None,
     },
 
     "SpeechCommand": {
         "supervised": sc.supervised,
         "dct": sc.dct,
-        "uniloss": None,
+        "uniloss": sc.dct_uniloss,
         "aug4adv": None,
     },
 

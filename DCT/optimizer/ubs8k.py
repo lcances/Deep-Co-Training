@@ -9,11 +9,11 @@ def supervised(model,
 
 
 def dct(model1, model2,
-        learning_rate: float = 0.001,
+        learning_rate: float = 3e-3,
         **kwargs) -> torch.optim.Optimizer:
 
     parameters = list(model1.parameters()) + list(model2.parameters())
-    return torch.optim.Adam(parameters(), lr=learning_rate, **kwargs)
+    return torch.optim.Adam(parameters, lr=learning_rate)
 
 
 def dct_uniloss(model1, model2,
@@ -21,4 +21,4 @@ def dct_uniloss(model1, model2,
                 **kwargs) -> torch.optim.Optimizer:
 
     parameters = list(model1.parameters()) + list(model2.parameters())
-    return torch.optim.Adam(parameters(), lr=learning_rate, **kwargs)
+    return torch.optim.Adam(parameters, lr=learning_rate)

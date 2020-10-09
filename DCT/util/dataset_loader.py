@@ -17,6 +17,7 @@ dataset_mapper = {
     "ubs8k": {
         "supervised": u8.load_supervised,
         "dct": u8.load_dct,
+        "uniloss": u8.load_dct,
         "aug4adv": u8.load_dct_aug4adv
     },
 
@@ -27,11 +28,15 @@ dataset_mapper = {
 
     "esc10": {
         "supervised": esc.load_esc10_supervised,
-        # "dct": esc.load_dct,
+        "dct": esc.load_esc10_dct,
+        "uniloss": esc.load_esc10_dct,
     },
 
     "esc50": {
         "supervised": esc.load_esc50_supervised,
+        "dct": esc.load_esc50_dct,
+        "uniloss": esc.load_esc50_dct
+        
     },
 
     #    "gtzan": {
@@ -41,15 +46,18 @@ dataset_mapper = {
     #
     "SpeechCommand": {
         "supervised": SC.load_supervised,
-        #        "dct": SC.load_dct,
+        "dct": SC.load_dct,
+        "uniloss": SC.load_dct
     },
 }
 
 
 def load_datasets_helper(framework: str, mapper: dict, **kwargs):
+    available_framework = list(mapper.keys())
+
     if framework not in mapper:
-        raise ValueError("Framework %s doesn't exist. Available framewokrs are {%s}" % (
-            list(mapper.keys())))
+        raise ValueError(f"Framework {framework} doesn't exist."
+                         f"Available framewokrs are {available_framework}")
 
     else:
         return mapper[framework](**kwargs)
