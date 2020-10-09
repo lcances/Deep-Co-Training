@@ -7,35 +7,35 @@ dataset_mapper = {
     "ubs8k": {
         "supervised": u8.supervised,
         "dct": u8.dct,
-        "uniloss": None,
+        "uniloss": u8.dct_uniloss,
         "aug4adv": None,
     },
 
     "cifar10": {
         "supervised": c10.supervised,
         "dct": c10.dct,
-        "uniloss": None,
+        "uniloss": c10.dct_uniloss,
         "aug4adv": None,
     },
 
     "esc10": {
         "supervised": esc.supervised,
         "dct": esc.dct,
-        "uniloss": None,
+        "uniloss": esc.dct_uniloss,
         "aug4adv": None,
     },
 
     "esc50": {
         "supervised": esc.supervised,
         "dct": esc.dct,
-        "uniloss": None,
+        "uniloss": esc.dct_uniloss,
         "aug4adv": None,
     },
 
     "SpeechCommand": {
         "supervised": sc.supervised,
         "dct": sc.dct,
-        "uniloss": None,
+        "uniloss": sc.dct_uniloss,
         "aug4adv": None,
     },
 
@@ -54,7 +54,10 @@ def load_preprocesser_helper(framework: str, mapper: dict, **kwargs):
                          f"framework are {list(mapper.keys())}")
 
     else:
-        return mapper[framework](**kwargs)
+        if mapper[framework] is not None:
+            return mapper[framework](**kwargs)
+        
+        raise NotImplementedError(f"Framework {framework} is not implemented yet")
 
 
 def load_preprocesser(dataset_name: str, framework: str,

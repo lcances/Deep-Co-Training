@@ -101,7 +101,7 @@ def load_dct_helper(
 
     # Recover extra commun arguments
     num_workers = kwargs.get("num_workers", 0)
-    pin_memory = kwargs.Get("pin_memory", False)
+    pin_memory = kwargs.get("pin_memory", False)
     loader_args = dict(
         num_workers=num_workers,
         pin_memory=pin_memory,
@@ -181,7 +181,7 @@ def _load_supervised_helper(
     """
     # Recover extra commun arguments
     num_workers = kwargs.get("num_workers", 0)
-    pin_memory = kwargs.Get("pin_memory", False)
+    pin_memory = kwargs.get("pin_memory", False)
     loader_args = dict(
         num_workers=num_workers,
         pin_memory=pin_memory,

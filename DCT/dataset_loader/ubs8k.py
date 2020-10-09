@@ -2,6 +2,7 @@ from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 from DCT.util.utils import ZipCycle
 from DCT.augmentation_list import augmentations
+from torch.nn import Module
 
 
 import os
@@ -67,8 +68,7 @@ def load_dct(
         train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
         val_folds: tuple = (10, ),
 
-        verbose=1,
-):
+        verbose=1, **kwargs):
     """
     Load the urbansound dataset for Deep Co Training system.
     """
@@ -132,7 +132,8 @@ def load_dct_aug4adv(
 
         num_workers=4,
         verbose=1,
-):
+    
+        **kwargs):
     """
     Load the urbansound dataset for Deep Co Training system.
     """

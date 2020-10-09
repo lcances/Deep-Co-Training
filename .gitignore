@@ -12,7 +12,7 @@ DCT.egg-info/
 venv.yml
 
 model_save/
-datasets/*
+datasets/
 logs/
 standalone/osirim/logs/
 

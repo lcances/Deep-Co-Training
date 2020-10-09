@@ -14,7 +14,7 @@ def dct(model1, model2,
         **kwargs) -> torch.optim.Optimizer:
 
     parameters = list(model1.parameters()) + list(model2.parameters())
-    return torch.optim.Adam(parameters(), lr=learning_rate, **kwargs)
+    return torch.optim.Adam(parameters, lr=learning_rate)
 
 
 def dct_uniloss(model1, model2,
@@ -22,4 +22,4 @@ def dct_uniloss(model1, model2,
                 **kwargs) -> torch.optim.Optimizer:
 
     parameters = list(model1.parameters()) + list(model2.parameters())
-    return torch.optim.Adam(parameters(), lr=learning_rate, **kwargs)
+    return torch.optim.Adam(parameters, lr=learning_rate)
