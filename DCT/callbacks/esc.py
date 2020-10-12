@@ -1,22 +1,26 @@
 import numpy
+from torch.optim.lr_scheduler import LambdaLR
+from torch.optim.optimizer import Optimizer
 
 
-def supervised(nb_epoch: int) -> list:
+def get_lr_lambda(nb_epoch):
     def lr_lambda(epoch):
         return (1.0 + numpy.cos((epoch-1)*numpy.pi/nb_epoch)) * 0.5
-
-    return [lr_lambda]
-
-
-def dct(nb_epoch: int) -> list:
-    def lr_lambda(epoch):
-        return (1.0 + numpy.cos((epoch-1)*numpy.pi/nb_epoch)) * 0.5
-
-    return [lr_lambda]
+    return lr_lambda
 
 
-def dct_uniloss(nb_epoch: int) -> list:
-    def lr_lambda(epoch):
-        return (1.0 + numpy.cos((epoch-1)*numpy.pi/nb_epoch)) * 0.5
+def supervised(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
+    lr_scheduler = LambdaLR(optimizer, get_lr_lambda(nb_epoch))
+    return [lr_scheduler]
 
-    return [lr_lambda]
+
+def dct(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
+    return supervised(nb_epoch, optimizer, **kwargs)
+
+
+def dct_uniloss(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
+    return supervised(nb_epoch, optimizer, **kwargs)
+
+
+def student_teacher(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
+    return supervised(nb_epoch, optimizer, **kwargs)

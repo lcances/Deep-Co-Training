@@ -2,6 +2,7 @@ from ubs8k.datasetManager import DatasetManager
 from ubs8k.datasets import Dataset
 from DCT.util.utils import ZipCycle
 from DCT.augmentation_list import augmentations
+from torch.nn import Module
 
 
 import os
@@ -24,8 +25,8 @@ def load_supervised(
     """
     Load the UrbanSound dataset for supervised systems.
     """
-    audio_root = os.path.join(dataset_root, "ubs8k", "audio")
-    metadata_root = os.path.join(dataset_root, "ubs8k", "metadata")
+    audio_root = os.path.join(dataset_root, "UrbanSound8K", "audio")
+    metadata_root = os.path.join(dataset_root, "UrbanSound8K", "metadata")
 
     all_folds = train_folds + val_folds
 
@@ -38,8 +39,7 @@ def load_supervised(
 
     # validation subset
     val_dataset = Dataset(manager, folds=val_folds, cached=True)
-    val_loader = torch_data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
     # training subset
     train_dataset = Dataset(manager, folds=train_folds, cached=True)
@@ -59,6 +59,61 @@ def load_supervised(
     return manager, train_loader, val_loader
 
 
+def student_teacher(
+    dataset_root,
+    supervised_ratio: float = 0.1,
+    batch_size: int = 64,
+
+    train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
+    val_folds: tuple = (10, ),
+
+    verbose=1,
+    **kwargs,
+):
+    assert supervised_ratio < 1.0
+    
+    """
+    Load the UrbanSound dataset for student teacher framework.
+    """
+    audio_root = os.path.join(dataset_root, "UrbanSound8K", "audio")
+    metadata_root = os.path.join(dataset_root, "UrbanSound8K", "metadata")
+
+    all_folds = train_folds + val_folds
+
+    # Create the dataset manager
+    manager = DatasetManager(
+        metadata_root, audio_root,
+        folds=all_folds,
+        verbose=verbose
+    )
+
+    # validation subset
+    val_dataset = Dataset(manager, folds=val_folds, cached=True)
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+
+    # training subset
+    train_dataset = Dataset(manager, folds=train_folds, cached=True)
+    
+     # Calc the size of the Supervised and Unsupervised batch
+    s_idx, u_idx = train_dataset.split_s_u(supervised_ratio)
+    nb_s_file = len(s_idx)
+    nb_u_file = len(u_idx)
+
+    ratio = nb_s_file / nb_u_file
+    s_batch_size = int(np.floor(batch_size * ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+
+    sampler_s = torch_data.SubsetRandomSampler(s_idx)
+    sampler_u = torch_data.SubsetRandomSampler(u_idx)
+
+    train_s_loader = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
+    train_u_loader = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
+
+    train_loader = ZipCycle([train_s_loader, train_u_loader])
+
+    return manager, train_loader, val_loader
+
+
 def load_dct(
         dataset_root,
         supervised_ratio: float = 0.1,
@@ -67,13 +122,12 @@ def load_dct(
         train_folds: tuple = (1, 2, 3, 4, 5, 6, 7, 8, 9),
         val_folds: tuple = (10, ),
 
-        verbose=1,
-):
+        verbose=1, **kwargs):
     """
     Load the urbansound dataset for Deep Co Training system.
     """
-    audio_root = os.path.join(dataset_root, "ubs8k", "audio")
-    metadata_root = os.path.join(dataset_root, "ubs8k", "metadata")
+    audio_root = os.path.join(dataset_root, "UrbanSound8K", "audio")
+    metadata_root = os.path.join(dataset_root, "UrbanSound8K", "metadata")
 
     all_folds = train_folds + val_folds
 
@@ -132,7 +186,8 @@ def load_dct_aug4adv(
 
         num_workers=4,
         verbose=1,
-):
+    
+        **kwargs):
     """
     Load the urbansound dataset for Deep Co Training system.
     """

@@ -9,44 +9,42 @@ dataset_mapper = {
     "ubs8k": {
         "supervised": u8.supervised,
         "dct": u8.dct,
-        "uniloss": None,
+        "uniloss": u8.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": u8.student_teacher,
     },
 
     "cifar10": {
         "supervised": c10.supervised,
         "dct": c10.dct,
-        "uniloss": None,
+        "uniloss": c10.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": c10.student_teacher,
     },
 
     "esc10": {
         "supervised": esc.supervised,
         "dct": esc.dct,
-        "uniloss": None,
+        "uniloss": esc.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": esc.student_teacher,
     },
 
     "esc50": {
         "supervised": esc.supervised,
         "dct": esc.dct,
-        "uniloss": None,
+        "uniloss": esc.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": esc.student_teacher,
     },
 
     "SpeechCommand": {
         "supervised": sc.supervised,
         "dct": sc.dct,
-        "uniloss": None,
+        "uniloss": sc.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": sc.student_teacher,
     },
-
-    "gtzan": {
-        "supervised": None,
-        "dct": None,
-        "uniloss": None,
-        "aug4adv": None,
-    }
 }
 
 

@@ -1,3 +1,7 @@
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LambdaLR
+
+
 def lr_lambda(e):
     if e < 60:
         return 1
@@ -12,13 +16,21 @@ def lr_lambda(e):
         return 0.008
 
 
-def supervised(**kwargs) -> list:
-    return [lr_lambda]
+def supervised(optimizer: Optimizer, **kwargs) -> list:
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
+    return [lr_scheduler]
 
 
 def dct(**kwargs) -> list:
-    return [lr_lambda]
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
+    return [lr_scheduler]
 
 
 def dct_uniloss() -> list:
-    return [lr_lambda]
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
+    return [lr_scheduler]
+
+
+def student_teacher() -> list:
+    lr_scheduler = LambdaLR(optimizer, lr_lambda)
+    return [lr_scheduler]

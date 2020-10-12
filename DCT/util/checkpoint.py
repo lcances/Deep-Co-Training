@@ -1,3 +1,4 @@
+from torch.utils.tensorboard import SummaryWriter
 import torch
 import os
 
@@ -7,12 +8,12 @@ class CheckPoint:
                  mode: str = "max", name: str = "best",
                  verbose: bool = True):
         self.mode = mode
+
         self.name = name
         self.verbose = verbose
 
         self.model = model
         self.optimizer = optimizer
-
         self.best_state = dict()
         self.last_state = dict()
         self.best_metric = None
@@ -104,3 +105,18 @@ class CheckPoint:
             return any(new_value > self.best_metric)
 
         return any(self.best_metric > new_value)
+
+    
+class mSummaryWriter(SummaryWriter):
+    def __init__(self, log_dir=None, comment='', purge_step=None, max_queue=10,
+                 flush_secs=120, filename_suffix=''):
+        super().__init__(log_dir, comment, purge_step, max_queue, flush_secs, filename_suffix)
+        self.history = dict()
+        
+    def add_scalar(self, tag, scalar_value, global_step=None, walltime=None):
+        super().add_scalar(tag, scalar_value, global_step, walltime)
+        
+        if tag not in self.history:
+            self.history[tag] = [scalar_value]
+        else:
+            self.history[tag].append(scalar_value)

@@ -3,14 +3,14 @@
 
 # # import
 
-# In[11]:
+# In[1]:
 
 
 #get_ipython().run_line_magic('load_ext', 'autoreload')
 #get_ipython().run_line_magic('autoreload', '2')
 
 
-# In[12]:
+# In[2]:
 
 
 import os
@@ -24,23 +24,25 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 import torch.nn.functional as F
+from torch.cuda.amp import autocast
+from torch.nn.parallel import DataParallel
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.tensorboard import SummaryWriter
 from advertorch.attacks import GradientSignAttack
 
 
-# In[13]:
+# In[3]:
 
-
-from ubs8k.datasetManager import DatasetManager
-from ubs8k.datasets import Dataset
 
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
 from DCT.util.checkpoint import CheckPoint
-from DCT.util.utils import reset_seed, get_datetime, ZipCycle
-from DCT.util.model_loader import get_model_from_name
+from DCT.util.utils import reset_seed, get_datetime, ZipCycle, track_maximum
+from DCT.util.model_loader import load_model
 from DCT.util.dataset_loader import load_dataset
+from DCT.util.optimizer_loader import load_optimizer
+from DCT.util.preprocess_loader import load_preprocesser
+from DCT.util.callbacks_loader import load_callbacks
 
 from DCT.ramps import Warmup, sigmoid_rampup
 from DCT.losses import loss_cot, loss_diff, loss_sup
@@ -48,29 +50,31 @@ from DCT.losses import loss_cot, loss_diff, loss_sup
 
 # # Arguments
 
-# In[14]:
+# In[4]:
 
 
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--from_config", default="", type=str)
-parser.add_argument("-d", "--dataset_root", default="../datasets", type=str)
-parser.add_argument("-D", "--dataset", default="cifar10", type=str, help="available [ubs8k | cifar10]")
+parser.add_argument("-d", "--dataset_root", default="../../datasets/", type=str)
+parser.add_argument("-D", "--dataset", default="esc50", type=str)
 
 group_t = parser.add_argument_group("Commun parameters")
-group_t.add_argument("--model", default="Pmodel", type=str)
-group_t.add_argument("--supervised_ratio", default=0.08, type=float)
-# parser.add_argument("--supervised_mult", default=1.0, type=float)
+group_t.add_argument("--model", default="wideresnet28_8", type=str)
+group_t.add_argument("--supervised_ratio", default=0.1, type=float)
 group_t.add_argument("--batch_size", default=100, type=int)
 group_t.add_argument("--nb_epoch", default=600, type=int)
-group_t.add_argument("--learning_rate", default=0.05, type=int)
+group_t.add_argument("--learning_rate", default=0.003, type=float)
 group_t.add_argument("--resume", action="store_true", default=False)
 group_t.add_argument("--seed", default=1234, type=int)
 
+group_m = parser.add_argument_group("Model parameters")
+group_m.add_argument("--num_classes", default=50, type=int)
+
 
 group_u = parser.add_argument_group("UrbanSound8k parameters")
-group_u.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4, 5, 6, 7, 8, 9], type=int)
-group_u.add_argument("-v", "--val_folds", nargs="+", default=[10], type=int)
+group_u.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4,], type=int)
+group_u.add_argument("-v", "--val_folds", nargs="+", default=[5], type=int)
 
 group_h = parser.add_argument_group('hyperparameters')
 group_h.add_argument("--lambda_cot_max", default=10, type=float)
@@ -84,13 +88,13 @@ group_a.add_argument("--augment_S", action="store_true", help="Apply augmentatio
 group_a.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
 
 group_l = parser.add_argument_group("Logs")
-group_l.add_argument("--checkpoint_root", default="../model_save/", type=str)
-group_l.add_argument("--tensorboard_root", default="../tensorboard/", type=str)
+group_l.add_argument("--checkpoint_root", default="../../model_save/", type=str)
+group_l.add_argument("--tensorboard_root", default="../../tensorboard/", type=str)
 group_l.add_argument("--checkpoint_path", default="deep-co-training", type=str)
 group_l.add_argument("--tensorboard_path", default="deep-co-training", type=str)
 group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
-args = parser.parse_args("")
+args = parser.parse_args()
 
 tensorboard_path = os.path.join(args.tensorboard_root, args.dataset, args.tensorboard_path)
 checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoint_path)
@@ -98,7 +102,7 @@ checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoi
 
 # # Initialization
 
-# In[15]:
+# In[5]:
 
 
 reset_seed(args.seed)
@@ -106,42 +110,60 @@ reset_seed(args.seed)
 
 # # Prepare the dataset
 
-# In[16]:
+# In[6]:
 
 
-"""
-we pre-processed the images using ZCA and augmented the dataset using horizontal flips and random translations. The translations
-were drawn from [−2, 2] pixels,
-"""
-extra_train_transforms = [
-    transforms.RandomAffine(0, translate=(1/16,1/16)), # translation at most two pixels
-    transforms.RandomHorizontalFlip(),
-]
+train_transform, val_transform = load_preprocesser(args.dataset, "dct")
+
+
+# In[ ]:
+
+
+
+
+
+# In[7]:
+
 
 manager, train_loader, val_loader = load_dataset(
     args.dataset,
     "dct",
-    
-    extra_train_transform = extra_train_transforms,
     
     dataset_root = args.dataset_root,
     supervised_ratio = args.supervised_ratio,
     batch_size = args.batch_size,
     train_folds = args.train_folds,
     val_folds = args.val_folds,
-    verbose = 1
+
+    train_transform=train_transform,
+    val_transform=val_transform,
+    
+    num_workers=8,
+    pin_memory=True,
+
+    verbose = 2
 )
+input_shape = train_loader._iterables[0].dataset[0][0].shape
 
 
 # # Models
 
-# In[21]:
+# In[8]:
 
 
 torch.cuda.empty_cache()
-model_func = get_model_from_name(args.model)
+model_func = load_model(args.dataset, args.model)
 
-m1, m2 = model_func(manager=manager), model_func(manager=manager)
+commun_args = dict(
+    manager=manager,
+    num_classes=args.num_classes,
+    input_shape=list(input_shape),
+)
+
+m1, m2 = model_func(**commun_args), model_func(**commun_args)
+
+m1 = DataParallel(m1)
+m2 = DataParallel(m2)
 
 m1 = m1.cuda()
 m2 = m2.cuda()
@@ -149,47 +171,39 @@ m2 = m2.cuda()
 
 # # training parameters
 
-# In[22]:
+# In[9]:
 
 
 # tensorboard
-tensorboard_title = "%s_%s_%.1fS" % (get_datetime(), model_func.__name__, args.supervised_ratio)
-checkpoint_title = "%s_%.1fS" % (model_func.__name__, args.supervised_ratio)
-tensorboard = SummaryWriter(log_dir="%s/%s" % (tensorboard_path, tensorboard_title), comment=model_func.__name__)
+tensorboard_title = f"{args.model}/{args.supervised_ratio}S/"                     f"{get_datetime()}_{model_func.__name__}_{args.supervised_ratio}S"
+checkpoint_title = f"{args.model}/{args.supervised_ratio}S/"                    f"{args.model}_{args.supervised_ratio}S"
+
+tensorboard = SummaryWriter(log_dir=f"{tensorboard_path}/{tensorboard_title}",comment=model_func.__name__)
 print(os.path.join(tensorboard_path, tensorboard_title))
 
 
-# ## cifar10 optimizer
-
-# In[ ]:
+# In[10]:
 
 
-# TODO ATTENTION, CET SECTION DE CODE DOIT ÊTRE SUPPRIMER AU PROFIL DU CONFIGURATEUR
-# VOIR DCT/<dataset>/train_parameters.py
-# ========================
-if args.dataset == "cifar10":
-    params = list(m1.parameters()) + list(m2.parameters())
-    optimizer = torch.optim.SGD(params, lr=0.1, momentum=0.9, weight_decay=0.0001)
-    
-    lr_lambda = lambda epoch: (1.0 + np.cos((epoch-1)*np.pi/args.nb_epoch)) * 0.5
-    
+tensorboard_params = {}
+for key, value in args.__dict__.items():
+    tensorboard_params[key] = str(value)
+tensorboard.add_hparams(tensorboard_params, {})
 
 
-# ## ubs8k optimizer
+# ## Optimizer & callbacks
 
-# In[24]:
+# In[11]:
 
 
-if args.dataset == "ubs8k":
-    params = list(m1.parameters()) + list(m2.parameters())
-    optimizer = torch.optim.Adam(params, lr=args.learning_rate)
-    lr_lambda = lambda epoch: (1.0 + numpy.cos((epoch-1)*numpy.pi/args.nb_epoch)) * 0.5
-# ===========================
+optimizer = load_optimizer(args.dataset, "dct", model1=m1, model2=m2, learning_rate=args.learning_rate)
+
+callbacks = load_callbacks(args.dataset, "dct", optimizer=optimizer, nb_epoch=args.nb_epoch)
 
 
 # ## Adversarial generator
 
-# In[25]:
+# In[12]:
 
 
 # adversarial generation
@@ -200,26 +214,23 @@ adv_generator_1 = GradientSignAttack(
 
 adv_generator_2 = GradientSignAttack(
     m2, loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-    eps=args.epsilon, clip_min=-np.inf, clip_max=np.in, targeted=False
+    eps=args.epsilon, clip_min=-np.inf, clip_max=np.inf, targeted=False
 )
 
 
-# In[26]:
+# In[13]:
 
 
 # Losses
 # see losses.py
 
-# define the warmups
+# define the warmups & add them to the callbacks (for update)
 lambda_cot = Warmup(args.lambda_cot_max, args.warmup_length, sigmoid_rampup)
 lambda_diff = Warmup(args.lambda_diff_max, args.warmup_length, sigmoid_rampup)
-
-# callback
-lr_scheduler = LambdaLR(optimizer, lr_lambda)
-callbacks = [lr_scheduler, lambda_cot, lambda_diff]
+callbacks += [lambda_cot, lambda_diff]
 
 # checkpoints
-checkpoint_m1 = CheckPoint(m1, optimizer, mode="max", name="%s/%s_m1.torch" % (checkpoint_path, checkpoint_title))
+checkpoint = CheckPoint([m1, m2], optimizer, mode="max", name="%s/%s_m1.torch" % (checkpoint_path, checkpoint_title))
 
 # metrics
 metrics_fn = dict(
@@ -235,6 +246,8 @@ metrics_fn = dict(
     avg_cot=ContinueAverage(),
     avg_diff=ContinueAverage(),
 )
+maximum_tracker = track_maximum()
+
 
 def reset_metrics():
     for item in metrics_fn.values():
@@ -245,7 +258,7 @@ def reset_metrics():
             item.reset()
 
 
-# In[27]:
+# In[14]:
 
 
 reset_metrics()
@@ -253,39 +266,26 @@ reset_metrics()
 
 # ## Can resume previous training
 
-# In[28]:
+# In[15]:
 
 
 if args.resume:
-    checkpoint_m1.load_last()
+    checkpoint.load_last()
 
 
 # ## Metrics and hyperparameters
 
-# In[29]:
+# In[16]:
 
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
-    
-def maximum():
-    def func(key, value):
-        if key not in func.max:
-            func.max[key] = value
-        else:
-            if func.max[key] < value:
-                func.max[key] = value
-        return func.max[key]
-
-    func.max = dict()
-    return func
-maximum_fn = maximum()
 
 
 # # Training functions
 
-# In[30]:
+# In[17]:
 
 
 UNDERLINE_SEQ = "\033[1;4m"
@@ -304,7 +304,7 @@ val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
 print(header)
 
 
-# In[31]:
+# In[18]:
 
 
 def train(epoch):
@@ -323,10 +323,11 @@ def train(epoch):
         x_s1, x_s2, x_u = x_s1.cuda(), x_s2.cuda(), x_u.cuda()
         y_s1, y_s2, y_u = y_s1.cuda(), y_s2.cuda(), y_u.cuda()
 
-        logits_s1 = m1(x_s1)
-        logits_s2 = m2(x_s2)
-        logits_u1 = m1(x_u)
-        logits_u2 = m2(x_u)
+        with autocast():
+            logits_s1 = m1(x_s1)
+            logits_s2 = m2(x_s2)
+            logits_u1 = m1(x_u)
+            logits_u2 = m2(x_u)
 
         # pseudo labels of U
         pred_u1 = torch.argmax(logits_u1, 1)
@@ -348,11 +349,12 @@ def train(epoch):
         m2.train()
 
         # predict adversarial examples ----
-        adv_logits_s1 = m1(adv_data_s2)
-        adv_logits_s2 = m2(adv_data_s1)
+        with autocast():
+            adv_logits_s1 = m1(adv_data_s2)
+            adv_logits_s2 = m2(adv_data_s1)
 
-        adv_logits_u1 = m1(adv_data_u2)
-        adv_logits_u2 = m2(adv_data_u1)
+            adv_logits_u1 = m1(adv_data_u2)
+            adv_logits_u2 = m2(adv_data_u1)
 
         # ======== calculate the differents loss ========
         # zero the parameter gradients ----
@@ -361,16 +363,17 @@ def train(epoch):
         m2.zero_grad()
 
         # losses ----
-        l_sup = loss_sup(logits_s1, logits_s2, y_s1, y_s2)
+        with autocast():
+            l_sup = loss_sup(logits_s1, logits_s2, y_s1, y_s2)
 
-        l_cot = loss_cot(logits_u1, logits_u2)
+            l_cot = loss_cot(logits_u1, logits_u2)
 
-        l_diff = loss_diff(
-            logits_s1, logits_s2, adv_logits_s1, adv_logits_s2,
-            logits_u1, logits_u2, adv_logits_u1, adv_logits_u2
-        )
+            l_diff = loss_diff(
+                logits_s1, logits_s2, adv_logits_s1, adv_logits_s2,
+                logits_u1, logits_u2, adv_logits_u1, adv_logits_u2
+            )
 
-        total_loss = l_sup + lambda_cot() * l_cot + lambda_diff() * l_diff
+            total_loss = l_sup + lambda_cot() * l_cot + lambda_diff() * l_diff
         total_loss.backward()
         optimizer.step()
 
@@ -435,7 +438,7 @@ def train(epoch):
     return total_loss.item()
 
 
-# In[32]:
+# In[19]:
 
 
 def test(epoch, msg = ""):
@@ -451,11 +454,12 @@ def test(epoch, msg = ""):
             x = X.cuda()
             y = y.cuda()
 
-            logits_1 = m1(x)
-            logits_2 = m2(x)
+            with autocast():
+                logits_1 = m1(x)
+                logits_2 = m2(x)
 
-            # losses ----
-            l_sup = loss_sup(logits_1, logits_2, y, y)
+                # losses ----
+                l_sup = loss_sup(logits_1, logits_2, y, y)
 
             # ======== Calc the metrics ========
             # accuracies ----
@@ -480,8 +484,8 @@ def test(epoch, msg = ""):
     tensorboard.add_scalar("val/acc_1", acc_1.mean, epoch)
     tensorboard.add_scalar("val/acc_2", acc_2.mean, epoch)
         
-    tensorboard.add_scalar("max/acc_1", maximum_fn("acc_1", acc_1.mean), epoch )
-    tensorboard.add_scalar("max/acc_2", maximum_fn("acc_2", acc_2.mean), epoch )
+    tensorboard.add_scalar("max/acc_1", maximum_tracker("acc_1", acc_1.mean), epoch )
+    tensorboard.add_scalar("max/acc_2", maximum_tracker("acc_2", acc_2.mean), epoch )
     
     tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
     tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
@@ -492,10 +496,10 @@ def test(epoch, msg = ""):
         c.step()
 
     # call checkpoint
-    checkpoint_m1.step(acc_1.mean)
+    checkpoint.step(acc_1.mean)
 
 
-# In[33]:
+# In[20]:
 
 
 print(header)
