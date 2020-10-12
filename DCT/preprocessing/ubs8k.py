@@ -12,3 +12,7 @@ def dct_uniloss():
 
 def dct_aug4adv():
     return None, None
+
+
+def student_teacher():
+    return None, None

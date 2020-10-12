@@ -18,6 +18,10 @@ function show_help {
     echo "    --ratio SUPERVISED RATIO (default 0.1)"
     echo "    --epoch EPOCH (default 200)"
     echo ""
+    echo "Dataset dependant arguments (esc | ubs8k)"
+    echo "    --train_folds (default 1 2 3 4)"
+    echo "    --val_folds (default 5)"
+    echo ""
     echo "Co-training hyperparameters"
     echo "    --lambda_sup_max LAMBDA SUP MAX (default 1)"
     echo "    --lambda_cot_max LAMBDA COT MAX (default 10)"
@@ -31,12 +35,14 @@ function show_help {
     echo "Available datasets"
     echo "    ubs8k"
     echo "    cifar10"
+    echo "    esc[10|50]"
+    echo "    SpeechCommand"
     
     echo "Available models"
     echo "    PModel"
-    echo "    wideresnet28_2"
-    echo "    cnn0"
-    echo "    cnn03"
+    echo "    resnet[18|34|50]"
+    echo "    wideresnet28_[2|4|8]"
+    echo "    cnn[0|03|06]"
     echo "    scallable1"
 }
 
@@ -70,25 +76,47 @@ while :; do
 done
 
 # ___________________________________________________________________________________ #
+# Cross validation depend on the dataset
 # ___________________________________________________________________________________ #
+
 
 if [ $CROSSVAL -eq 1 ]; then
     echo "Cross validation activated"
-    folds=(
-        "-t 1 2 3 4 5 6 7 8 9 -v 10" \
-        "-t 2 3 4 5 6 7 8 9 10 -v 1" \
-        "-t 1 3 4 5 6 7 8 9 10 -v 2" \
-        "-t 1 2 4 5 6 7 8 9 10 -v 3" \
-        "-t 1 2 3 5 6 7 8 9 10 -v 4" \
-        "-t 1 2 3 4 6 7 8 9 10 -v 5" \
-        "-t 1 2 3 4 5 7 8 9 10 -v 6" \
-        "-t 1 2 3 4 5 6 8 9 10 -v 7" \
-        "-t 1 2 3 4 5 6 7 9 10 -v 8" \
-        "-t 1 2 3 4 5 6 7 8 10 -v 9" \
-    )
+    if [ "$DATASET" = "ubs8k"]; then
+        folds=(
+            "-t 1 2 3 4 5 6 7 8 9 -v 10" \
+            "-t 2 3 4 5 6 7 8 9 10 -v 1" \
+            "-t 1 3 4 5 6 7 8 9 10 -v 2" \
+            "-t 1 2 4 5 6 7 8 9 10 -v 3" \
+            "-t 1 2 3 5 6 7 8 9 10 -v 4" \
+            "-t 1 2 3 4 6 7 8 9 10 -v 5" \
+            "-t 1 2 3 4 5 7 8 9 10 -v 6" \
+            "-t 1 2 3 4 5 6 8 9 10 -v 7" \
+            "-t 1 2 3 4 5 6 7 9 10 -v 8" \
+            "-t 1 2 3 4 5 6 7 8 10 -v 9" \
+        )
+    else
+        folds=(
+            "-t 1 2 3 4 -v 5" \
+            "-t 2 3 4 5 -v 1" \
+            "-t 1 3 4 5 -v 2" \
+            "-t 1 2 4 5 -v 3" \
+            "-t 1 2 3 5 -v 4" \
+        )
+    fi
+        
 else
-    folds=("-t 1 2 3 4 5 6 7 8 9 -v 10")
+    if [ "$DATASET" = "ubs8k" ]; then
+        folds=("-t 1 2 3 4 5 6 7 8 9 -v 10")
+    else
+        folds=("-t 1 2 3 4 -v 5")
+    fi
 fi
+
+# ___________________________________________________________________________________ #
+# Prepare the parameters
+# ___________________________________________________________________________________ #
+
 
 tensorboard_path_root="--tensorboard_path ../../tensorboard/${DATASET}/deep-co-training"
 checkpoint_path_root="--checkpoint_path ../../model_save/${DATASET}/deep-co-training"
@@ -117,6 +145,11 @@ if [ $RESUME -eq 1 ]; then
     echo "$RESUME"
     parameters="${parameters} --resume"
 fi
+
+# ___________________________________________________________________________________ #
+# Run the script
+# ___________________________________________________________________________________ #
+
 
 run_number=0
 for i in ${!folds[*]}
