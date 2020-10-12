@@ -11,6 +11,7 @@ dataset_mapper = {
         "dct": u8.dct,
         "uniloss": u8.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": u8.student_teacher
     },
 
     "cifar10": {
@@ -18,6 +19,7 @@ dataset_mapper = {
         "dct": c10.dct,
         "uniloss": c10.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": c10.student_teacher
     },
 
     "esc10": {
@@ -25,6 +27,7 @@ dataset_mapper = {
         "dct": esc.dct,
         "uniloss": esc.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": esc.student_teacher
     },
 
     "esc50": {
@@ -32,6 +35,7 @@ dataset_mapper = {
         "dct": esc.dct,
         "uniloss": esc.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": esc.student_teacher
     },
 
     "SpeechCommand": {
@@ -39,14 +43,8 @@ dataset_mapper = {
         "dct": sc.dct,
         "uniloss": sc.dct_uniloss,
         "aug4adv": None,
+        "student-teacher": sc.student_teacher
     },
-
-    "gtzan": {
-        "supervised": None,
-        "dct": None,
-        "uniloss": None,
-        "aug4adv": None,
-    }
 }
 
 

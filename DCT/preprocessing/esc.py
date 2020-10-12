@@ -19,18 +19,16 @@ def supervised() -> Tuple[Module, Module]:
 
 
 def dct() -> Tuple[Module, Module]:
-    train_transform = commun_transforms
-    val_transform = commun_transforms
-
-    return train_transform, val_transform
+    return supervised()
 
 
 def dct_uniloss() -> Tuple[Module, Module]:
-    train_transform = commun_transforms
-    val_transform = commun_transforms
-
-    return train_transform, val_transform
+    return supervised()
 
 
 def dct_aug4adv() -> Tuple[Module, Module]:
     raise NotImplementedError
+
+
+def student_teacher() -> Tuple[Module, Module]:
+    return supervised()
