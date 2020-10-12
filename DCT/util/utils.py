@@ -12,6 +12,13 @@ import torch.distributed as dist
 # TODO write q timer decorator that deppend on the logging level
 
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 def timeit_logging(func):
     def decorator(*args, **kwargs):
         start_time = time.time()
@@ -88,8 +95,6 @@ def reset_seed(seed):
     np.random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
-
-    from typing import Iterable, Sized
 
 
 class ZipCycle(Iterable, Sized):

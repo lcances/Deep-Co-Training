@@ -18,36 +18,36 @@ dataset_mapper = {
         "supervised": u8.load_supervised,
         "dct": u8.load_dct,
         "uniloss": u8.load_dct,
-        "aug4adv": u8.load_dct_aug4adv
+        "aug4adv": u8.load_dct_aug4adv,
+        "student-teacher": u8.student_teacher,
     },
 
     "cifar10": {
         "supervised": c10.load_supervised,
-        "dct": c10.load_dct
+        "dct": c10.load_dct,
+        "student-teacher": c10.student_teacher,
     },
 
     "esc10": {
         "supervised": esc.load_esc10_supervised,
         "dct": esc.load_esc10_dct,
         "uniloss": esc.load_esc10_dct,
+        "student-teacher": esc.esc10_student_teacher,
     },
 
     "esc50": {
         "supervised": esc.load_esc50_supervised,
         "dct": esc.load_esc50_dct,
-        "uniloss": esc.load_esc50_dct
+        "uniloss": esc.load_esc50_dct,
+        "student-teacher": esc.esc50_student_teacher,
         
     },
 
-    #    "gtzan": {
-    #        "supervised": gtzan.load_supervised,
-    #        "dct": gtzan.load_dct,
-    #    },
-    #
     "SpeechCommand": {
         "supervised": SC.load_supervised,
         "dct": SC.load_dct,
-        "uniloss": SC.load_dct
+        "uniloss": SC.load_dct,
+        "student-teacher": SC.student_teacher,
     },
 }
 
