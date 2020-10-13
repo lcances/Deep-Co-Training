@@ -13,39 +13,36 @@
 # In[2]:
 
 
+import argparse
+from DCT.losses import loss_cot, loss_diff, loss_sup
+from DCT.ramps import Warmup, sigmoid_rampup
+from DCT.util.callbacks_loader import load_callbacks
+from DCT.util.preprocess_loader import load_preprocesser
+from DCT.util.optimizer_loader import load_optimizer
+from DCT.util.dataset_loader import load_dataset
+from DCT.util.model_loader import load_model
+from DCT.util.utils import reset_seed, get_datetime, ZipCycle, track_maximum
+from DCT.util.checkpoint import CheckPoint
+from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
+from advertorch.attacks import GradientSignAttack
+from torch.utils.tensorboard import SummaryWriter
+from torch.optim.lr_scheduler import LambdaLR
+import torchvision.transforms as transforms
+from torch.nn.parallel import DataParallel
+from torch.cuda.amp import autocast
+import torch.nn.functional as F
+import torch.utils.data as data
+import torch.nn as nn
+import torch
+import numpy as np
+import time
 import os
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
-import time
-
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.utils.data as data
-import torch.nn.functional as F
-from torch.cuda.amp import autocast
-from torch.nn.parallel import DataParallel
-import torchvision.transforms as transforms
-from torch.optim.lr_scheduler import LambdaLR
-from torch.utils.tensorboard import SummaryWriter
-from advertorch.attacks import GradientSignAttack
 
 
 # In[3]:
-
-
-from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage, Ratio
-from DCT.util.checkpoint import CheckPoint
-from DCT.util.utils import reset_seed, get_datetime, ZipCycle, track_maximum
-from DCT.util.model_loader import load_model
-from DCT.util.dataset_loader import load_dataset
-from DCT.util.optimizer_loader import load_optimizer
-from DCT.util.preprocess_loader import load_preprocesser
-from DCT.util.callbacks_loader import load_callbacks
-
-from DCT.ramps import Warmup, sigmoid_rampup
-from DCT.losses import loss_cot, loss_diff, loss_sup
 
 
 # # Arguments
@@ -53,10 +50,10 @@ from DCT.losses import loss_cot, loss_diff, loss_sup
 # In[4]:
 
 
-import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--from_config", default="", type=str)
-parser.add_argument("-d", "--dataset_root", default="../../datasets/", type=str)
+parser.add_argument("-d", "--dataset_root",
+                    default="../../datasets/", type=str)
 parser.add_argument("-D", "--dataset", default="esc50", type=str)
 
 group_t = parser.add_argument_group("Commun parameters")
@@ -73,7 +70,8 @@ group_m.add_argument("--num_classes", default=50, type=int)
 
 
 group_u = parser.add_argument_group("UrbanSound8k parameters")
-group_u.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4,], type=int)
+group_u.add_argument("-t", "--train_folds", nargs="+",
+                     default=[1, 2, 3, 4, ], type=int)
 group_u.add_argument("-v", "--val_folds", nargs="+", default=[5], type=int)
 
 group_h = parser.add_argument_group('hyperparameters')
@@ -83,21 +81,29 @@ group_h.add_argument("--warmup_length", default=80, type=int)
 group_h.add_argument("--epsilon", default=0.02, type=float)
 
 group_a = parser.add_argument_group("Augmentation")
-group_a.add_argument("--augment", action="append", help="augmentation. use as if python script")
-group_a.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
-group_a.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
+group_a.add_argument("--augment", action="append",
+                     help="augmentation. use as if python script")
+group_a.add_argument("--augment_S", action="store_true",
+                     help="Apply augmentation on Supervised part")
+group_a.add_argument("--augment_U", action="store_true",
+                     help="Apply augmentation on Unsupervised part")
 
 group_l = parser.add_argument_group("Logs")
-group_l.add_argument("--checkpoint_root", default="../../model_save/", type=str)
-group_l.add_argument("--tensorboard_root", default="../../tensorboard/", type=str)
+group_l.add_argument("--checkpoint_root",
+                     default="../../model_save/", type=str)
+group_l.add_argument("--tensorboard_root",
+                     default="../../tensorboard/", type=str)
 group_l.add_argument("--checkpoint_path", default="deep-co-training", type=str)
-group_l.add_argument("--tensorboard_path", default="deep-co-training", type=str)
+group_l.add_argument("--tensorboard_path",
+                     default="deep-co-training", type=str)
 group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
 
-tensorboard_path = os.path.join(args.tensorboard_root, args.dataset, args.tensorboard_path)
-checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoint_path)
+tensorboard_path = os.path.join(
+    args.tensorboard_root, args.dataset, args.tensorboard_path)
+checkpoint_path = os.path.join(
+    args.checkpoint_root, args.dataset, args.checkpoint_path)
 
 
 # # Initialization
@@ -119,29 +125,26 @@ train_transform, val_transform = load_preprocesser(args.dataset, "dct")
 # In[ ]:
 
 
-
-
-
 # In[7]:
 
 
 manager, train_loader, val_loader = load_dataset(
     args.dataset,
     "dct",
-    
-    dataset_root = args.dataset_root,
-    supervised_ratio = args.supervised_ratio,
-    batch_size = args.batch_size,
-    train_folds = args.train_folds,
-    val_folds = args.val_folds,
+
+    dataset_root=args.dataset_root,
+    supervised_ratio=args.supervised_ratio,
+    batch_size=args.batch_size,
+    train_folds=args.train_folds,
+    val_folds=args.val_folds,
 
     train_transform=train_transform,
     val_transform=val_transform,
-    
+
     num_workers=8,
     pin_memory=True,
 
-    verbose = 2
+    verbose=2
 )
 input_shape = train_loader._iterables[0].dataset[0][0].shape
 
@@ -178,17 +181,12 @@ m2 = m2.cuda()
 tensorboard_title = f"{args.model}/{args.supervised_ratio}S/"                     f"{get_datetime()}_{model_func.__name__}_{args.supervised_ratio}S"
 checkpoint_title = f"{args.model}/{args.supervised_ratio}S/"                    f"{args.model}_{args.supervised_ratio}S"
 
-tensorboard = SummaryWriter(log_dir=f"{tensorboard_path}/{tensorboard_title}",comment=model_func.__name__)
+tensorboard = SummaryWriter(
+    log_dir=f"{tensorboard_path}/{tensorboard_title}", comment=model_func.__name__)
 print(os.path.join(tensorboard_path, tensorboard_title))
 
 
 # In[10]:
-
-
-tensorboard_params = {}
-for key, value in args.__dict__.items():
-    tensorboard_params[key] = str(value)
-tensorboard.add_hparams(tensorboard_params, {})
 
 
 # ## Optimizer & callbacks
@@ -196,9 +194,11 @@ tensorboard.add_hparams(tensorboard_params, {})
 # In[11]:
 
 
-optimizer = load_optimizer(args.dataset, "dct", model1=m1, model2=m2, learning_rate=args.learning_rate)
+optimizer = load_optimizer(
+    args.dataset, "dct", model1=m1, model2=m2, learning_rate=args.learning_rate)
 
-callbacks = load_callbacks(args.dataset, "dct", optimizer=optimizer, nb_epoch=args.nb_epoch)
+callbacks = load_callbacks(
+    args.dataset, "dct", optimizer=optimizer, nb_epoch=args.nb_epoch)
 
 
 # ## Adversarial generator
@@ -230,7 +230,8 @@ lambda_diff = Warmup(args.lambda_diff_max, args.warmup_length, sigmoid_rampup)
 callbacks += [lambda_cot, lambda_diff]
 
 # checkpoints
-checkpoint = CheckPoint([m1, m2], optimizer, mode="max", name="%s/%s_m1.torch" % (checkpoint_path, checkpoint_title))
+checkpoint = CheckPoint([m1, m2], optimizer, mode="max",
+                        name="%s/%s_m1.torch" % (checkpoint_path, checkpoint_title))
 
 # metrics
 metrics_fn = dict(
@@ -240,7 +241,7 @@ metrics_fn = dict(
     acc_u=[CategoricalAccuracy(), CategoricalAccuracy()],
     f1_s=[FScore(), FScore()],
     f1_u=[FScore(), FScore()],
-    
+
     avg_total=ContinueAverage(),
     avg_sup=ContinueAverage(),
     avg_cot=ContinueAverage(),
@@ -292,10 +293,10 @@ UNDERLINE_SEQ = "\033[1;4m"
 RESET_SEQ = "\033[0m"
 
 header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} | {:<6.6} | {:<6.6} | {:<6.6} - {:<9.9} {:<9.9} | {:<9.9}- {:<6.6}"
-value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
+value_form = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
 
 header = header_form.format(
-    "", "Epoch", "%", "Losses:", "Lsup", "Lcot", "Ldiff", "total", "metrics: ", "acc_s1", "acc_u1","Time"
+    "", "Epoch", "%", "Losses:", "Lsup", "Lcot", "Ldiff", "total", "metrics: ", "acc_s1", "acc_u1", "Time"
 )
 
 train_form = value_form
@@ -338,7 +339,7 @@ def train(epoch):
         m1.eval()
         m2.eval()
 
-        #generate adversarial examples ----
+        # generate adversarial examples ----
         adv_data_s1 = adv_generator_1.perturb(x_s1, y_s1)
         adv_data_u1 = adv_generator_1.perturb(x_u, pred_u1)
 
@@ -415,14 +416,13 @@ def train(epoch):
                 time.time() - start_time
             ), end="\r")
 
-
     # using tensorboard to monitor loss and acc\n",
     tensorboard.add_scalar('train/total_loss', avg_total.mean, epoch)
-    tensorboard.add_scalar('train/Lsup', avg_sup.mean, epoch )
-    tensorboard.add_scalar('train/Lcot', avg_cot.mean, epoch )
-    tensorboard.add_scalar('train/Ldiff', avg_diff.mean, epoch )
-    tensorboard.add_scalar("train/acc_1", acc_s1.mean, epoch )
-    tensorboard.add_scalar("train/acc_2", acc_s2.mean, epoch )
+    tensorboard.add_scalar('train/Lsup', avg_sup.mean, epoch)
+    tensorboard.add_scalar('train/Lcot', avg_cot.mean, epoch)
+    tensorboard.add_scalar('train/Ldiff', avg_diff.mean, epoch)
+    tensorboard.add_scalar("train/acc_1", acc_s1.mean, epoch)
+    tensorboard.add_scalar("train/acc_2", acc_s2.mean, epoch)
 
     tensorboard.add_scalar("detail_acc/acc_s1", acc_s1.mean, epoch)
     tensorboard.add_scalar("detail_acc/acc_s2", acc_s2.mean, epoch)
@@ -441,7 +441,7 @@ def train(epoch):
 # In[19]:
 
 
-def test(epoch, msg = ""):
+def test(epoch, msg=""):
     start_time = time.time()
     print("")
 
@@ -483,13 +483,18 @@ def test(epoch, msg = ""):
 
     tensorboard.add_scalar("val/acc_1", acc_1.mean, epoch)
     tensorboard.add_scalar("val/acc_2", acc_2.mean, epoch)
-        
-    tensorboard.add_scalar("max/acc_1", maximum_tracker("acc_1", acc_1.mean), epoch )
-    tensorboard.add_scalar("max/acc_2", maximum_tracker("acc_2", acc_2.mean), epoch )
-    
-    tensorboard.add_scalar("detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
-    tensorboard.add_scalar("detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
-    tensorboard.add_scalar("detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
+
+    tensorboard.add_scalar(
+        "max/acc_1", maximum_tracker("acc_1", acc_1.mean), epoch)
+    tensorboard.add_scalar(
+        "max/acc_2", maximum_tracker("acc_2", acc_2.mean), epoch)
+
+    tensorboard.add_scalar(
+        "detail_hyperparameters/lambda_cot", lambda_cot(), epoch)
+    tensorboard.add_scalar(
+        "detail_hyperparameters/lambda_diff", lambda_diff(), epoch)
+    tensorboard.add_scalar(
+        "detail_hyperparameters/learning_rate", get_lr(optimizer), epoch)
 
     # Apply callbacks
     for c in callbacks:
@@ -506,20 +511,28 @@ print(header)
 
 for epoch in range(0, args.nb_epoch):
     total_loss = train(epoch)
-    
+
     if np.isnan(total_loss):
         print("Losses are NaN, stoping the training here")
         break
-        
+
     test(epoch)
 
     tensorboard.flush()
-    
+
 tensorboard.close()
 
+# %%
+
+hparams = {}
+for key, value in args.__dict__.items():
+    hparams[key] = str(value)
+
+final_metrics = {
+    "max_acc_1": maximum_tracker.max["acc_1"],
+    "max_acc_2": maximum_tracker.max["acc_2"],
+}
+
+tensorboard.add_hparams(hparams, final_metrics)
 
 # In[ ]:
-
-
-
-
