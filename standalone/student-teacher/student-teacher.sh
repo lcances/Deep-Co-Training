@@ -86,6 +86,11 @@ commun_args="${commun_args} --supervised_ratio ${RATIO}"
 commun_args="${commun_args} --batch_size ${BS}"
 commun_args="${commun_args} --learning_rate ${LR}"
 commun_args="${commun_args} --nb_epoch ${EPOCH}"
+
+commun_args="${commun_args} --lambda_cost_max ${LCM}"
+commun_args="${commun_args} --warmup_length ${WL}"
+commun_args="${commun_args} --ema_alpha ${ALPHA}"
+
 commun_args="${commun_args} --tensorboard_sufix ${SUFIX}"
 
 echo "commun args"
