@@ -94,7 +94,7 @@ fi
 
 # ___________________________________________________________________________________ #
 LOG_DIR="logs"
-SBATCH_JOB_NAME=sup_${DATASET}_${MODEL}_${RATIO}S
+SBATCH_JOB_NAME=st_${DATASET}_${MODEL}_${RATIO}S
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
