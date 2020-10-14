@@ -1,9 +1,9 @@
 c_args="wideresnet28_2 ubs8k"
 c_args="${c_args} --batch_size 64 --epoch 200"
 
-LR=(0.0005 0.001 0.003)
+LR=(0.001 0.003)
 WL=(50 100)
-ALPHA=(0.999 0.99 0.995)
+ALPHA=(0.999 0.99)
 LCM=(1 1.5 2)
 
 for l in ${!LR[*]}; do
