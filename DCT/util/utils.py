@@ -148,15 +148,22 @@ class ZipCycle(Iterable, Sized):
         return self._len
 
 
-def DDP_setup(rank, world_size):
-    """Initialization required to use DistributedDataParallel"""
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+def create_bash_crossvalidation(nb_fold: int = 10):
+    cross_validation = []
+    end = nb_fold
 
-    # initialize the process group
-    dist.init_process_group("gloo", rank=rank, world_size=world_size)
+    for i in range(nb_fold):
+        train_folds = []
+        start = i
 
+        for i in range(nb_fold - 1):
+            start = (start + 1) % nb_fold
+            start = start if start != 0 else nb_fold
+            train_folds.append(start)
 
-def DDP_cleanup():
-    """Proper way to finish system using DistributedDataParallel"""
-    dist.destroy_process_group()
+        cross_validation.append("-t " + " ".join(map(str, train_folds)) + " -v %d" % end)
+        end = (end % nb_fold) + 1
+        end = end if end != 0 else nb_fold
+
+    print(";".join(cross_validation))
+

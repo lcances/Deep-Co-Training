@@ -123,9 +123,8 @@ def load_dct_helper(
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
 
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     sampler_s = SubsetRandomSampler(s_idx)
     sampler_u = SubsetRandomSampler(u_idx)
@@ -170,11 +169,14 @@ def load_esc50_supervised(
 def _load_supervised_helper(
         dataset_class: Union[ESC10, ESC50],
         dataset_root,
+    
         supervised_ratio: float = 1.0,
         batch_size: int = 128,
         train_folds: tuple = (1, 2, 3, 4),
         val_folds: tuple = (5, ),
-        transform: Module = None,
+    
+        train_transform: Module = None,
+        val_transform: Module = None,
         **kwargs) -> Tuple[DataLoader, DataLoader]:
     """
     Load the cifar10 dataset for Deep Co Training system.
@@ -190,13 +192,11 @@ def _load_supervised_helper(
     dataset_path = os.path.join(dataset_root)
 
     # validation subset
-    val_dataset = dataset_class(
-        root=dataset_path, folds=val_folds, download=True, transform=transform)
-
+    val_dataset = dataset_class(root=dataset_path, folds=val_folds, download=True, transform=val_transform)
     val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
 
     # Training subset
-    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True, transform=transform)
+    train_dataset = dataset_class(root=dataset_path, folds=train_folds, download=True, transform=train_transform)
 
     if supervised_ratio == 1.0:
         train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, **loader_args)
@@ -271,10 +271,10 @@ def _student_teacher_helper(
     s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio, nb_class=train_dataset.nb_class)
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
-
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
+    print("s_batch_size: ", s_batch_size)
+    print("u_batch_size: ", u_batch_size)
 
     sampler_s = torch_data.SubsetRandomSampler(s_idx)
     sampler_u = torch_data.SubsetRandomSampler(u_idx)

@@ -45,16 +45,14 @@ def load_supervised(
     train_dataset = Dataset(manager, folds=train_folds, cached=True)
 
     if supervised_ratio == 1.0:
-        train_loader = torch_data.DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True)
+        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
     else:
         s_idx, u_idx = train_dataset.split_s_u(supervised_ratio)
 
         # Train loader only use the s_idx
         sampler_s = torch_data.SubsetRandomSampler(s_idx)
-        train_loader = torch_data.DataLoader(
-            train_dataset, batch_size=batch_size, sampler=sampler_s)
+        train_loader = torch_data.DataLoader(train_dataset, batch_size=batch_size, sampler=sampler_s)
 
     return manager, train_loader, val_loader
 
@@ -99,9 +97,11 @@ def student_teacher(
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
 
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
+
+    print("s_batch_size: ", s_batch_size)
+    print("u_batch_size: ", u_batch_size)
 
     sampler_s = torch_data.SubsetRandomSampler(s_idx)
     sampler_u = torch_data.SubsetRandomSampler(u_idx)
@@ -149,25 +149,20 @@ def load_dct(
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
 
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     # create the sampler, the loader and "zip" them
     sampler_s1 = torch_data.SubsetRandomSampler(s_idx)
     sampler_s2 = torch_data.SubsetRandomSampler(s_idx)
     sampler_u = torch_data.SubsetRandomSampler(u_idx)
 
-    train_loader_s1 = torch_data.DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s1)
-    train_loader_s2 = torch_data.DataLoader(
-        train_dataset, batch_size=s_batch_size, sampler=sampler_s2)
-    train_loader_u = torch_data.DataLoader(
-        train_dataset, batch_size=u_batch_size, sampler=sampler_u)
+    train_loader_s1 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s1)
+    train_loader_s2 = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s2)
+    train_loader_u = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
 
     train_loader = ZipCycle([train_loader_s1, train_loader_s2, train_loader_u])
-    val_loader = torch_data.DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = torch_data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
     return manager, train_loader, val_loader
 
@@ -241,9 +236,8 @@ def load_dct_aug4adv(
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
 
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     # create the sampler for S (m1 et m2) and U
     sampler_s1 = torch_data.SubsetRandomSampler(s_idx)

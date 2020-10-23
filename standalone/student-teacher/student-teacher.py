@@ -27,6 +27,7 @@ from DCT.util.dataset_loader import load_dataset
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import LambdaLR
+
 from torch.cuda.amp import autocast
 import torchvision.transforms as transforms
 import torch.nn.functional as F
@@ -74,30 +75,26 @@ group_m = parser.add_argument_group("Model parameters")
 group_m.add_argument("--num_classes", default=35, type=int)
 
 group_u = parser.add_argument_group("Datasets parameters")
-group_u.add_argument("-t", "--train_folds", nargs="+",
-                     default=[1, 2, 3, 4], type=int)
+group_u.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4], type=int)
 group_u.add_argument("-v", "--val_folds", nargs="+", default=[5], type=int)
 
 group_s = parser.add_argument_group("Student teacher parameters")
 group_s.add_argument("--ema_alpha", default=0.999, type=float)
 group_s.add_argument("--warmup_length", default=100, type=int)
 group_s.add_argument("--lambda_cost_max", default=2, type=float)
+group_s.add_argument("--noise", action="store_true", default=False)
 
 group_l = parser.add_argument_group("Logs")
-group_l.add_argument("--checkpoint_root",
-                     default="../../model_save/", type=str)
-group_l.add_argument("--tensorboard_root",
-                     default="../../tensorboard/", type=str)
+group_l.add_argument("--checkpoint_root", default="../../model_save/", type=str)
+group_l.add_argument("--tensorboard_root", default="../../tensorboard/", type=str)
 group_l.add_argument("--checkpoint_path", default="student-teacher", type=str)
 group_l.add_argument("--tensorboard_path", default="student-teacher", type=str)
 group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
 
-tensorboard_path = os.path.join(
-    args.tensorboard_root, args.dataset, args.tensorboard_path)
-checkpoint_path = os.path.join(
-    args.checkpoint_root, args.dataset, args.checkpoint_path)
+tensorboard_path = os.path.join(args.tensorboard_root, args.dataset, args.tensorboard_path)
+checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoint_path)
 
 
 # In[26]:
@@ -216,8 +213,7 @@ lambda_cost = Warmup(args.lambda_cost_max, args.warmup_length, sigmoid_rampup)
 callbacks += [lambda_cost]
 
 # Checkpoint
-checkpoint = CheckPoint(student, optimizer, mode="max",
-                        name="%s/%s.torch" % (checkpoint_path, checkpoint_title))
+checkpoint = CheckPoint(student, optimizer, mode="max", name="%s/%s.torch" % (checkpoint_path, checkpoint_title))
 
 
 def get_lr(optimizer):
@@ -264,7 +260,7 @@ avg_Tce = ContinueAverage()
 avg_ccost = ContinueAverage()
 
 softmax_fn = nn.Softmax(dim=1)
-
+noise_fn = transforms.Lambda(lambda x: x + (torch.rand(x.shape).cuda() * 10 + 10))
 
 def reset_metrics():
     for d in [calc_student_s_metrics.fn, calc_student_u_metrics.fn, calc_teacher_s_metrics.fn, calc_teacher_u_metrics.fn]:
@@ -343,8 +339,8 @@ def train(epoch):
         # Predictions
         student_s_logits = student(x_s)
         student_u_logits = student(x_u)
-        teacher_s_logits = teacher(x_s)
-        teacher_u_logits = teacher(x_u)
+        teacher_s_logits = teacher(noise_fn(x_s))
+        teacher_u_logits = teacher(noise_fn(x_u))
 
         # Calculate supervised loss (only student on S)
         loss = loss_ce(student_s_logits, y_s)
@@ -352,8 +348,7 @@ def train(epoch):
         # Calculate consistency cost (mse(student(x), teacher(x))) x is S + U
         student_logits = torch.cat((student_s_logits, student_u_logits), dim=0)
         teacher_logits = torch.cat((teacher_s_logits, teacher_u_logits), dim=0)
-        ccost = consistency_cost(softmax_fn(
-            student_logits), softmax_fn(teacher_logits))
+        ccost = consistency_cost(softmax_fn(student_logits), softmax_fn(teacher_logits))
 
         total_loss = loss + lambda_cost() * ccost
 
@@ -366,8 +361,7 @@ def train(epoch):
             _teacher_loss = loss_ce(teacher_s_logits, y_s)
 
             # Update teacher
-            update_teacher_model(
-                student, teacher, args.ema_alpha, epoch*nb_batch + i)
+            update_teacher_model(student, teacher, args.ema_alpha, epoch*nb_batch + i)
 
             # Compute the metrics for the student
             student_s_metrics = calc_student_s_metrics(student_s_logits, y_s)
@@ -501,7 +495,6 @@ for e in range(start_epoch, args.nb_epoch):
     val(e)
 
     tensorboard.flush()
-tensorboard.close()
 
 
 # ## Save the hyper parameters and the metrics
@@ -521,3 +514,5 @@ final_metrics = {
 }
 
 tensorboard.add_hparams(hparams, final_metrics)
+tensorboard.flush()
+tensorboard.close()
