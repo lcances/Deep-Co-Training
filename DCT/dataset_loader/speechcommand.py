@@ -251,7 +251,7 @@ def load_dct(
     train_transform: Module = None,
     val_transform: Module = None,
 
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    **kwargs) -> Tuple[DataLoader, DataLoader]:
 
     loader_args = dict(
         num_workers=kwargs.get("num_workers", 0),
@@ -260,23 +260,20 @@ def load_dct(
     dataset_path = os.path.join(dataset_root)
 
     # Validation subset
-    val_dataset = SpeechCommands(
-        root=dataset_path, subset="validation", transform=train_transform, download=True)
+    val_dataset = SpeechCommands(root=dataset_path, subset="validation", transform=train_transform, download=True)
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
 
     # Training subset
-    train_dataset = SpeechCommands(
-        root=dataset_path, subset="train", transform=val_transform, download=True)
+    train_dataset = SpeechCommands(root=dataset_path, subset="train", transform=val_transform, download=True)
     s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
 
     # Calc the size of the Supervised and Unsupervised batch
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
 
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     sampler_s = SubsetRandomSampler(s_idx)
     sampler_u = SubsetRandomSampler(u_idx)
@@ -322,9 +319,8 @@ def student_teacher(
     nb_s_file = len(s_idx)
     nb_u_file = len(u_idx)
 
-    ratio = nb_s_file / nb_u_file
-    s_batch_size = int(np.floor(batch_size * ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - ratio)))
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
 
     sampler_s = torch_data.SubsetRandomSampler(s_idx)
     sampler_u = torch_data.SubsetRandomSampler(u_idx)

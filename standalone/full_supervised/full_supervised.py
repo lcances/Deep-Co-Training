@@ -191,26 +191,12 @@ print(os.path.join(tensorboard_path, tensorboard_title))
 loss_ce = nn.CrossEntropyLoss(reduction="mean")
 
 
-# In[16]:
-
-
-tensorboard_params = {}
-for key, value in args.__dict__.items():
-    tensorboard_params[key] = str(value)
-
-
-# In[17]:
-
-
-tensorboard.add_hparams(tensorboard_params, {})
-
-
 # ## optimizer & callbacks
 
 # In[18]:
 
 
-optimizer = load_optimizer(args.dataset, "supervised", model=model)
+optimizer = load_optimizer(args.dataset, "supervised", learning_rate=args.learning_rate, model=model)
 callbacks = load_callbacks(args.dataset, "supervised", optimizer=optimizer, nb_epoch=args.nb_epoch)
 
 
@@ -367,33 +353,6 @@ def val(epoch):
         c.step()
 
 
-# In[25]:
-
-
-if args.preload_dataset:
-    train_loaded = train_loader.dataset.load_cache_from_disk("train")
-    val_loaded = val_loader.dataset.load_cache_from_disk("val")
-    
-    if not train_loaded:
-        print("No disk cache for training set")
-        import tqdm
-
-        # Training
-        for i in tqdm.tqdm(range(len(train_loader.dataset))):
-            _, _ = train_loader.dataset[i]
-        train_loader.dataset.save_cache_to_disk("train")
-        
-    if not val_loaded:
-        print("No disk cache for validation set")
-        #val
-        for i in tqdm.tqdm(range(len(val_loader.dataset))):
-            _, _ = val_loader.dataset[i]
-        val_loader.dataset.save_cache_to_disk("val")
-
-
-# In[ ]:
-
-
 print(header)
 
 start_epoch = checkpoint.epoch_counter
@@ -404,13 +363,19 @@ for e in range(start_epoch, args.nb_epoch):
     val(e)
     
     tensorboard.flush()
-tensorboard.close()
 
-# # Testing (only for speechcommand)
+# ## Save the hyper parameters and the metrics
 
-# In[30]:
+hparams = {}
+for key, value in args.__dict__.items():
+    hparams[key] = str(value)
 
+final_metrics = {
+    "max_acc": maximum_tracker.max["acc"],
+    "max_f1": maximum_tracker.max["f1"],
+}
 
+# In[25]:
 if args.dataset.lower() == "speechcommand":
     
     from DCT.dataset_loader.speechcommand import SpeechCommands
@@ -419,64 +384,64 @@ if args.dataset.lower() == "speechcommand":
     from DCT.util.transforms import PadUpTo
     from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
 
+    # Basic transformation to pad and compute mel-spectrogram
     transform = Sequential(
         PadUpTo(target_length=16000, mode="constant", value=0),
         MelSpectrogram(sample_rate=16000, n_fft=2048, hop_length=512, n_mels=64),
         AmplitudeToDB(),
     )
 
+    # Get the test dataset
     test_dataset = SpeechCommands(root=args.dataset_root, subset="testing", download=True, transform=transform)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
+    
+    print(header)
+
+    start_time = time.time()
+    print("")
+    reset_metrics()
+    model.eval()
+
+    with torch.set_grad_enabled(False):
+        for i, (X, y) in enumerate(test_loader):
+            X = X.cuda()
+            y = y.cuda()
+
+            logits = model(X)
+            loss = loss_ce(logits, y)
+
+            # metrics
+            pred = torch.softmax(logits, dim=1)
+            pred_arg = torch.argmax(logits, dim=1)
+            y_one_hot = F.one_hot(y, num_classes=args.num_classes)
+
+            acc = acc_fn(pred_arg, y).mean
+            fscore = fscore_fn(pred, y_one_hot).mean
+            avg_ce = avg(loss.item()).mean
+
+            # logs
+            print(val_form.format(
+                "Testing: ",
+                1,
+                int(100 * (i + 1) / len(val_loader)),
+                "", avg_ce,
+                "", acc, fscore,
+                time.time() - start_time
+            ), end="\r")
+    
+    print("=========== FINAL PERFORMANCE ==========")
+    final_metrics = {
+        **final_metrics,
+        "test_acc": acc,
+        "test_f1": fscore
+     }
+
+    print("ACC: ", acc)
+    print("F1 : ", fscore)
 
 
-# In[ ]:
+tensorboard.add_hparams(hparams, final_metrics)
 
-
-len(test_dataset)
-
-
-# In[ ]:
-
-
-print(header)
-
-start_time = time.time()
-print("")
-reset_metrics()
-model.eval()
-
-with torch.set_grad_enabled(False):
-    for i, (X, y) in enumerate(test_loader):
-        X = X.cuda()
-        y = y.cuda()
-
-        logits = model(X)
-        loss = loss_ce(logits, y)
-
-        # metrics
-        pred = torch.softmax(logits, dim=1)
-        pred_arg = torch.argmax(logits, dim=1)
-        y_one_hot = F.one_hot(y, num_classes=args.num_classes)
-
-        acc = acc_fn(pred_arg, y).mean
-        fscore = fscore_fn(pred, y_one_hot).mean
-        avg_ce = avg(loss.item()).mean
-
-        # logs
-        print(val_form.format(
-            "Testing: ",
-            1,
-            int(100 * (i + 1) / len(val_loader)),
-            "", avg_ce,
-            "", acc, fscore,
-            time.time() - start_time
-        ), end="\r")
-
-
-# In[ ]:
-
-
-
-
-
+tensorboard.flush()
+tensorboard.close()
 # # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪

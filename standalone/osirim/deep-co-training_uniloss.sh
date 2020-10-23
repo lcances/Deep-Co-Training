@@ -14,50 +14,39 @@ parse_long() {
 
 function show_help {
     echo "usage:  $BASH_SOURCE dataset model [-n | --node] [-N | --nb_task] \
-                  [-g | --nb_gpu] [-p | --partition] [training parameters]"
+                  [-g | --nb_gpu] [-p | --partition]"
     echo ""
     echo "Mandatory argument"
     echo "    dataset DATASET               Available are {ubs8k, esc10, esc50, speechcommand}"
     echo "    model MODEL                   Available are {cnn03, resnet[18|34|50], wideresnet28_[2|4|8]}"
     echo ""
     echo "Options"
+    echo "    -e  | --epoch EPOCH           The number of epoch"
+    echo "    -bs  | --batch_size            The size of the batch"
+    echo "    -r  | --ratio RATIO           The supervised ratio to use"
+    echo "    -lr | --learning_rate         The learning rate" 
+    echo ""
+    echo "Osirim related paraters"
     echo "    -n | --node NODE              On which node the job will be executed"
     echo "    -N | --nb_task NB TASK        On many parallel task"
     echo "    -g | --nb_gpu  NB GPU         On how many gpu this training should be done"
     echo "    -p | --partition PARTITION    On which partition the script will be executed"
     echo ""
-    echo "Training parameters"
-    echo "    --batch_size BATCH_SIZE       The batch size"
-    echo "    --nb_epoch NB_EPOCH           The total number of epoch"
-    echo "    --learning_rate LR            The initial learning rate"
-    echo "    --seed SEED                   The random generation seed"
-    echo "    - r | --ratoi SR              The ratio of supervised file"
-    echo "    --lambda_cot_max LCM          Lambda cot max"
-    echo "    --lambda_diff_max LDM         Lambda diff max"
-    echo "    --warmup_lenght WL            Warmup lenght"
-    echo "    --tensorboard_sufix SUFIX     Sufix for the tensorboard name, more precision"
-    echo ""
     echo "Available partition"
     echo "    GPUNodes"
     echo "    RTX6000Node"
 }
-                 
+
 # default parameters
 NODE=" "
 NB_TASK=1
 NB_GPU=1
 PARTITION="GPUNodes"
 
-BATCH_SIZE=100
-LR=0.003
-NB_EPOCH=300
-SR=0.1
-LCM=10
-LDM=0.5
-WL=80
-SEED=1234
-SUFIX=""
-
+EPOCH=5000
+BS=64
+LR=0.0005
+RATIO="0.1"
 
 # Parse the first two parameters
 MODEL=$1; shift;
@@ -71,22 +60,17 @@ while :; do
     if ! [ "$1" ]; then break; fi
 
     case $1 in
+        -e | --epoch)          EPOCH=$(parse_long $2); shift; shift;;
+        -bs | --batch_size)     BS=$(parse_long $2); shift; shift;;
+        -r | --ratio)          RATIO=$(parse_long $2); shift; shift;;
+        -lr | --learning_rate) LR=$(parse_long $2); shift; shift;;
+
         -n | --node) NODE=$(parse_long $2); shift; shift;;
         -N | --nb_task) NB_TASK=$(parse_long $2); shift; shift;;
         -g | --nb_gpu) NB_GPU=$(parse_long $2); shift; shift;;
         -p | --partition) PARTITION=$(parse_long $2); shift; shift;;
-        
-        --batch_size) BATCH_SIZE=$(parse_long $2); shift: shift;; #
-        --learning_rate) LR=$(parse_long $2); shift; shift;; #
-        --nb_epoch) NB_EPOCH=$(parse_long $2); shift; shift;; #
-        --supervised_ratio) SR=$(parse_long $2); shift; shift;; #
-        --lambda_cot_max) LCM=$(parse_long $2); shift; shift;; #
-        --lambda_diff_max) LDM=$(parse_long $2); shift; shift;; #
-        --warmup_length) WL=$(parse_long $2); shift; shift;; #
-        --seed) SEED=$(parse_long $2); shift; shift;; #
-        --tensorboard_sufix) SUFIX=$(parse_long $2); shift; shift;;
 
-        -?*) echo "WARN: unknown option" $1 >&2; exit 1
+        -?*) echo "WARN: unknown option" $1 >&2
     esac
 done
 
@@ -98,7 +82,7 @@ fi
 
 # ___________________________________________________________________________________ #
 LOG_DIR="logs"
-SBATCH_JOB_NAME=dct_${DATASET}_${MODEL}_${LR}lr_${LCM}lcm_${LDM}ldm_${WL}wl
+SBATCH_JOB_NAME=uniloss_${DATASET}_${MODEL}
 
 cat << EOT > .sbatch_tmp.sh
 #!/bin/bash
@@ -117,16 +101,24 @@ $NODELINE
 # container=/logiciels/containerCollections/CUDA10/pytorch.sif
 container=/users/samova/lcances/container/pytorch-dev.sif
 python=/users/samova/lcances/.miniconda3/envs/pytorch-dev/bin/python
-script=../co-training/co-training.py
+script=../co-training/co-training-uniloss.py
 
 commun_args=""
-commun_args="\${commun_args} --seed ${SEED}"
+commun_args="\${commun_args} --dataset ${DATASET}"
 commun_args="\${commun_args} --model ${MODEL}"
-commun_args="\${commun_args} --supervised_ratio ${SR} --learning_rate ${LR}"
-commun_args="\${commun_args} --batch_size ${BATCH_SIZE} --nb_epoch ${NB_EPOCH}"
-commun_args="\${commun_args} --lambda_cot_max ${LCM} --lambda_diff_max ${LDM} --warmup_length ${WL}"
-commun_args="\${commun_args} --tensorboard_path deep-co-training_grid-search"
-commun_args="\${commun_args} --tensorboard_sufix ${SUFIX}"
+
+commun_args="\${commun_args} --supervised_ratio ${RATIO}"
+commun_args="\${commun_args} --nb_epoch ${EPOCH}"
+commun_args="\${commun_args} --batch_size ${BS}"
+commun_args="\${commun_args} --learning_rate ${LR}"
+
+commun_args="\${commun_args} --lambda_cot_max 1"
+commun_args="\${commun_args} --lambda_diff_max 1"
+commun_args="\${commun_args} --loss_scheduler weighted-linear"
+commun_args="\${commun_args} --steps 5000"
+commun_args="\${commun_args} --cycle 1"
+commun_args="\${commun_args} --beta 1"
+
 
 echo "commun args"
 echo $commun_args

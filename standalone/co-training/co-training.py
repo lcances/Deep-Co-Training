@@ -441,7 +441,7 @@ def train(epoch):
 # In[19]:
 
 
-def test(epoch, msg=""):
+def val(epoch, msg=""):
     start_time = time.time()
     print("")
 
@@ -516,14 +516,12 @@ for epoch in range(0, args.nb_epoch):
         print("Losses are NaN, stoping the training here")
         break
 
-    test(epoch)
+    val(epoch)
 
     tensorboard.flush()
 
-tensorboard.close()
 
-# %%
-
+# Save the hyperparemeters, final metrics and training parameters
 hparams = {}
 for key, value in args.__dict__.items():
     hparams[key] = str(value)
@@ -533,6 +531,83 @@ final_metrics = {
     "max_acc_2": maximum_tracker.max["acc_2"],
 }
 
+
+# In[25]:
+if args.dataset.lower() == "speechcommand":
+    
+    from DCT.dataset_loader.speechcommand import SpeechCommands
+    from torch.utils.data import DataLoader
+    from torch.nn import Sequential
+    from DCT.util.transforms import PadUpTo
+    from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
+
+    # Basic transformation to pad and compute mel-spectrogram
+    transform = Sequential(
+        PadUpTo(target_length=16000, mode="constant", value=0),
+        MelSpectrogram(sample_rate=16000, n_fft=2048, hop_length=512, n_mels=64),
+        AmplitudeToDB(),
+    )
+
+    # Get the test dataset
+    test_dataset = SpeechCommands(root=args.dataset_root, subset="testing", download=True, transform=transform)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
+    
+    print(header)
+
+    start_time = time.time()
+    print("")
+    reset_metrics()
+    model.eval()
+
+    with torch.set_grad_enabled(False):
+        for batch, (X, y) in enumerate(test_loader):
+            x = X.cuda()
+            y = y.cuda()
+
+            with autocast():
+                logits_1 = m1(x)
+                logits_2 = m2(x)
+
+                # losses ----
+                l_sup = loss_sup(logits_1, logits_2, y, y)
+
+            # ======== Calc the metrics ========
+            # accuracies ----
+            pred_1 = torch.argmax(logits_1, dim=1)
+            pred_2 = torch.argmax(logits_2, dim=1)
+
+            acc_1 = metrics_fn["acc_s"][0](pred_1, y)
+            acc_2 = metrics_fn["acc_s"][1](pred_2, y)
+
+            avg_sup = metrics_fn["avg_sup"](l_sup.item())
+
+            # logs
+            print(val_form.format(
+                "Test: ",
+                epoch + 1,
+                int(100 * (batch + 1) / len(train_loader)),
+                "", avg_sup.mean, 0.0, 0.0, avg_sup.mean,
+                "", acc_1.mean, 0.0,
+                time.time() - start_time
+            ), end="\r")
+    
+    print("=========== FINAL PERFORMANCE ==========")
+    final_metrics = {
+        **final_metrics,
+        "test_acc_1": acc_1.mean,
+        "test_acc_2": acc_2.mean,
+     }
+
+    print("ACC 1: ", acc_1.mean)
+    print("ACC 2 : ", acc_2.mean)
+
+
+
+# %%
+
+
 tensorboard.add_hparams(hparams, final_metrics)
+tensorboard.flush()
+tensorboard.close()
 
 # In[ ]:
