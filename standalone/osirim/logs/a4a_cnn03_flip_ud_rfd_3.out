@@ -1,1 +1,0 @@
-python co-training-AugAsAdv.py -t 1 2 3 4 5 6 7 8 9 -v 10 --model cnn03 --supervised_ratio 0.1 --nb_epoch 150 --learning_rate 0.003 --augment_m1 flip_ud --augment_m2 rfd_3

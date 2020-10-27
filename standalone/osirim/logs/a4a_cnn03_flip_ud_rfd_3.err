@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "../co-training/co-training-AugAsAdv.py", line 118, in <module>
-    manager, train_loader, val_loader = load_dataset(
-  File "/users/samova/lcances/Deep-Co-Training/DCT/util/dataset_loader.py", line 41, in load_dataset
-    return load_ubs8k_datasets(framework, **parameters, **kwargs)
-TypeError: load_ubs8k_datasets() got an unexpected keyword argument 'dataset_root'
-srun: error: gpu-nc03: task 0: Exited with exit code 1
