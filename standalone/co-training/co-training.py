@@ -52,8 +52,7 @@ os.environ["OMP_NUM_THREADS"] = "2"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--from_config", default="", type=str)
-parser.add_argument("-d", "--dataset_root",
-                    default="../../datasets/", type=str)
+parser.add_argument("-d", "--dataset_root", default="../../datasets/", type=str)
 parser.add_argument("-D", "--dataset", default="esc50", type=str)
 
 group_t = parser.add_argument_group("Commun parameters")
@@ -81,21 +80,15 @@ group_h.add_argument("--warmup_length", default=80, type=int)
 group_h.add_argument("--epsilon", default=0.02, type=float)
 
 group_a = parser.add_argument_group("Augmentation")
-group_a.add_argument("--augment", action="append",
-                     help="augmentation. use as if python script")
-group_a.add_argument("--augment_S", action="store_true",
-                     help="Apply augmentation on Supervised part")
-group_a.add_argument("--augment_U", action="store_true",
-                     help="Apply augmentation on Unsupervised part")
+group_a.add_argument("--augment", action="append", help="augmentation. use as if python script")
+group_a.add_argument("--augment_S", action="store_true", help="Apply augmentation on Supervised part")
+group_a.add_argument("--augment_U", action="store_true", help="Apply augmentation on Unsupervised part")
 
 group_l = parser.add_argument_group("Logs")
-group_l.add_argument("--checkpoint_root",
-                     default="../../model_save/", type=str)
-group_l.add_argument("--tensorboard_root",
-                     default="../../tensorboard/", type=str)
+group_l.add_argument("--checkpoint_root", default="../../model_save/", type=str)
+group_l.add_argument("--tensorboard_root", default="../../tensorboard/", type=str)
 group_l.add_argument("--checkpoint_path", default="deep-co-training", type=str)
-group_l.add_argument("--tensorboard_path",
-                     default="deep-co-training", type=str)
+group_l.add_argument("--tensorboard_path", default="deep-co-training", type=str)
 group_l.add_argument("--tensorboard_sufix", default="", type=str)
 
 args = parser.parse_args()
