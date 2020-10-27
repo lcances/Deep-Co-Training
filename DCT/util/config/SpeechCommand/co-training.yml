@@ -1,9 +1,7 @@
 
 # Dataset configuration
 dataset_root: "../../datasets"
-dataset: "ubs8k"
-train_folds: [1, 2, 3, 4, 5, 6, 7, 8, 9]
-val_folds: [10]
+dataset: "SpeechCommand"
 
 # Training configuration
 model: wideresnet28_2

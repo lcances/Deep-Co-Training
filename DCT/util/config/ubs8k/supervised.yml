@@ -7,23 +7,17 @@ val_folds: [10]
 
 # Training configuration
 model: wideresnet28_2
-supervised_ratio: 0.1
-learning_rate: 0.0005
-batch_size: 100
-nb_epoch: 300
-
-lambda_cot_max: 1
-lambda_cot_diff: 0.5
-warmup_length: 160
-epsilon: 0.02
-
+supervised_ratio: 1.0
+batch_size: 64
+nb_epoch: 100
+learning_rate: 0.003
 resume: "false"
 seed: 1234
 num_classes: 10
 
 # Miscalenous
 checkpoint_root: "../../model_save"
-checkpoint_path: "deep-co-training"
+checkpoint_path: "supervised"
 tensorboard_root: "../../tensorboard"
-tensorboard_path: "deep-co-training"
+tensorboard_path: "supervised"
 tensorboard_sufix: ""

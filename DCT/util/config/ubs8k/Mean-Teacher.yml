@@ -8,14 +8,13 @@ val_folds: [10]
 # Training configuration
 model: wideresnet28_2
 supervised_ratio: 0.1
-learning_rate: 0.0005
-batch_size: 100
-nb_epoch: 300
+learning_rate: 0.003
+batch_size: 64
+nb_epoch: 200
 
-lambda_cot_max: 1
-lambda_cot_diff: 0.5
-warmup_length: 160
-epsilon: 0.02
+lambda_ccost_max: 1
+warmup_length: 50
+alpha: 0.999
 
 resume: "false"
 seed: 1234

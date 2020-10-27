@@ -1,0 +1,23 @@
+
+# Dataset configuration
+dataset_root: "../../datasets"
+dataset: "esc10"
+train_folds: [1, 2, 3, 4]
+val_folds: [5]
+
+# Training configuration
+model: wideresnet28_2
+supervised_ratio: 1.0
+batch_size: 64
+nb_epoch: 100
+learning_rate: 0.003
+resume: "false"
+seed: 1234
+num_classes: 10
+
+# Miscalenous
+checkpoint_root: "../../model_save"
+checkpoint_path: "supervised"
+tensorboard_root: "../../tensorboard"
+tensorboard_path: "supervised"
+tensorboard_sufix: ""
