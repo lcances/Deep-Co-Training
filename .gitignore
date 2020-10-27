@@ -12,7 +12,10 @@ DCT.egg-info/
 venv.yml
 
 model_save/
+tensorboard/
+tensorboard_tmp/
 datasets/
+tmp/
 logs/
 standalone/osirim/logs/
 
