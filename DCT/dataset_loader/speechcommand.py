@@ -243,7 +243,100 @@ class SpeechCommandsNoLoad(SpeechCommands):
         return target_mapper[label], speaker_id, utterance_number
 
 
-def load_dct(
+# =============================================================================
+#        SUPERVISED DATASETS
+# =============================================================================
+def supervised(
+        dataset_root,
+        supervised_ratio: float = 1.0,
+        batch_size: int = 128,
+
+        train_transform: Module = None,
+        val_transform: Module = None,
+
+        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    """
+    Load the SppechCommand for a supervised training
+    """
+    loader_args = dict(
+        num_workers=kwargs.get("num_workers", 0),
+        pin_memory=kwargs.get("pin_memory", False),
+    )
+    dataset_path = os.path.join(dataset_root)
+
+    # validation subset
+    val_dataset = SpeechCommands(
+        root=dataset_path, subset="validation", transform=train_transform, download=True)
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+
+    # Training subset
+    train_dataset = SpeechCommands(
+        root=dataset_path, subset="train", transform=val_transform, download=True)
+
+    if supervised_ratio == 1.0:
+        train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+
+    else:
+        s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
+
+        sampler_s = SubsetRandomSampler(s_idx)
+        train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, sampler=sampler_s, **loader_args)
+
+    return None, train_loader, val_loader
+
+
+# =============================================================================
+#       MEAN TEACHER
+# =============================================================================
+def mean_teacher(
+        dataset_root,
+        supervised_ratio: float = 0.1,
+        batch_size: int = 128,
+
+        train_transform: Module = None,
+        val_transform: Module = None,
+
+        **kwargs) -> Tuple[DataLoader, DataLoader]:
+    """
+    Load the SpeechCommand for a student teacher learning
+    """
+    loader_args = dict(
+        num_workers=kwargs.get("num_workers", 0),
+        pin_memory=kwargs.get("pin_memory", False),
+    )
+    dataset_path = os.path.join(dataset_root)
+
+    # validation subset
+    val_dataset = SpeechCommands(root=dataset_path, subset="validation", transform=train_transform, download=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
+
+    # Training subset
+    train_dataset = SpeechCommands(root=dataset_path, subset="train", transform=val_transform, download=True)
+    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
+    nb_s_file = len(s_idx)
+    nb_u_file = len(u_idx)
+
+    s_batch_size = int(np.floor(batch_size * supervised_ratio))
+    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
+
+    sampler_s = torch_data.SubsetRandomSampler(s_idx)
+    sampler_u = torch_data.SubsetRandomSampler(u_idx)
+
+    train_s_loader = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
+    train_u_loader = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
+
+    train_loader = ZipCycle([train_s_loader, train_u_loader])
+
+    return None, train_loader, val_loader
+
+
+# =============================================================================
+#        DEEP CO TRAINING
+# =============================================================================
+def dct(
     dataset_root,
     supervised_ratio: float = 0.1,
     batch_size: int = 100,
@@ -291,95 +384,3 @@ def load_dct(
     return None, train_loader, val_loader
 
 
-def student_teacher(
-        dataset_root,
-        supervised_ratio: float = 0.1,
-        batch_size: int = 128,
-
-        train_transform: Module = None,
-        val_transform: Module = None,
-
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
-    """
-    Load the SpeechCommand for a student teacher learning
-    """
-    loader_args = dict(
-        num_workers=kwargs.get("num_workers", 0),
-        pin_memory=kwargs.get("pin_memory", False),
-    )
-    dataset_path = os.path.join(dataset_root)
-
-    # validation subset
-    val_dataset = SpeechCommands(root=dataset_path, subset="validation", transform=train_transform, download=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
-
-    # Training subset
-    train_dataset = SpeechCommands(root=dataset_path, subset="train", transform=val_transform, download=True)
-    s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
-    nb_s_file = len(s_idx)
-    nb_u_file = len(u_idx)
-
-    s_batch_size = int(np.floor(batch_size * supervised_ratio))
-    u_batch_size = int(np.ceil(batch_size * (1 - supervised_ratio)))
-
-    sampler_s = torch_data.SubsetRandomSampler(s_idx)
-    sampler_u = torch_data.SubsetRandomSampler(u_idx)
-
-    train_s_loader = torch_data.DataLoader(train_dataset, batch_size=s_batch_size, sampler=sampler_s)
-    train_u_loader = torch_data.DataLoader(train_dataset, batch_size=u_batch_size, sampler=sampler_u)
-
-    train_loader = ZipCycle([train_s_loader, train_u_loader])
-
-    return None, train_loader, val_loader
-
-
-# =============================================================================
-#        SUPERVISED DATASETS
-# =============================================================================
-def load_supervised(
-        dataset_root,
-        supervised_ratio: float = 1.0,
-        batch_size: int = 128,
-
-        train_transform: Module = None,
-        val_transform: Module = None,
-
-        **kwargs) -> Tuple[DataLoader, DataLoader]:
-    """
-    Load the SppechCommand for a supervised training
-    """
-    loader_args = dict(
-        num_workers=kwargs.get("num_workers", 0),
-        pin_memory=kwargs.get("pin_memory", False),
-    )
-    dataset_path = os.path.join(dataset_root)
-
-    # validation subset
-    val_dataset = SpeechCommands(
-        root=dataset_path, subset="validation", transform=train_transform, download=True)
-    val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=True, **loader_args)
-
-    # Training subset
-    train_dataset = SpeechCommands(
-        root=dataset_path, subset="train", transform=val_transform, download=True)
-
-    if supervised_ratio == 1.0:
-        train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, **loader_args)
-
-    else:
-        s_idx, u_idx = _split_s_u(train_dataset, supervised_ratio)
-
-        sampler_s = SubsetRandomSampler(s_idx)
-        train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, sampler=sampler_s, **loader_args)
-
-    return None, train_loader, val_loader
-
-
-if __name__ == "__main__":
-    _, td, vd = load_supervised("/corpus/corpus")
-
-    print(len(td))
-    print(len(vd))
