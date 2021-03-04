@@ -14,5 +14,5 @@ def dct_aug4adv():
     return None, None
 
 
-def student_teacher():
+def mean_teacher():
     return None, None

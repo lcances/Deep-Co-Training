@@ -31,5 +31,5 @@ def dct_aug4adv() -> Tuple[Module, Module]:
     raise NotImplementedError
 
 
-def student_teacher() -> Tuple[Module, Module]:
+def mean_teacher() -> Tuple[Module, Module]:
     return supervised()

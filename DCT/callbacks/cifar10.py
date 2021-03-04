@@ -31,6 +31,6 @@ def dct_uniloss() -> list:
     return [lr_scheduler]
 
 
-def student_teacher() -> list:
+def mean_teacher() -> list:
     lr_scheduler = LambdaLR(optimizer, lr_lambda)
     return [lr_scheduler]

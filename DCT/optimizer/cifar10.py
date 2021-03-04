@@ -29,7 +29,7 @@ def dct_uniloss(model1, model2,
     return torch.optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
 
-def student_teacher(model,
+def mean_teacher(model,
                     learning_rate: float = 0.1,
                     momentum: float = 0.9,
                     weight_decay: float = 0.0005,

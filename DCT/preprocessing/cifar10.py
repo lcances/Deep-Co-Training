@@ -23,5 +23,5 @@ def dct_aug4adv() -> Tuple[Compose, Compose]:
     return supervised()
 
 
-def student_teacher() -> Tuple[Compose, Compose]:
+def mean_teacher() -> Tuple[Compose, Compose]:
     return supervised()

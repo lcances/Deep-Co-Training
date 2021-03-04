@@ -21,5 +21,5 @@ def dct_uniloss(model1, model2,
     return dct(model1, model2, learning_rate, **kwargs)
 
 
-def student_teacher(student, learning_rate: float = 0.003, **kwargs) -> Optimizer:
+def mean_teacher(student, learning_rate: float = 0.003, **kwargs) -> Optimizer:
     return Adam(student.parameters(), lr=learning_rate)

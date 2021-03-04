@@ -22,5 +22,5 @@ def dct_uniloss(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
     return supervised(nb_epoch, optimizer, **kwargs)
 
 
-def student_teacher(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
+def mean_teacher(nb_epoch: int, optimizer: Optimizer, **kwargs) -> list:
     return supervised(nb_epoch, optimizer, **kwargs)
