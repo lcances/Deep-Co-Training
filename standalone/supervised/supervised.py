@@ -1,68 +1,27 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # import
-
-# In[33]:
-
-
-# get_ipython().run_line_magic('load_ext', 'autoreload')
-# get_ipython().run_line_magic('autoreload', '2')
-
-
-# In[34]:
-
-
-import sys
-sys.executable
-
-
-# In[35]:
-
-
 import os
 os.environ["MKL_NUM_THREADS"] = "2"
 os.environ["NUMEXPR_NU M_THREADS"] = "2"
 os.environ["OMP_NUM_THREADS"] = "2"
 import time
-
-import numpy
 import torch
 import torch.nn as nn
-import torch.utils.data as data
 import torch.nn.functional as F
-import torchvision.transforms as transforms
-from torch.cuda.amp import autocast
-
-from torch.optim.lr_scheduler import LambdaLR
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
-
-
-# In[36]:
-
-
-from DCT.util.dataset_loader import load_dataset
-from DCT.util.optimizer_loader import load_optimizer
-from DCT.util.callbacks_loader import load_callbacks
-from DCT.util.model_loader import load_model
-from DCT.util.preprocess_loader import load_preprocesser
+from DCT.util import load_optimizer
+from DCT.util import load_preprocesser
+from DCT.util import load_callbacks
+from DCT.util import load_dataset
+from DCT.util import load_model
 from DCT.util.checkpoint import CheckPoint, mSummaryWriter
 from DCT.util.utils import reset_seed, get_datetime, track_maximum
-
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
-
-
-# # Arguments
-
-# In[37]:
-
-
 import argparse
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--from_config", default="", type=str)
 parser.add_argument("-d", "--dataset_root", default="../../datasets", type=str)
-parser.add_argument("-D", "--dataset", default="SpeechCommand", type=str, help="available [ubs8k | cifar10]")
+parser.add_argument("-D", "--dataset", default="speechcommand", type=str, choices=['ubs8k', 'cifar10', 'SpeechCommands'])
 
 group_t = parser.add_argument_group("Commun parameters")
 group_t.add_argument("-m", "--model", default="cnn03", type=str)
@@ -93,31 +52,9 @@ args = parser.parse_args()
 tensorboard_path = os.path.join(args.tensorboard_root, args.dataset, args.tensorboard_path)
 checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoint_path)
 
-
-# In[6]:
-
-
-args
-
-
-# # initialisation
-
-# In[7]:
-
+print(vars(args))
 
 reset_seed(args.seed)
-
-
-# # Prepare the dataset
-
-# In[8]:
-
-
-args.dataset_root
-
-
-# In[9]:
-
 
 train_transform, val_transform = load_preprocesser(args.dataset, "supervised")
 
@@ -128,20 +65,20 @@ train_transform, val_transform = load_preprocesser(args.dataset, "supervised")
 manager, train_loader, val_loader = load_dataset(
     args.dataset,
     "supervised",
-    
-    dataset_root = args.dataset_root,
-    supervised_ratio = args.supervised_ratio,
-    batch_size = args.batch_size,
-    train_folds = args.train_folds,
-    val_folds = args.val_folds,
+
+    dataset_root=args.dataset_root,
+    supervised_ratio=args.supervised_ratio,
+    batch_size=args.batch_size,
+    train_folds=args.train_folds,
+    val_folds=args.val_folds,
 
     train_transform=train_transform,
     val_transform=val_transform,
-    
+
     num_workers=0,
     pin_memory=True,
 
-    verbose = 1
+    verbose=1
 )
 
 
@@ -268,11 +205,11 @@ def train(epoch):
     reset_metrics()
     model.train()
 
-    for i, (X, y) in enumerate(train_loader):        
-        X = X.cuda()
-        y = y.cuda()
-        
-        logits = model(X)        
+    for i, (X, y) in enumerate(train_loader):
+        X = X.cuda().float()
+        y = y.cuda().long()
+
+        logits = model(X)
         loss = loss_ce(logits, y)
 
         optimizer.zero_grad()
@@ -284,9 +221,9 @@ def train(epoch):
             pred_arg = torch.argmax(logits, dim=1)
             y_one_hot = F.one_hot(y, num_classes=args.num_classes)
 
-            acc = acc_fn(pred_arg, y).mean
-            fscore = fscore_fn(pred, y_one_hot).mean
-            avg_ce = avg(loss.item()).mean
+            acc = acc_fn(pred_arg, y).mean(size=100)
+            fscore = fscore_fn(pred, y_one_hot).mean(size=100)
+            avg_ce = avg(loss.item()).mean(size=100)
 
             # logs
             print(train_form.format(
@@ -325,9 +262,9 @@ def val(epoch):
             pred_arg = torch.argmax(logits, dim=1)
             y_one_hot = F.one_hot(y, num_classes=args.num_classes)
 
-            acc = acc_fn(pred_arg, y).mean
-            fscore = fscore_fn(pred, y_one_hot).mean
-            avg_ce = avg(loss.item()).mean
+            acc = acc_fn(pred_arg, y).mean(size=100)
+            fscore = fscore_fn(pred, y_one_hot).mean(size=100)
+            avg_ce = avg(loss.item()).mean(size=100)
 
             # logs
             print(val_form.format(
