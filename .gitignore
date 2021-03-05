@@ -10,6 +10,8 @@ __pycache__/
 .*.db-wal
 DCT.egg-info/
 venv.yml
+.hydra/
+outputs/
 
 model_save/
 tensorboard/
