@@ -21,6 +21,9 @@ from omegaconf import DictConfig, OmegaConf
 
 @hydra.main(config_name='../../config/supervised/supervised.yaml')
 def run(cfg: DictConfig) -> DictConfig:
+    # keep the file directory as the current working directory
+    os.chdir(hydra.utils.get_original_cwd())
+    
     print(OmegaConf.to_yaml(cfg))
     print('current dir: ', os.getcwd())
 
