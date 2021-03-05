@@ -5,10 +5,12 @@ from torch.utils.data import DataLoader
 
 
 def supervised(*args, **kwargs) -> Union[None, DataLoader, DataLoader]:
-    return get_supervised(ESC50)
+    return get_supervised(ESC50)(*args, **kwargs)
+
 
 def dct(*args, **kwargs) -> Union[None, DataLoader, DataLoader]:
-    return get_dct(ESC50)
+    return get_dct(ESC50)(*args, **kwargs)
+
 
 def mean_teacher(*args, **kwargs) -> Tuple[None, DataLoader, DataLoader]:
-    return get_mean_teacher(ESC50)
+    return get_mean_teacher(ESC50)(*args, **kwargs)
