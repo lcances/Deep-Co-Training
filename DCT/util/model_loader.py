@@ -1,20 +1,17 @@
 import DCT.models.ubs8k as u8
-import DCT.models.ubs8k_test as u8_test
 import DCT.models.cifar10 as c10
 import DCT.models.esc as esc
 import DCT.models.speechcommands as sc
-import DCT.models.gtzan as gtzan
 
 import inspect
 import logging
 
 dataset_mapper = {
-    "ubs8k": [u8, u8_test],
+    "ubs8k": [u8],
     "cifar10": [c10],
     "esc10": [esc],
     "esc50": [esc],
     "speechcommand": [sc],
-    "gtzan": [gtzan]
 }
 
 
