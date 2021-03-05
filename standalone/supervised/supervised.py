@@ -6,379 +6,223 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 from DCT.util import load_optimizer
 from DCT.util import load_preprocesser
 from DCT.util import load_callbacks
 from DCT.util import load_dataset
 from DCT.util import load_model
 from DCT.util.checkpoint import CheckPoint, mSummaryWriter
-from DCT.util.utils import reset_seed, get_datetime, track_maximum
+from DCT.util.utils import reset_seed, get_datetime, track_maximum, get_lr, get_train_format
 from metric_utils.metrics import CategoricalAccuracy, FScore, ContinueAverage
-import argparse
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--from_config", default="", type=str)
-parser.add_argument("-d", "--dataset_root", default="../../datasets", type=str)
-parser.add_argument("-D", "--dataset", default="speechcommand", type=str, choices=['ubs8k', 'cifar10', 'SpeechCommands'])
-
-group_t = parser.add_argument_group("Commun parameters")
-group_t.add_argument("-m", "--model", default="cnn03", type=str)
-group_t.add_argument("--supervised_ratio", default=1.0, type=float)
-group_t.add_argument("--batch_size", default=256, type=int)
-group_t.add_argument("--nb_epoch", default=100, type=int)
-group_t.add_argument("--learning_rate", default=0.001, type=float)
-group_t.add_argument("--resume", action="store_true", default=False)
-group_t.add_argument("--preload_dataset", action="store_true", default=False)
-group_t.add_argument("--seed", default=1234, type=int)
-
-group_m = parser.add_argument_group("Model parameters")
-group_m.add_argument("--num_classes", default=35, type=int)
-
-group_u = parser.add_argument_group("Datasets parameters")
-group_u.add_argument("-t", "--train_folds", nargs="+", default=[1, 2, 3, 4], type=int)
-group_u.add_argument("-v", "--val_folds", nargs="+", default=[5], type=int)
-
-group_l = parser.add_argument_group("Logs")
-group_l.add_argument("--checkpoint_root", default="../../model_save/", type=str)
-group_l.add_argument("--tensorboard_root", default="../../tensorboard/", type=str)
-group_l.add_argument("--checkpoint_path", default="supervised", type=str)
-group_l.add_argument("--tensorboard_path", default="supervised", type=str)
-group_l.add_argument("--tensorboard_sufix", default="", type=str)
-
-args = parser.parse_args()
-
-tensorboard_path = os.path.join(args.tensorboard_root, args.dataset, args.tensorboard_path)
-checkpoint_path = os.path.join(args.checkpoint_root, args.dataset, args.checkpoint_path)
-
-print(vars(args))
-
-reset_seed(args.seed)
-
-train_transform, val_transform = load_preprocesser(args.dataset, "supervised")
-
-
-# In[11]:
-
-
-manager, train_loader, val_loader = load_dataset(
-    args.dataset,
-    "supervised",
-
-    dataset_root=args.dataset_root,
-    supervised_ratio=args.supervised_ratio,
-    batch_size=args.batch_size,
-    train_folds=args.train_folds,
-    val_folds=args.val_folds,
-
-    train_transform=train_transform,
-    val_transform=val_transform,
-
-    num_workers=0,
-    pin_memory=True,
-
-    verbose=1
-)
-
-
-# In[12]:
-
-
-input_shape = tuple(train_loader.dataset[0][0].shape)
-
-
-# # Prep model
-
-# In[13]:
-
-
-torch.cuda.empty_cache()
-
-model_func = load_model(args.dataset, args.model)
-# model_func = get_model_from_name("esc_wideresnet28_8")
-model = model_func(input_shape=input_shape, num_classes = args.num_classes)
-model = model.cuda()
-
-
-# In[14]:
-
-
 from torchsummary import summary
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
-s = summary(model, input_shape)
 
+@hydra.main(config_name='../../config/supervised/supervised.yaml')
+def run(cfg: DictConfig) -> DictConfig:
+    print(OmegaConf.to_yaml(cfg))
+    print('current dir: ', os.getcwd())
 
-# # training parameters
+    reset_seed(cfg.train_param.seed)
 
-# In[15]:
+    # -------- Get the pre-processer --------
+    train_transform, val_transform = load_preprocesser(cfg.dataset.dataset, "supervised")
 
+    # -------- Get the dataset --------
+    _, train_loader, val_loader = load_dataset(
+        cfg.dataset.dataset,
+        "supervised",
 
-# tensorboard
-title_element = (args.model, args.supervised_ratio, get_datetime(), model_func.__name__, args.supervised_ratio)
-tensorboard_title = "%s/%sS/%s_%s_%.1fS" % title_element
+        dataset_root=cfg.path.dataset_root,
+        supervised_ratio=cfg.train_param.supervised_ratio,
+        batch_size=cfg.train_param.batch_size,
+        train_folds=cfg.train_param.train_folds,
+        val_folds=cfg.train_param.val_folds,
 
-title_element = (model_func.__name__, args.supervised_ratio)
-checkpoint_title = "%s_%.1fS" % title_element
+        train_transform=train_transform,
+        val_transform=val_transform,
 
-tensorboard = mSummaryWriter(log_dir="%s/%s" % (tensorboard_path, tensorboard_title), comment=model_func.__name__)
-print(os.path.join(tensorboard_path, tensorboard_title))
+        num_workers=0, # With the cache enable, it is faster to have only one worker
+        pin_memory=True,
 
-# losses
-loss_ce = nn.CrossEntropyLoss(reduction="mean")
-
-
-# ## optimizer & callbacks
-
-# In[18]:
-
-
-optimizer = load_optimizer(args.dataset, "supervised", learning_rate=args.learning_rate, model=model)
-callbacks = load_callbacks(args.dataset, "supervised", optimizer=optimizer, nb_epoch=args.nb_epoch)
-
-
-# In[19]:
-
-
-# Checkpoint
-checkpoint = CheckPoint(model, optimizer, mode="max", name="%s/%s.torch" % (checkpoint_path, checkpoint_title))
-
-# Metrics
-fscore_fn = FScore()
-acc_fn = CategoricalAccuracy()
-avg = ContinueAverage()
-
-maximum_tracker = track_maximum()
-
-reset_metrics = lambda : [m.reset() for m in [fscore_fn, acc_fn, avg]]
-
-def get_lr(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
-
-
-# ## Can resume previous training
-
-# In[20]:
-
-
-if args.resume:
-    checkpoint.load_last()
-
-
-# In[21]:
-
-
-args.resume
-
-
-# ## training function
-
-# In[22]:
-
-
-UNDERLINE_SEQ = "\033[1;4m"
-RESET_SEQ = "\033[0m"
-
-
-header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} - {:<9.9} {:<12.12}| {:<9.9}- {:<6.6}"
-value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} - {:<9.9} {:<10.4f}| {:<9.4f}- {:<6.4f}"
-
-header = header_form.format(
-    ".               ", "Epoch", "%", "Losses:", "ce", "metrics: ", "acc", "F1 ","Time"
-)
-
-
-train_form = value_form
-val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
-
-print(header)
-
-
-# In[23]:
-
-
-def train(epoch):
-    start_time = time.time()
-    print("")
-
-    reset_metrics()
-    model.train()
-
-    for i, (X, y) in enumerate(train_loader):
-        X = X.cuda().float()
-        y = y.cuda().long()
-
-        logits = model(X)
-        loss = loss_ce(logits, y)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        with torch.set_grad_enabled(False):
-            pred = torch.softmax(logits, dim=1)
-            pred_arg = torch.argmax(logits, dim=1)
-            y_one_hot = F.one_hot(y, num_classes=args.num_classes)
-
-            acc = acc_fn(pred_arg, y).mean(size=100)
-            fscore = fscore_fn(pred, y_one_hot).mean(size=100)
-            avg_ce = avg(loss.item()).mean(size=100)
-
-            # logs
-            print(train_form.format(
-                "Training: ",
-                epoch + 1,
-                int(100 * (i + 1) / len(train_loader)),
-                "", avg_ce,
-                "", acc, fscore,
-                time.time() - start_time
-            ), end="\r")
-
-    tensorboard.add_scalar("train/Lce", avg_ce, epoch)
-    tensorboard.add_scalar("train/f1", fscore, epoch)
-    tensorboard.add_scalar("train/acc", acc, epoch)
-
-
-# In[24]:
-
-
-def val(epoch):
-    start_time = time.time()
-    print("")
-    reset_metrics()
-    model.eval()
-
-    with torch.set_grad_enabled(False):
-        for i, (X, y) in enumerate(val_loader):
-            X = X.cuda()
-            y = y.cuda()
-
-            logits = model(X)
-            loss = loss_ce(logits, y)
-
-            # metrics
-            pred = torch.softmax(logits, dim=1)
-            pred_arg = torch.argmax(logits, dim=1)
-            y_one_hot = F.one_hot(y, num_classes=args.num_classes)
-
-            acc = acc_fn(pred_arg, y).mean(size=100)
-            fscore = fscore_fn(pred, y_one_hot).mean(size=100)
-            avg_ce = avg(loss.item()).mean(size=100)
-
-            # logs
-            print(val_form.format(
-                "Validation: ",
-                epoch + 1,
-                int(100 * (i + 1) / len(val_loader)),
-                "", avg_ce,
-                "", acc, fscore,
-                time.time() - start_time
-            ), end="\r")
-
-    tensorboard.add_scalar("val/Lce", avg_ce, epoch)
-    tensorboard.add_scalar("val/f1", fscore, epoch)
-    tensorboard.add_scalar("val/acc", acc, epoch)
-    
-    tensorboard.add_scalar("hyperparameters/learning_rate", get_lr(optimizer), epoch)
-    
-    tensorboard.add_scalar("max/acc", maximum_tracker("acc", acc), epoch )
-    tensorboard.add_scalar("max/f1", maximum_tracker("f1", fscore), epoch )
-
-    checkpoint.step(acc)
-    for c in callbacks:
-        c.step()
-
-
-print(header)
-
-start_epoch = checkpoint.epoch_counter
-end_epoch = args.nb_epoch
-
-for e in range(start_epoch, args.nb_epoch):
-    train(e)
-    val(e)
-    
-    tensorboard.flush()
-
-# ## Save the hyper parameters and the metrics
-
-hparams = {}
-for key, value in args.__dict__.items():
-    hparams[key] = str(value)
-
-final_metrics = {
-    "max_acc": maximum_tracker.max["acc"],
-    "max_f1": maximum_tracker.max["f1"],
-}
-
-# In[25]:
-if args.dataset.lower() == "speechcommand":
-    
-    from DCT.dataset_loader.speechcommand import SpeechCommands
-    from torch.utils.data import DataLoader
-    from torch.nn import Sequential
-    from DCT.util.transforms import PadUpTo
-    from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
-
-    # Basic transformation to pad and compute mel-spectrogram
-    transform = Sequential(
-        PadUpTo(target_length=16000, mode="constant", value=0),
-        MelSpectrogram(sample_rate=16000, n_fft=2048, hop_length=512, n_mels=64),
-        AmplitudeToDB(),
+        verbose=1
     )
 
-    # Get the test dataset
-    test_dataset = SpeechCommands(root=args.dataset_root, subset="testing", download=True, transform=transform)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
-    
-    print(header)
+    # The input shape of the data is used to generate the model 
+    input_shape = tuple(train_loader.dataset[0][0].shape)
 
-    start_time = time.time()
-    print("")
-    reset_metrics()
-    model.eval()
+    # -------- Prepare the model --------
+    torch.cuda.empty_cache()
+    model_func = load_model(cfg.dataset.dataset, cfg.model.model)
+    model = model_func(input_shape=input_shape, num_classes=cfg.dataset.num_classes)
+    model = model.cuda()
 
-    with torch.set_grad_enabled(False):
-        for i, (X, y) in enumerate(test_loader):
-            X = X.cuda()
-            y = y.cuda()
+    summary(model, input_shape)
+
+    # -------- Tensorboard and checkpoint --------
+    # -- Prepare suffix
+    sufix_title = ''
+    sufix_title += f'_{cfg.train_param.learning_rate}-lr'
+    sufix_title += f'_{cfg.train_param.supervised_ratio}-sr'
+    sufix_title += f'_{cfg.train_param.nb_epoch}-e'
+    sufix_title += f'_{cfg.train_param.batch_size}-bs'
+    sufix_title += f'_{cfg.train_param.seed}-seed'
+
+    # -------- Tensorboard logging --------
+    tensorboard_title = f'{get_datetime()}_{cfg.model.model}_{sufix_title}'
+    log_dir = f'{cfg.path.tensorboard_path}/{tensorboard_title}'
+    print('Tensorboard log at: ', log_dir)
+
+    tensorboard = mSummaryWriter(log_dir=log_dir, comment=model_func.__name__)
+
+    # -------- Optimizer, callbacks, loss and checkpoint
+    optimizer = load_optimizer(cfg.dataset.dataset, "supervised", learning_rate=cfg.train_param.learning_rate, model=model)
+    callbacks = load_callbacks(cfg.dataset.dataset, "supervised", optimizer=optimizer, nb_epoch=cfg.train_param.nb_epoch)
+    loss_ce = nn.CrossEntropyLoss(reduction="mean")
+
+    checkpoint_title = f'{cfg.model.model}_{sufix_title}'
+    checkpoint_path = f'{cfg.path.checkpoint_path}/{checkpoint_title}'
+    checkpoint = CheckPoint(model, optimizer, mode="max", name=checkpoint_path)
+
+    # -------- Metrics and print formater --------
+    fscore_fn = FScore()
+    acc_fn = CategoricalAccuracy()
+    avg = ContinueAverage()
+    reset_metrics = lambda : [m.reset() for m in [fscore_fn, acc_fn, avg]]
+    maximum_tracker = track_maximum()
+
+    header, train_formater, val_formater = get_train_format('supervised')
+
+    # -------- Training and Validation function --------
+    def train(epoch):
+        start_time = time.time()
+        print("")
+
+        reset_metrics()
+        model.train()
+
+        for i, (X, y) in enumerate(train_loader):
+            X = X.cuda().float()
+            y = y.cuda().long()
 
             logits = model(X)
             loss = loss_ce(logits, y)
 
-            # metrics
-            pred = torch.softmax(logits, dim=1)
-            pred_arg = torch.argmax(logits, dim=1)
-            y_one_hot = F.one_hot(y, num_classes=args.num_classes)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-            acc = acc_fn(pred_arg, y).mean
-            fscore = fscore_fn(pred, y_one_hot).mean
-            avg_ce = avg(loss.item()).mean
+            with torch.set_grad_enabled(False):
+                pred = torch.softmax(logits, dim=1)
+                pred_arg = torch.argmax(logits, dim=1)
+                y_one_hot = F.one_hot(y, num_classes=cfg.dataset.num_classes)
 
-            # logs
-            print(val_form.format(
-                "Testing: ",
-                1,
-                int(100 * (i + 1) / len(val_loader)),
-                "", avg_ce,
-                "", acc, fscore,
-                time.time() - start_time
-            ), end="\r")
-    
-    print("=========== FINAL PERFORMANCE ==========")
+                acc = acc_fn(pred_arg, y).mean(size=100)
+                fscore = fscore_fn(pred, y_one_hot).mean(size=100)
+                avg_ce = avg(loss.item()).mean(size=100)
+
+                # logs
+                print(train_formater.format(
+                    "Training: ",
+                    epoch + 1,
+                    int(100 * (i + 1) / len(train_loader)),
+                    "", avg_ce,
+                    "", acc, fscore,
+                    time.time() - start_time
+                ), end="\r")
+
+        tensorboard.add_scalar("train/Lce", avg_ce, epoch)
+        tensorboard.add_scalar("train/f1", fscore, epoch)
+        tensorboard.add_scalar("train/acc", acc, epoch)
+
+    def val(epoch):
+        start_time = time.time()
+        print("")
+        reset_metrics()
+        model.eval()
+
+        with torch.set_grad_enabled(False):
+            for i, (X, y) in enumerate(val_loader):
+                X = X.cuda().float()
+                y = y.cuda().long()
+
+                logits = model(X)
+                loss = loss_ce(logits, y)
+
+                # metrics
+                pred = torch.softmax(logits, dim=1)
+                pred_arg = torch.argmax(logits, dim=1)
+                y_one_hot = F.one_hot(y, num_classes=cfg.dataset.num_classes)
+
+                acc = acc_fn(pred_arg, y).mean(size=100)
+                fscore = fscore_fn(pred, y_one_hot).mean(size=100)
+                avg_ce = avg(loss.item()).mean(size=100)
+
+                # logs
+                print(val_formater.format(
+                    "Validation: ",
+                    epoch + 1,
+                    int(100 * (i + 1) / len(val_loader)),
+                    "", avg_ce,
+                    "", acc, fscore,
+                    time.time() - start_time
+                ), end="\r")
+
+        tensorboard.add_scalar("val/Lce", avg_ce, epoch)
+        tensorboard.add_scalar("val/f1", fscore, epoch)
+        tensorboard.add_scalar("val/acc", acc, epoch)
+
+        tensorboard.add_scalar("hyperparameters/learning_rate", get_lr(optimizer), epoch)
+
+        tensorboard.add_scalar("max/acc", maximum_tracker("acc", acc), epoch)
+        tensorboard.add_scalar("max/f1", maximum_tracker("f1", fscore), epoch)
+
+        checkpoint.step(acc)
+        for c in callbacks:
+            c.step()
+
+    # -------- Training loop --------
+    print(header)
+
+    if cfg.train_param.resume:
+        checkpoint.load_last()
+
+    start_epoch = checkpoint.epoch_counter
+    end_epoch = cfg.train_param.nb_epoch
+
+    for e in range(start_epoch, end_epoch):
+        train(e)
+        val(e)
+
+        tensorboard.flush()
+
+    # -------- Save the hyper parameters and the metrics --------
+    hparams = dict(
+        dataset=cfg.dataset.dataset,
+        model=cfg.model.model,
+        supervised_ratio=cfg.train_param.supervised_ratio,
+        batch_size=cfg.train_param.batch_size,
+        nb_epoch=cfg.train_param.nb_epoch,
+        learning_rate=cfg.train_param.learning_rate,
+        seed=cfg.train_param.seed,
+        train_folds=cfg.train_param.train_folds,
+        val_folds=cfg.train_param.val_folds,
+    )
+
+    # convert all value to str
+    hparams = dict(zip(hparams.keys(), map(str, hparams.values())))
+
     final_metrics = {
-        **final_metrics,
-        "test_acc": acc,
-        "test_f1": fscore
-     }
+        "max_acc": maximum_tracker.max["acc"],
+        "max_f1": maximum_tracker.max["f1"],
+    }
 
-    print("ACC: ", acc)
-    print("F1 : ", fscore)
+    tensorboard.add_hparams(hparams, final_metrics)
+
+    tensorboard.flush()
+    tensorboard.close()
 
 
-tensorboard.add_hparams(hparams, final_metrics)
-
-tensorboard.flush()
-tensorboard.close()
-# # ♫♪.ılılıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llılılı.♫♪
+if __name__ == '__main__':
+    run()

@@ -12,6 +12,26 @@ import torch.distributed as dist
 # TODO write q timer decorator that deppend on the logging level
 
 
+def get_train_format(framwork: str = 'supervised'):
+    assert framwork in ['supervised', 'mean_teacher', 'dct']
+
+    UNDERLINE_SEQ = "\033[1;4m"
+    RESET_SEQ = "\033[0m"
+
+    if framwork == 'supervised':
+        header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} - {:<9.9} {:<12.12}| {:<9.9}- {:<6.6}"
+        value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} - {:<9.9} {:<10.4f}| {:<9.4f}- {:<6.4f}"
+
+        header = header_form.format(
+            ".               ", "Epoch", "%", "Losses:", "ce", "metrics: ", "acc", "F1 ","Time"
+        )
+
+    train_form = value_form
+    val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
+
+    return header, train_form, val_form
+    
+
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
     __getattr__ = dict.get
@@ -64,6 +84,11 @@ def track_maximum():
 def get_datetime():
     now = datetime.datetime.now()
     return str(now)[:10] + "_" + str(now)[11:-7]
+
+
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
 
 
 def get_model_from_name(model_name):
