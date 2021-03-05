@@ -7,7 +7,7 @@ from torch.nn import Module
 from torch import Tensor
 from DCT.util.utils import ZipCycle
 import torch.utils.data as torch_data
-from torchaudio.datasets import SPEECHCOMMANDS
+from DCT.dataset.speechcommands import SPEECHCOMMANDS
 from tqdm import trange
 
 from typing import Tuple
@@ -107,7 +107,7 @@ class SpeechCommands(SPEECHCOMMANDS):
                  url: str = URL,
                  download: bool = False,
                  transform: Module = None) -> None:
-        super().__init__(root, url, download, transform)
+        super().__init__(root, url, download)
 
         assert subset in ["train", "validation", "testing"]
         self.subset = subset
@@ -263,6 +263,9 @@ def supervised(
         pin_memory=kwargs.get("pin_memory", False),
     )
     dataset_path = os.path.join(dataset_root)
+
+    print('dataset path')
+    print(dataset_path)
 
     # validation subset
     val_dataset = SpeechCommands(
