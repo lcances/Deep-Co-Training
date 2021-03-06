@@ -12,19 +12,25 @@ import torch.distributed as dist
 # TODO write q timer decorator that deppend on the logging level
 
 
-def get_train_format(framwork: str = 'supervised'):
-    assert framwork in ['supervised', 'mean_teacher', 'dct']
+def get_train_format(framework: str = 'supervised'):
+    assert framework in ['supervised', 'mean-teacher', 'dct']
 
     UNDERLINE_SEQ = "\033[1;4m"
     RESET_SEQ = "\033[0m"
 
-    if framwork == 'supervised':
+    if framework == 'supervised':
         header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} - {:<9.9} {:<12.12}| {:<9.9}- {:<6.6}"
         value_form  = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} - {:<9.9} {:<10.4f}| {:<9.4f}- {:<6.4f}"
 
         header = header_form.format(
             ".               ", "Epoch", "%", "Losses:", "ce", "metrics: ", "acc", "F1 ","Time"
         )
+
+    elif framework == 'mean-teacher':
+        header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<10.8} {:<8.6} {:<8.6} {:<8.6} {:<8.6} {:<8.6} {:<8.6} | {:<10.8} {:<8.6} {:<8.6} {:<8.6} {:<8.6} {:<8.6} - {:<8.6}"
+        value_form = "{:<8.8} {:<6d} - {:<6d} - {:<10.8} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} | {:<10.8} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} {:<8.4f} - {:<8.4f}"
+        header = header_form.format(".               ", "Epoch",  "%", "Student:", "ce", "ccost",
+                                    "acc_s", "f1_s", "acc_u", "f1_u", "Teacher:", "ce", "acc_s", "f1_s", "acc_u", "f1_u", "Time")
 
     train_form = value_form
     val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
