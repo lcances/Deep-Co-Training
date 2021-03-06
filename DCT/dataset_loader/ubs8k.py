@@ -66,7 +66,7 @@ def mean_teacher(
     verbose=1,
     **kwargs,
 ):
-    assert supervised_ratio < 1.0
+    assert supervised_ratio <= 1.0
     
     """
     Load the UrbanSound dataset for student teacher framework.
