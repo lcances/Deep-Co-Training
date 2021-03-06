@@ -32,6 +32,14 @@ def get_train_format(framework: str = 'supervised'):
         header = header_form.format(".               ", "Epoch",  "%", "Student:", "ce", "ccost",
                                     "acc_s", "f1_s", "acc_u", "f1_u", "Teacher:", "ce", "acc_s", "f1_s", "acc_u", "f1_u", "Time")
 
+    elif framework == 'dct':
+        header_form = "{:<8.8} {:<6.6} - {:<6.6} - {:<8.8} {:<6.6} | {:<6.6} | {:<6.6} | {:<6.6} - {:<9.9} {:<9.9} | {:<9.9}- {:<6.6}"
+        value_form = "{:<8.8} {:<6} - {:<6} - {:<8.8} {:<6.4f} | {:<6.4f} | {:<6.4f} | {:<6.4f} - {:<9.9} {:<9.4f} | {:<9.4f}- {:<6.4f}"
+
+        header = header_form.format(
+            "", "Epoch", "%", "Losses:", "Lsup", "Lcot", "Ldiff", "total", "metrics: ", "acc_s1", "acc_u1", "Time"
+        )
+
     train_form = value_form
     val_form = UNDERLINE_SEQ + value_form + RESET_SEQ
 
