@@ -1,0 +1,37 @@
+hydra:
+  hydra_logging:
+    disable_existing_loggers: false
+  run:
+    dir: .
+
+dataset:
+  dataset: speechcommand
+  num_classes: 35
+
+model:
+  model: wideresnet28_2
+
+train_param:
+  supervised_ratio: 0.1
+  batch_size: 64
+  nb_epoch: 300
+  learning_rate: 0.001
+  seed: 1234
+  resume: false
+
+  # These two parameters bellow are used for UrbanSound8k and ESC cross validation
+  train_folds: null
+  val_folds: null
+
+dct:
+  epsilon: 0.02
+  warmup_length: 50
+  lambda_cot_max: 1
+  lambda_diff_max: 0.5
+
+path:
+  dataset_root: ../../datasets
+  checkpoint_root: ../../model_save
+  tensorboard_root: ../../tensorboard
+  checkpoint_path: ${path.checkpoint_root}/${dataset.dataset}/deep-co-training
+  tensorboard_path: ${path.tensorboard_root}/${dataset.dataset}/deep-co-training
