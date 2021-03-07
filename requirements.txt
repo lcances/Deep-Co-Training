@@ -1,0 +1,86 @@
+absl-py==0.11.0
+advertorch==0.2.3
+antlr4-python3-runtime==4.8
+appdirs @ file:///home/conda/feedstock_root/build_artifacts/appdirs_1603108395799/work
+audioread @ file:///home/conda/feedstock_root/build_artifacts/audioread_1607457396158/work
+augmentation-utils @ git+https://github.com/leocances/augmentation_utils.git@0174b36edc31a368c7abaef4a87fc59d864a09ca
+brotlipy==0.7.0
+cachetools==4.2.1
+certifi==2020.12.5
+cffi @ file:///home/conda/feedstock_root/build_artifacts/cffi_1613413861439/work
+chardet @ file:///home/conda/feedstock_root/build_artifacts/chardet_1610093490430/work
+cloudpickle @ file:///tmp/build/80754af9/cloudpickle_1598884132938/work
+cryptography @ file:///home/conda/feedstock_root/build_artifacts/cryptography_1612993729974/work
+cycler==0.10.0
+cytoolz==0.11.0
+dask @ file:///tmp/build/80754af9/dask-core_1613253194046/work
+-e git+git@github.com:leocances/Deep-Co-Training.git@d945158a862d7251b0252af3aaf226f24d5e243e#egg=DCT
+decorator @ file:///home/ktietz/src/ci/decorator_1611930055503/work
+flake8==3.8.4
+google-auth==1.27.0
+google-auth-oauthlib==0.4.2
+grpcio==1.36.1
+h5py @ file:///tmp/build/80754af9/h5py_1593454122442/work
+hydra-core==1.0.6
+idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1593328102638/work
+imagecodecs @ file:///tmp/build/80754af9/imagecodecs_1611258060730/work
+imageio @ file:///tmp/build/80754af9/imageio_1594161405741/work
+importlib-resources==5.1.2
+joblib @ file:///tmp/build/80754af9/joblib_1613502643832/work
+kiwisolver @ file:///tmp/build/80754af9/kiwisolver_1612282420641/work
+librosa @ file:///home/conda/feedstock_root/build_artifacts/librosa_1595413403988/work
+llvmlite==0.35.0
+Markdown==3.3.4
+matplotlib @ file:///tmp/build/80754af9/matplotlib-suite_1613407855456/work
+mccabe==0.6.1
+metric-utils @ git+https://github.com/leocances/pytorch_metrics.git@b6342ba376d0e71e0bafe084e539323b04577f44
+mkl-fft==1.3.0
+mkl-random==1.1.1
+mkl-service==2.3.0
+networkx @ file:///tmp/build/80754af9/networkx_1598376031484/work
+numba @ file:///home/conda/feedstock_root/build_artifacts/numba_1607010260266/work
+numpy @ file:///tmp/build/80754af9/numpy_and_numpy_base_1603570489231/work
+oauthlib==3.1.0
+olefile==0.46
+omegaconf==2.0.6
+packaging @ file:///home/conda/feedstock_root/build_artifacts/packaging_1612459636436/work
+pandas==1.2.3
+Pillow @ file:///tmp/build/80754af9/pillow_1614711424473/work
+pooch @ file:///home/conda/feedstock_root/build_artifacts/pooch_1606467285986/work
+protobuf==3.15.4
+pyasn1==0.4.8
+pyasn1-modules==0.2.8
+pycodestyle==2.6.0
+pycparser @ file:///home/conda/feedstock_root/build_artifacts/pycparser_1593275161868/work
+pyflakes==2.2.0
+pyOpenSSL @ file:///home/conda/feedstock_root/build_artifacts/pyopenssl_1608055815057/work
+pyparsing @ file:///home/linux1/recipes/ci/pyparsing_1610983426697/work
+PySocks @ file:///home/conda/feedstock_root/build_artifacts/pysocks_1610291447907/work
+python-dateutil @ file:///home/ktietz/src/ci/python-dateutil_1611928101742/work
+pytz @ file:///tmp/build/80754af9/pytz_1612215392582/work
+PyWavelets @ file:///tmp/build/80754af9/pywavelets_1601658317819/work
+PyYAML==5.4.1
+requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1608156231189/work
+requests-oauthlib==1.3.0
+resampy==0.2.2
+rsa==4.7.2
+scikit-image==0.17.2
+scikit-learn @ file:///tmp/build/80754af9/scikit-learn_1614446682169/work
+scipy @ file:///tmp/build/80754af9/scipy_1614022789989/work
+six @ file:///tmp/build/80754af9/six_1605205327372/work
+SoundFile @ file:///home/conda/feedstock_root/build_artifacts/pysoundfile_1607011569782/work
+tensorboard==2.4.1
+tensorboard-plugin-wit==1.8.0
+threadpoolctl @ file:///tmp/tmp9twdgx9k/threadpoolctl-2.1.0-py3-none-any.whl
+tifffile @ file:///tmp/build/80754af9/tifffile_1614367036884/work
+toolz @ file:///home/linux1/recipes/ci/toolz_1610987900194/work
+torch==1.7.1
+torchaudio==0.7.0a0+a853dff
+torchsummary==1.5.1
+torchvision==0.8.2
+tornado @ file:///tmp/build/80754af9/tornado_1606942300299/work
+tqdm @ file:///tmp/build/80754af9/tqdm_1611857934208/work
+typing-extensions @ file:///home/ktietz/src/ci_mi/typing_extensions_1612808209620/work
+ubs8k @ git+https://github.com/leocances/UrbanSound8K.git@6c0761d0fdd963ae44b4e3610d735169f6391440
+urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1611695416663/work
+Werkzeug==1.0.1

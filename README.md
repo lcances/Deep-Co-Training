@@ -24,6 +24,7 @@ conda install h5py
 conda install pillow
 conda install librosa -c conda-forge
 
+pip install hydra-core
 pip install advertorch
 pip install torchsummary
 pip install tensorboard
@@ -59,7 +60,7 @@ The handling of running arguments is done using [hydra](hydra.cc) and the config
 conda activate dct
 cd Deep-Co-training/standalone/supervised
 
-bash to_run_gs.sh --dataset esc10
+bash to_run_cv.sh --dataset esc10
 ```
 
 ## Manual execution training for ESC-10
@@ -72,8 +73,9 @@ conda activate dct
 cd Deep-Co-training/standalone/supervised
 
 python supervised.py \
+    -cn ../../config/supervised/supervised_esc.yaml \
     dataset.dataset=esc10 \
-    model.model=wideres28_2
+    model.model=wideres28_2 
 ```
 <!--
 # Reproduction
